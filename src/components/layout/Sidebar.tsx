@@ -3,12 +3,13 @@ import { useApp } from '../../context/AppContext'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊' },
+  { to: '/session', label: 'Analyseur', icon: '🧮' },
+  { to: '/gex', label: 'GEX Panel', icon: '⚡' },
   { to: '/journal', label: 'Journal', icon: '📓' },
   { to: '/setups', label: 'Setups NQ', icon: '🎯' },
   { to: '/bible', label: 'Bible', icon: '📖' },
   { to: '/plan', label: 'Plan Semaine', icon: '📅' },
   { to: '/stats', label: 'Statistiques', icon: '📈' },
-  { to: '/niveaux', label: 'Niveaux Clés', icon: '🔑' },
 ]
 
 export function Sidebar() {
@@ -24,7 +25,7 @@ export function Sidebar() {
         {sidebarOpen && (
           <div className="flex flex-col">
             <span className="font-bold text-white text-sm leading-tight">NQ100</span>
-            <span className="text-xs text-brand-400">Trading Bible</span>
+            <span className="text-xs text-brand-400">Méthode Salah</span>
           </div>
         )}
         <button

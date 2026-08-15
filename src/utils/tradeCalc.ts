@@ -60,9 +60,6 @@ export function calcDailyStats(trades: Trade[], date: string): DailyStats {
 
 export function calcAccountStats(trades: Trade[], startingBalance: number): AccountStats {
   const totalPnl = trades.reduce((s, t) => s + t.pnl, 0)
-  const winners = trades.filter((t) => t.pnl > 0)
-  const losers = trades.filter((t) => t.pnl < 0)
-
   const rrValues = trades.map((t) => {
     const riskPoints = Math.abs(t.entry - t.stopLoss)
     if (riskPoints === 0) return 0
