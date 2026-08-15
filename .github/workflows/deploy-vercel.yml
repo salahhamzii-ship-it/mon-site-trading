@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - claude/bjr-3hneil
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -19,8 +20,11 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run build
+
       - name: Deploy to Vercel
         run: |
-          npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+          npx vercel deploy dist \
+            --prod \
+            --yes \
+            --token=${{ secrets.VERCEL_TOKEN }}
