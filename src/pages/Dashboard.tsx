@@ -1,582 +1,532 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { NavLink } from 'react-router-dom'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface Candle { o: number; h: number; l: number; c: number; v: number }
 
-interface Candle {
-  open: number; high: number; low: number; close: number; vol: number
-}
-
-// ─── Data helpers ─────────────────────────────────────────────────────────────
-
-function mkCandle(prev?: Candle): Candle {
-  const open  = prev ? prev.close : 21200
-  const body  = (Math.random() - 0.47) * 75
-  const close = open + body
-  const wick  = Math.abs(body) * (0.3 + Math.random() * 0.7)
-  return {
-    open, close,
-    high: Math.max(open, close) + wick * Math.random(),
-    low:  Math.min(open, close) - wick * Math.random(),
-    vol:  30000 + Math.random() * 100000,
-  }
-}
-
-function genHistory(n: number): Candle[] {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function genCandles(n: number): Candle[] {
   const out: Candle[] = []
-  for (let i = 0; i < n; i++) out.push(mkCandle(out[i - 1]))
+  let p = 21340
+  for (let i = 0; i < n; i++) {
+    const o = p, d = Math.random() > 0.46 ? 1 : -1
+    const c = o + d * (5 + Math.random() * 20)
+    out.push({ o, h: Math.max(o, c) + Math.random() * 6, l: Math.min(o, c) - Math.random() * 6, c, v: 400 + Math.random() * 2000 })
+    p = c
+  }
   return out
 }
 
-const N   = 60
-const MA  = 20
-const VR  = 0.14
-const SBI = N - 20     // session base index
-
-// ─── Gauge (SVG arc) ──────────────────────────────────────────────────────────
-
-function Gauge({ value, color }: { value: number; color: string }) {
-  const ARC    = 190
-  const offset = ARC - (value / 100) * ARC
-  return (
-    <svg width="164" height="92" viewBox="0 0 164 92" aria-hidden="true">
-      <path d="M22 87 A60 60 0 0 1 142 87" fill="none"
-            stroke={`${color}1a`} strokeWidth="8" strokeLinecap="round"/>
-      <path d="M22 87 A60 60 0 0 1 142 87" fill="none"
-            stroke={color} strokeWidth="8" strokeLinecap="round"
-            strokeDasharray={ARC} strokeDashoffset={offset}
-            style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1)' }}/>
-      <text x="82" y="74" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#3d4f6a">PRESSION</text>
-      <text x="82" y="58" textAnchor="middle" fontFamily="monospace" fontSize="16" fontWeight="700" fill={color}>
-        {value}%
-      </text>
-    </svg>
-  )
+function fmt(p: number, dec = 2) {
+  const [i, d] = p.toFixed(dec).split('.')
+  return i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (dec > 0 ? '.' + d : '')
 }
 
-// ─── Candlestick Canvas ───────────────────────────────────────────────────────
-
-function CandlestickChart({ hist, live }: { hist: Candle[]; live: Candle }) {
-  const wrapRef   = useRef<HTMLDivElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+// ── Chart ─────────────────────────────────────────────────────────────────────
+function MiniChart({ hist, live, avwap, gex }: { hist: Candle[]; live: number; avwap: number; gex: number }) {
+  const cvRef = useRef<HTMLCanvasElement>(null)
+  const boxRef = useRef<HTMLDivElement>(null)
 
   const draw = useCallback(() => {
-    const canvas = canvasRef.current
-    const wrap   = wrapRef.current
-    if (!canvas || !wrap) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const cv = cvRef.current, ct = cv?.getContext('2d')
+    if (!cv || !ct) return
+    const W = cv.width, H = cv.height
+    if (!W || !H) return
 
-    const W = wrap.clientWidth
-    const H = wrap.clientHeight
-    canvas.width  = W
-    canvas.height = H
+    const PL = 6, PR = 66, PT = 10, PB = 24, VH = 22
+    const pw = W - PL - PR, ph = H - PT - PB - VH
+    ct.clearRect(0, 0, W, H)
 
-    const all = [...hist, live]
-    const n   = all.length
-    ctx.clearRect(0, 0, W, H)
+    const fm: Candle = { o: hist.at(-1)!.c, h: Math.max(hist.at(-1)!.c, live), l: Math.min(hist.at(-1)!.c, live), c: live, v: 600 }
+    const cs = [...hist.slice(-58), fm]
+    const n = cs.length
+    const pMn = Math.min(...cs.map(c => c.l)) - 2, pMx = Math.max(...cs.map(c => c.h)) + 2
+    const pR = pMx - pMn || 1, mV = Math.max(...cs.map(c => c.v))
+    const py = (p: number) => PT + (1 - (p - pMn) / pR) * ph
+    const bS = pw / n, bW = Math.max(1.5, bS * 0.65)
 
-    const cw     = (W - 60) / n
-    const bw     = Math.max(2, cw * 0.58)
-    const chartH = H * (1 - VR) - 8
-    const volH   = H * VR
-    const volY   = H - volH
-    const pad    = 8
-
-    const hiMax = Math.max(...all.map(c => c.high)) + 15
-    const loMin = Math.min(...all.map(c => c.low))  - 15
-    const pr    = hiMax - loMin
-    const vm    = Math.max(...all.map(c => c.vol))
-
-    const py = (p: number) => pad + (1 - (p - loMin) / pr) * (chartH - pad * 2)
-    const cx = (i: number) => 30 + i * cw + cw / 2
-    const vy = (v: number) => volY + (1 - v / vm) * volH * 0.92
-
-    // Grid
-    ctx.strokeStyle = 'rgba(26,34,54,.9)'
-    ctx.lineWidth   = 1
-    for (let g = 0; g <= 5; g++) {
-      const y = pad + (g / 5) * (chartH - pad * 2)
-      ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(W - 12, y); ctx.stroke()
-      ctx.fillStyle   = 'rgba(61,79,106,.8)'
-      ctx.font        = '9px monospace'
-      ctx.textAlign   = 'left'
-      ctx.fillText(Math.round(hiMax - (g / 5) * pr).toLocaleString(), 2, y + 3)
+    // grid
+    ct.strokeStyle = '#1e293b'; ct.lineWidth = 1; ct.setLineDash([])
+    for (let i = 0; i <= 4; i++) {
+      const y = PT + (i / 4) * ph
+      ct.beginPath(); ct.moveTo(PL, y); ct.lineTo(W - PR, y); ct.stroke()
+      ct.fillStyle = '#475569'; ct.font = '7px monospace'; ct.textAlign = 'right'
+      ct.fillText(fmt(pMx - (i / 4) * pR, 0), W - PR + 62, y + 2.5)
     }
 
-    // Vol separator
-    ctx.strokeStyle = 'rgba(26,34,54,.5)'
-    ctx.beginPath(); ctx.moveTo(30, volY); ctx.lineTo(W - 12, volY); ctx.stroke()
-
-    // MA
-    const ma = all.map((_, i) => {
-      if (i < MA - 1) return null
-      const sl = all.slice(i - MA + 1, i + 1)
-      return sl.reduce((s, c) => s + c.close, 0) / MA
-    })
-    ctx.strokeStyle = 'rgba(245,158,11,.55)'
-    ctx.lineWidth   = 1.5
-    ctx.beginPath()
-    let first = true
-    for (let i = 0; i < n; i++) {
-      if (ma[i] == null) continue
-      const x = cx(i), y = py(ma[i]!)
-      if (first) { ctx.moveTo(x, y); first = false } else ctx.lineTo(x, y)
+    // AVWAP
+    const avY = py(avwap)
+    if (avY > PT && avY < PT + ph) {
+      ct.setLineDash([3, 3]); ct.strokeStyle = '#3b82f6bb'; ct.lineWidth = 1.2
+      ct.beginPath(); ct.moveTo(PL, avY); ct.lineTo(W - PR, avY); ct.stroke()
+      ct.setLineDash([]); ct.fillStyle = '#3b82f6aa'; ct.font = '6px monospace'; ct.textAlign = 'left'
+      ct.fillText('AVWAP 18h', PL + 2, avY - 2)
     }
-    ctx.stroke()
-
-    // AVWAP 18h
-    const avwapY = py(loMin + pr * 0.38)
-    ctx.strokeStyle = 'rgba(96,165,250,.45)'
-    ctx.lineWidth   = 1
-    ctx.setLineDash([4, 5])
-    ctx.beginPath(); ctx.moveTo(30, avwapY); ctx.lineTo(W - 12, avwapY); ctx.stroke()
-    ctx.setLineDash([])
-    ctx.fillStyle = 'rgba(96,165,250,.6)'
-    ctx.font = '9px monospace'; ctx.textAlign = 'right'
-    ctx.fillText('AVWAP 18h', W - 14, avwapY - 3)
 
     // GEX attracteur
-    const gexY = py(loMin + pr * 0.55)
-    ctx.strokeStyle = 'rgba(245,158,11,.25)'
-    ctx.lineWidth   = 1
-    ctx.setLineDash([2, 6])
-    ctx.beginPath(); ctx.moveTo(30, gexY); ctx.lineTo(W - 12, gexY); ctx.stroke()
-    ctx.setLineDash([])
-    ctx.fillStyle = 'rgba(245,158,11,.5)'
-    ctx.fillText('GEX Attr.', W - 14, gexY - 3)
-
-    // Candles
-    for (let i = 0; i < n; i++) {
-      const c    = all[i]
-      const isUp = c.close >= c.open
-      const col  = isUp ? '#10b981' : '#f43f5e'
-      const x    = cx(i)
-      const last = i === n - 1
-
-      ctx.strokeStyle = last ? col : (isUp ? 'rgba(16,185,129,.4)' : 'rgba(244,63,94,.4)')
-      ctx.lineWidth   = 1
-      ctx.beginPath(); ctx.moveTo(x, py(c.high)); ctx.lineTo(x, py(c.low)); ctx.stroke()
-
-      const top = py(Math.max(c.open, c.close))
-      const bot = py(Math.min(c.open, c.close))
-      ctx.fillStyle = last ? col : (isUp ? 'rgba(16,185,129,.65)' : 'rgba(244,63,94,.65)')
-      ctx.fillRect(x - bw / 2, top, bw, Math.max(1, bot - top))
-
-      if (c.vol) {
-        ctx.fillStyle = isUp ? 'rgba(16,185,129,.18)' : 'rgba(244,63,94,.18)'
-        const vy_ = vy(c.vol)
-        ctx.fillRect(x - bw / 2, vy_, bw, (volY + volH * 0.92) - vy_)
-      }
+    const gY = py(gex)
+    if (gY > PT && gY < PT + ph) {
+      ct.setLineDash([2, 5]); ct.strokeStyle = '#f59e0b77'; ct.lineWidth = 1
+      ct.beginPath(); ct.moveTo(PL, gY); ct.lineTo(W - PR, gY); ct.stroke(); ct.setLineDash([])
     }
 
-    // Price dashed line
-    const priceY = py(live.close)
-    ctx.strokeStyle = 'rgba(96,165,250,.5)'
-    ctx.lineWidth   = 1
-    ctx.setLineDash([2, 5])
-    ctx.beginPath(); ctx.moveTo(30, priceY); ctx.lineTo(W - 64, priceY); ctx.stroke()
-    ctx.setLineDash([])
+    // BPR zone fill
+    const bprHi = py(21380), bprLo = py(21340)
+    if (bprHi < PT + ph && bprLo > PT) {
+      ct.fillStyle = '#7c3aed11'
+      ct.fillRect(PL, bprHi, W - PR - PL, bprLo - bprHi)
+    }
 
-    // Price tag
-    const tx = W - 62, tw = 54, th = 17, ty = priceY - th / 2, tr = 3
-    ctx.fillStyle = 'rgba(96,165,250,.88)'
-    ctx.beginPath()
-    ctx.moveTo(tx + tr, ty)
-    ctx.lineTo(tx + tw - tr, ty)
-    ctx.quadraticCurveTo(tx + tw, ty, tx + tw, ty + tr)
-    ctx.lineTo(tx + tw, ty + th - tr)
-    ctx.quadraticCurveTo(tx + tw, ty + th, tx + tw - tr, ty + th)
-    ctx.lineTo(tx + tr, ty + th)
-    ctx.quadraticCurveTo(tx, ty + th, tx, ty + th - tr)
-    ctx.lineTo(tx, ty + tr)
-    ctx.quadraticCurveTo(tx, ty, tx + tr, ty)
-    ctx.closePath()
-    ctx.fill()
-    ctx.fillStyle = '#07090f'
-    ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'
-    ctx.fillText(live.close.toFixed(2), tx + tw / 2, priceY + 4)
-  }, [hist, live])
+    // candles
+    for (let i = 0; i < n; i++) {
+      const c = cs[i], x = PL + (i + .5) * bS, bull = c.c >= c.o
+      const col = bull ? '#10b981' : '#ef4444'
+      ct.globalAlpha = i === n - 1 ? 0.5 : 1
+      ct.strokeStyle = col; ct.lineWidth = 1; ct.setLineDash([])
+      ct.beginPath(); ct.moveTo(x, py(c.h)); ct.lineTo(x, py(c.l)); ct.stroke()
+      const bY = Math.min(py(c.o), py(c.c)), bH = Math.max(1, Math.abs(py(c.o) - py(c.c)))
+      ct.fillStyle = bull ? '#064e3b' : '#7f1d1d'; ct.fillRect(x - bW / 2, bY, bW, bH)
+      ct.strokeRect(x - bW / 2, bY, bW, bH)
+      const vH = (c.v / mV) * (VH - 2), vY = H - PB - vH
+      ct.fillStyle = bull ? '#10b98118' : '#ef444418'; ct.fillRect(x - bW / 2, vY, bW, vH)
+      ct.globalAlpha = 1
+    }
+
+    // live price tag
+    const lY = py(live), bull = live >= 21262
+    const tc = bull ? '#10b981' : '#ef4444'
+    ct.setLineDash([2, 3]); ct.strokeStyle = tc + '55'; ct.lineWidth = 1
+    ct.beginPath(); ct.moveTo(PL, lY); ct.lineTo(W - PR, lY); ct.stroke(); ct.setLineDash([])
+    const tag = fmt(live); ct.font = 'bold 8px monospace'
+    const tw = ct.measureText(tag).width
+    ct.fillStyle = tc; ct.shadowColor = tc; ct.shadowBlur = 5
+    ct.beginPath(); ct.roundRect(W - PR + 2, lY - 7, tw + 8, 14, 2); ct.fill()
+    ct.shadowBlur = 0; ct.fillStyle = '#fff'; ct.textAlign = 'left'
+    ct.fillText(tag, W - PR + 6, lY + 3)
+  }, [hist, live, avwap, gex])
 
   useEffect(() => {
-    const wrap = wrapRef.current
-    if (!wrap) return
-    const ro = new ResizeObserver(draw)
-    ro.observe(wrap)
+    const ro = new ResizeObserver(() => {
+      if (cvRef.current && boxRef.current) {
+        cvRef.current.width = boxRef.current.clientWidth
+        cvRef.current.height = boxRef.current.clientHeight
+        draw()
+      }
+    })
+    if (boxRef.current) ro.observe(boxRef.current)
     return () => ro.disconnect()
   }, [draw])
 
   useEffect(() => { draw() }, [draw])
 
   return (
-    <div ref={wrapRef} className="relative flex-1 min-w-0 overflow-hidden" style={{ background: '#07090f' }}>
-      {/* Chromatic edge bleed: red left, green right */}
-      <div className="absolute inset-0 pointer-events-none z-10" style={{
-        background: [
-          'linear-gradient(to right, rgba(244,63,94,.07) 0%, transparent 16%)',
-          'linear-gradient(to left, rgba(16,185,129,.07) 0%, transparent 16%)',
-        ].join(', '),
+    <div ref={boxRef} style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
+        background: 'linear-gradient(to right,rgba(239,68,68,.04) 0%,transparent 12%,transparent 88%,rgba(16,185,129,.04) 100%)'
       }}/>
-      <canvas ref={canvasRef} className="block"/>
-      {/* OHLC overlay */}
-      <div className="absolute top-2.5 left-3 z-20 flex gap-3.5 pointer-events-none"
-           style={{ fontFamily: 'monospace', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
-        {[
-          ['O', hist[hist.length - 1]?.open.toFixed(2)],
-          ['H', live.high.toFixed(2)],
-          ['L', live.low.toFixed(2)],
-          ['C', live.close.toFixed(2)],
-        ].map(([l, v]) => (
-          <span key={l} style={{ color: '#3d4f6a' }}>
-            {l} <span style={{ color: '#8892a4' }}>{v}</span>
-          </span>
-        ))}
-      </div>
+      <canvas ref={cvRef} style={{ display: 'block', width: '100%', height: '100%' }}/>
     </div>
   )
 }
 
-// ─── Le Chameau Canvas ────────────────────────────────────────────────────────
-
-function ChameauCanvas({ strength }: { strength: number }) {
-  const ref = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = ref.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    const cW = 440, cH = 88
-    ctx.clearRect(0, 0, cW, cH)
-
-    // Camel silhouette: two humps + neck/head
-    ctx.beginPath()
-    ctx.moveTo(16, 78)
-    ctx.bezierCurveTo(45, 78, 65, 12, 108, 12)
-    ctx.bezierCurveTo(150, 12, 155, 46, 172, 46)
-    ctx.bezierCurveTo(183, 46, 190, 48, 200, 48)
-    ctx.bezierCurveTo(210, 48, 218, 18, 256, 18)
-    ctx.bezierCurveTo(294, 18, 298, 48, 312, 48)
-    ctx.bezierCurveTo(322, 48, 336, 38, 350, 26)
-    ctx.bezierCurveTo(356, 22, 364, 18, 372, 18)
-    ctx.bezierCurveTo(378, 18, 382, 24, 382, 30)
-    ctx.lineTo(382, 78)
-    ctx.closePath()
-
-    const fillG = ctx.createLinearGradient(0, 12, 0, 78)
-    fillG.addColorStop(0, `rgba(245,158,11,${strength * 0.28})`)
-    fillG.addColorStop(1, 'rgba(245,158,11,.03)')
-    ctx.fillStyle = fillG; ctx.fill()
-    ctx.strokeStyle = `rgba(245,158,11,${0.22 + strength * 0.45})`
-    ctx.lineWidth = 1.5; ctx.stroke()
-
-    // Ground
-    ctx.strokeStyle = 'rgba(245,158,11,.08)'; ctx.lineWidth = 1
-    ctx.beginPath(); ctx.moveTo(16, 78); ctx.lineTo(400, 78); ctx.stroke()
-
-    // Hump labels
-    ctx.fillStyle = 'rgba(245,158,11,.35)'; ctx.font = '8px monospace'; ctx.textAlign = 'center'
-    ctx.fillText('AVWAP', 108, 6); ctx.fillText('POC', 256, 10)
-
-    // Dot position along spine
-    const sx = 60 + strength * 280
-    let sy: number
-    if      (sx < 108) sy = 78 - (78-12) * (sx-16)  / (108-16)
-    else if (sx < 172) sy = 12 + (46-12) * (sx-108) / (172-108)
-    else if (sx < 200) sy = 46 + (48-46) * (sx-172) / (200-172)
-    else if (sx < 256) sy = 48 - (48-18) * (sx-200) / (256-200)
-    else if (sx < 312) sy = 18 + (48-18) * (sx-256) / (312-256)
-    else               sy = 48 - (48-26) * (sx-312) / (382-312)
-
-    const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 14)
-    glow.addColorStop(0, `rgba(245,158,11,${strength * 0.7})`)
-    glow.addColorStop(1, 'rgba(245,158,11,0)')
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sx, sy, 14, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2); ctx.fill()
-
-    ctx.fillStyle = `rgba(245,158,11,${0.5 + strength * 0.5})`
-    ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center'
-    ctx.fillText(`${Math.round(strength * 100)}%`, sx, sy - 12)
-  }, [strength])
-
-  return <canvas ref={ref} width={440} height={88}/>
-}
-
-// ─── Panel sub-components ─────────────────────────────────────────────────────
-
-function SecLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[9px] tracking-[2.5px] uppercase px-1.5 py-2"
-         style={{ color: '#3d4f6a', fontFamily: 'monospace' }}>
-      {children}
-    </div>
-  )
-}
-
-function Sig({ children, dotColor, value, valColor }: {
-  children: React.ReactNode
-  dotColor: string
-  value: string
-  valColor: string
+// ── Data card ──────────────────────────────────────────────────────────────────
+function Card({ title, icon, accent, children }: {
+  title: string; icon: string; accent: string; children: React.ReactNode
 }) {
   return (
-    <div className="flex items-start gap-2 px-2 py-1.5 rounded" style={{ fontSize: 12 }}>
-      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-0.5 inline-block" style={{ background: dotColor }}/>
-      <span className="flex-1" style={{ color: '#8892a4' }}>{children}</span>
-      <span className="text-[10px] tabular-nums" style={{ color: valColor, fontFamily: 'monospace' }}>{value}</span>
+    <div style={{
+      background: '#0f172a', borderRadius: 6, border: `1px solid ${accent}22`,
+      display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1,
+      boxShadow: `0 0 0 1px ${accent}11, inset 0 1px 0 ${accent}18`,
+    }}>
+      <div style={{
+        padding: '5px 10px', borderBottom: `1px solid #1e293b`,
+        display: 'flex', alignItems: 'center', gap: 6,
+        background: `linear-gradient(135deg, ${accent}0e 0%, transparent 100%)`,
+      }}>
+        <span style={{ fontSize: 10 }}>{icon}</span>
+        <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: accent }}>{title}</span>
+      </div>
+      <div style={{ padding: '6px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {children}
+      </div>
     </div>
   )
 }
 
-function Level({ name, value, side }: { name: string; value: string; side: 'r' | 'g' }) {
-  const tc = side === 'r' ? '#f43f5e' : '#10b981'
-  const bc = side === 'r' ? 'rgba(244,63,94,.4)' : 'rgba(16,185,129,.4)'
+function Row({ label, value, color = '#94a3b8', tag }: { label: string; value: string; color?: string; tag?: string }) {
   return (
-    <div className="flex justify-between items-center px-2 py-1.5 mb-0.5"
-         style={{ borderLeft: `2px solid ${bc}` }}>
-      <span className="text-[10px]" style={{ color: '#3d4f6a' }}>{name}</span>
-      <span className="text-[11px] tabular-nums" style={{ color: tc, fontFamily: 'monospace' }}>{value}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1px 0' }}>
+      <span style={{ fontSize: 8, color: '#475569', letterSpacing: .5 }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {tag && (
+          <span style={{ fontSize: 6, padding: '1px 3px', borderRadius: 2, fontWeight: 700, background: color + '22', color }}>{tag}</span>
+        )}
+        <span style={{ fontSize: 9, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      </div>
     </div>
   )
 }
 
-function ALNBadge({ p }: { p: 'P3' | 'P4' | 'P2' }) {
-  const s = {
-    P3: { bg: 'rgba(16,185,129,.12)',  fg: '#10b981', br: 'rgba(16,185,129,.25)' },
-    P4: { bg: 'rgba(244,63,94,.12)',   fg: '#f43f5e', br: 'rgba(244,63,94,.25)'  },
-    P2: { bg: 'rgba(245,158,11,.1)',   fg: '#f59e0b', br: 'rgba(245,158,11,.2)'  },
-  }[p]
-  return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-[1px]"
-          style={{ background: s.bg, color: s.fg, border: `1px solid ${s.br}` }}>
-      {p}
-    </span>
-  )
-}
-
-function ChMetric({ label, value, bar, align = 'left' }: {
-  label: string; value: string; bar: number | null; align?: 'left' | 'right'
-}) {
-  return (
-    <div className={`flex flex-col gap-1 ${align === 'right' ? 'items-end' : ''}`}>
-      <span className="text-[9px] tracking-[2px] uppercase" style={{ color: '#3d4f6a', fontFamily: 'monospace' }}>{label}</span>
-      <span className="text-[15px] font-bold tabular-nums" style={{ color: '#f59e0b', fontFamily: 'monospace' }}>{value}</span>
-      {bar !== null && (
-        <div className="h-[3px] w-32 rounded-full overflow-hidden" style={{ background: 'rgba(245,158,11,.1)' }}>
-          <div className="h-full rounded-full" style={{ width: `${bar}%`, background: '#f59e0b', transition: 'width 1.5s ease' }}/>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Bears & Bulls panels ─────────────────────────────────────────────────────
-
-function BearsPanel({ pressure }: { pressure: number }) {
-  return (
-    <aside className="flex-shrink-0 flex flex-col overflow-hidden"
-           style={{ width: 256, background: 'linear-gradient(170deg,#110810 0%,#0d1118 100%)', borderRight: '1px solid #1a2236' }}>
-      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: '#1a2236' }}>
-        <span className="text-[11px] tracking-[3px] uppercase font-bold" style={{ color: '#f43f5e' }}>⬇ Bears</span>
-        <span className="text-xl font-bold tabular-nums" style={{ color: '#f43f5e', fontFamily: 'monospace' }}>{pressure}</span>
-      </div>
-      <div className="flex justify-center py-1">
-        <Gauge value={pressure} color="#f43f5e"/>
-      </div>
-      <div className="flex-1 overflow-y-auto px-2.5 pb-2" style={{ scrollbarWidth: 'none' }}>
-        <SecLabel>Pattern ALN</SecLabel>
-        <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
-          <ALNBadge p="P4"/>
-          <span className="text-xs flex-1" style={{ color: '#8892a4' }}>London inside Asia</span>
-          <span className="text-[10px]" style={{ color: '#f43f5e', fontFamily: 'monospace' }}>ACTIF</span>
-        </div>
-        <SecLabel>Résistances</SecLabel>
-        <Level name="London High" value="21 340" side="r"/>
-        <Level name="Asia High"   value="21 388" side="r"/>
-        <Level name="Call Wall"   value="21 400" side="r"/>
-        <SecLabel>Signaux vendeurs</SecLabel>
-        <Sig dotColor="#f43f5e" value="EN DESSOUS" valColor="#f43f5e">AVWAP 18h (Chef)</Sig>
-        <Sig dotColor="#f43f5e" value="SHORT –38"  valColor="#f43f5e">Inventaire OVN</Sig>
-        <Sig dotColor="#f43f5e" value="↓ LOWER"    valColor="#f43f5e">OTF</Sig>
-        <Sig dotColor="#f43f5e" value="REJETÉ"     valColor="#f43f5e">Excess Haut</Sig>
-        <Sig dotColor="#f59e0b" value="MITIGÉ"     valColor="#f59e0b">IB Classification</Sig>
-      </div>
-    </aside>
-  )
-}
-
-function BullsPanel({ pressure }: { pressure: number }) {
-  return (
-    <aside className="flex-shrink-0 flex flex-col overflow-hidden"
-           style={{ width: 256, background: 'linear-gradient(170deg,#071210 0%,#0d1118 100%)', borderLeft: '1px solid #1a2236' }}>
-      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: '#1a2236' }}>
-        <span className="text-[11px] tracking-[3px] uppercase font-bold" style={{ color: '#10b981' }}>⬆ Bulls</span>
-        <span className="text-xl font-bold tabular-nums" style={{ color: '#10b981', fontFamily: 'monospace' }}>{pressure}</span>
-      </div>
-      <div className="flex justify-center py-1">
-        <Gauge value={pressure} color="#10b981"/>
-      </div>
-      <div className="flex-1 overflow-y-auto px-2.5 pb-2" style={{ scrollbarWidth: 'none' }}>
-        <SecLabel>Pattern ALN</SecLabel>
-        <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
-          <ALNBadge p="P3"/>
-          <span className="text-xs flex-1" style={{ color: '#8892a4' }}>Haussier actif</span>
-          <span className="text-[10px]" style={{ color: '#10b981', fontFamily: 'monospace' }}>80.8%</span>
-        </div>
-        <SecLabel>Supports</SecLabel>
-        <Level name="London Low"  value="21 180" side="g"/>
-        <Level name="Put Wall"    value="21 120" side="g"/>
-        <Level name="VAL J-1"     value="21 062" side="g"/>
-        <SecLabel>Signaux acheteurs</SecLabel>
-        <Sig dotColor="#10b981" value="AU-DESSUS" valColor="#10b981">AVWAP 18h (Chef)</Sig>
-        <Sig dotColor="#10b981" value="LONG +62"  valColor="#10b981">Inventaire OVN</Sig>
-        <Sig dotColor="#10b981" value="21 240"    valColor="#10b981">GEX Attracteur</Sig>
-        <Sig dotColor="#10b981" value="100%"      valColor="#10b981">IB Bullish conf.</Sig>
-        <Sig dotColor="#10b981" value="82.12%"    valColor="#10b981">Noon Curve PM Low</Sig>
-      </div>
-    </aside>
-  )
-}
-
-// ─── Dashboard (Command Center) ───────────────────────────────────────────────
-
+// ── Main Dashboard ─────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [hist] = useState<Candle[]>(() => genHistory(N))
-  const sessionBase = hist[SBI].open
+  const [hist] = useState(() => genCandles(80))
+  const [live, setLive] = useState(21340.0)
+  const [clock, setClock] = useState('')
+  const [bprPct, setBprPct] = useState(61.8)
 
-  const [live, setLive] = useState<Candle>({
-    open: hist[N-1].close, close: hist[N-1].close,
-    high: hist[N-1].close, low:   hist[N-1].close, vol: 0,
-  })
+  const open = 21262
+  const avwap = 21380
+  const gex   = 21340
 
-  const [pressure, setPressure] = useState({ bears: 38, bulls: 62 })
-  const [strength, setStrength] = useState(0.77)
-  const [chRes,    setChRes]    = useState(74)
-  const [chInt,    setChInt]    = useState(81)
-  const [chStatus, setChStatus] = useState('Résilience haute — Structure intacte')
-  const [clock,    setClock]    = useState('')
-
-  // Clock
   useEffect(() => {
-    const tick = () => {
-      try {
-        const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
-        setClock(`${String(et.getHours()).padStart(2,'0')}:${String(et.getMinutes()).padStart(2,'0')}:${String(et.getSeconds()).padStart(2,'0')} ET`)
-      } catch { setClock('--:--:-- ET') }
+    const t = () => {
+      const n = new Date()
+      setClock([n.getHours(), n.getMinutes(), n.getSeconds()].map(v => String(v).padStart(2, '0')).join(':'))
     }
-    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id)
+    t(); const id = setInterval(t, 1000); return () => clearInterval(id)
   }, [])
 
-  // Price tick
   useEffect(() => {
     const id = setInterval(() => {
-      setLive(prev => {
-        const d = (Math.random() - 0.488) * 14
-        const close = parseFloat((prev.close + d).toFixed(2))
-        return { ...prev, close, high: Math.max(prev.high, close), low: Math.min(prev.low, close) }
-      })
+      setLive(p => Math.round((p + (Math.random() - 0.48) * 3) * 4) / 4)
     }, 900)
     return () => clearInterval(id)
   }, [])
 
-  // Pressure tick
   useEffect(() => {
     const id = setInterval(() => {
-      setPressure(prev => {
-        const b = Math.max(20, Math.min(75, prev.bears + Math.round((Math.random() - 0.48) * 6)))
-        return { bears: b, bulls: 100 - b }
-      })
-    }, 4500)
+      setBprPct(p => Math.min(90, Math.max(30, p + (Math.random() - .5) * 8)))
+    }, 5000)
     return () => clearInterval(id)
   }, [])
 
-  // Chameau tick
-  useEffect(() => {
-    const msgs = [
-      'Résilience haute — Structure intacte',
-      'Le Chameau tient — AVWAP respecté 3×',
-      'Consolidation saine — continuation probable',
-      'Structure solide — inventaire LONG préservé',
-    ]
-    const id = setInterval(() => {
-      setStrength(s => Math.max(.28, Math.min(.96, s + (Math.random() - .47) * .06)))
-      setChRes(r => Math.max(30, Math.min(96, r + Math.round((Math.random() - .47) * 4))))
-      setChInt(i => Math.max(30, Math.min(96, i + Math.round((Math.random() - .47) * 4))))
-      setChStatus(msgs[Math.floor(Math.random() * msgs.length)])
-    }, 7000)
-    return () => clearInterval(id)
-  }, [])
+  const chg = live - open
+  const chgPct = ((chg / open) * 100).toFixed(2)
+  const bull = chg >= 0
+  const priceColor = bull ? '#10b981' : '#ef4444'
 
-  const delta   = live.close - sessionBase
-  const deltaPct = (delta / sessionBase * 100).toFixed(2)
-  const up      = delta >= 0
+  const oteLevel = bprPct > 61.8 && bprPct < 78.6
+  const signalReady = oteLevel && bull
+  const signalColor = signalReady ? '#10b981' : bprPct > 78.6 ? '#ef4444' : '#f59e0b'
+  const signalLabel = signalReady ? '🟢 PRÊT' : bprPct > 78.6 ? '🔴 DÉPASSÉ' : '🟡 EN ATTENTE'
+
+  // Nav items
+  const navItems = [
+    { to: '/', label: 'Dashboard', icon: '📊', end: true },
+    { to: '/session', label: 'Analyseur', icon: '🧮' },
+    { to: '/gex', label: 'GEX Panel', icon: '⚡' },
+    { to: '/journal', label: 'Journal', icon: '📓' },
+    { to: '/setups', label: 'Setups NQ', icon: '🎯' },
+    { to: '/bible', label: 'Bible', icon: '📖' },
+    { to: '/plan', label: 'Plan', icon: '📅' },
+    { to: '/stats', label: 'Stats', icon: '📈' },
+  ]
+
+  const C = {
+    root: {
+      marginLeft: '-24px', marginRight: '-24px', marginTop: '-24px',
+      height: 'calc(100vh - 56px)',
+      display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
+      background: '#0a0f1a', color: '#e2e8f0',
+      fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif', fontSize: 12,
+    },
+  }
 
   return (
-    <div
-      className="-mx-6 -mt-6 flex flex-col overflow-hidden"
-      style={{ height: 'calc(100vh - 56px)', background: '#07090f', fontFamily: "'SF Mono',Consolas,monospace", userSelect: 'none' }}
-    >
-      {/* ── Command header ──────────────────────────────────────────────────── */}
-      <header
-        className="relative flex-shrink-0 flex items-center justify-between px-5"
-        style={{ height: 48, background: '#0d1118', borderBottom: '1px solid #1a2236' }}
-      >
-        <div className="flex items-baseline gap-2.5">
-          <span className="font-bold tracking-[3px] text-sm text-white uppercase">NQ100</span>
-          <span className="text-[9px] tracking-[3px] uppercase" style={{ color: '#3d4f6a' }}>Command Terminal</span>
+    <div style={C.root}>
+      <style>{`
+        @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px #10b981}50%{opacity:.25;box-shadow:none}}
+        .nav-tab{display:flex;align-items:center;gap:5px;padding:0 14px;height:100%;border:none;
+          background:transparent;color:#64748b;font-size:11px;font-weight:600;cursor:pointer;
+          border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;text-decoration:none;}
+        .nav-tab:hover{color:#cbd5e1;background:#ffffff08}
+        .nav-tab.active{color:#e2e8f0;border-bottom-color:#3b82f6;background:#1e3a5f22}
+        .bpr-bar{height:8px;border-radius:4px;background:#1e293b;position:relative;overflow:hidden}
+        .bpr-fill{height:100%;border-radius:4px;transition:width 1s ease;
+          background:linear-gradient(90deg,#7c3aed,#a855f7)}
+        .bpr-marker{position:absolute;top:-2px;width:2px;height:12px;border-radius:1px;transition:left 1s ease}
+      `}</style>
+
+      {/* ── ROW 1 : PRICE HEADER ── */}
+      <div style={{
+        height: 50, background: '#060c16', borderBottom: '1px solid #1e293b',
+        display: 'flex', alignItems: 'center', padding: '0 16px', gap: 16,
+        flexShrink: 0, boxShadow: '0 1px 0 #1e293b',
+      }}>
+        {/* Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+            background: 'linear-gradient(135deg,#10b981,#3b82f6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 900, fontSize: 11, color: '#000', letterSpacing: -.5,
+          }}>ST</div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#f1f5f9' }}>NQ100 • Méthode Salah</div>
+            <div style={{ fontSize: 8, color: '#10b981', letterSpacing: 1 }}>@SalahTataouine</div>
+          </div>
         </div>
 
-        {/* Centered live price */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-baseline gap-2.5">
-          <span className="text-[22px] font-bold tracking-[-0.5px] tabular-nums" style={{ color: '#60a5fa' }}>
-            {live.close.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+        {/* Divider */}
+        <div style={{ width: 1, height: 28, background: '#1e293b' }}/>
+
+        {/* Price */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', fontVariantNumeric: 'tabular-nums', letterSpacing: .5 }}>
+            {fmt(live)}
           </span>
-          <span className="text-[13px] tabular-nums" style={{ color: up ? '#10b981' : '#f43f5e' }}>
-            {up ? '+' : ''}{delta.toFixed(2)} ({up ? '+' : ''}{deltaPct}%)
+          <span style={{ fontSize: 12, fontWeight: 600, color: priceColor, fontVariantNumeric: 'tabular-nums' }}>
+            {bull ? '▲' : '▼'} {bull ? '+' : ''}{fmt(chg)} ({bull ? '+' : ''}{chgPct}%)
           </span>
         </div>
 
-        <div className="flex items-center gap-3.5">
-          <span className="text-[10px] tracking-[2px] uppercase px-2 py-0.5 rounded"
-                style={{ background: 'rgba(16,185,129,.12)', color: '#10b981', border: '1px solid rgba(16,185,129,.25)' }}>
-            RTH LIVE
-          </span>
-          <span className="text-xs" style={{ color: '#8892a4' }}>{clock}</span>
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#10b981', boxShadow: '0 0 8px #10b981', animation: 'blink 2s ease-in-out infinite' }}/>
+        {/* Quick stats */}
+        <div style={{ display: 'flex', gap: 12, marginLeft: 8 }}>
+          {[
+            { l: 'Open', v: fmt(open), c: '#94a3b8' },
+            { l: 'VAH', v: '21 420', c: '#f87171' },
+            { l: 'VAL', v: '21 240', c: '#34d399' },
+            { l: 'POC', v: '21 340', c: '#a78bfa' },
+          ].map(({ l, v, c }) => (
+            <div key={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ fontSize: 7, color: '#475569', letterSpacing: 1, textTransform: 'uppercase' }}>{l}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: c, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+            </div>
+          ))}
         </div>
-      </header>
 
-      {/* ── Arena (3 col) ───────────────────────────────────────────────────── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <BearsPanel pressure={pressure.bears}/>
-        <CandlestickChart hist={hist} live={live}/>
-        <BullsPanel pressure={pressure.bulls}/>
+        {/* Right side */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', animation: 'blink 1.4s infinite' }}/>
+          <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 3, fontWeight: 700, letterSpacing: 1,
+            background: '#0a2318', color: '#10b981', border: '1px solid #0d3d24' }}>LIVE RTH</span>
+          <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 3, fontWeight: 700, letterSpacing: 1,
+            background: '#0d1f3d', color: '#60a5fa', border: '1px solid #1a3a6a' }}>NQ · CME</span>
+          <span style={{ fontSize: 9, color: '#475569', letterSpacing: 2, fontVariantNumeric: 'tabular-nums',
+            fontFamily: '"Courier New", monospace' }}>{clock} ET</span>
+        </div>
       </div>
 
-      {/* ── Le Chameau ──────────────────────────────────────────────────────── */}
-      <div
-        className="flex-shrink-0 grid"
-        style={{ height: 164, gridTemplateColumns: '200px 1fr 200px', background: 'linear-gradient(180deg,#0d1118 0%,#080a0f 100%)', borderTop: '1px solid #1a2236' }}
-      >
-        <div className="p-4 flex flex-col justify-center gap-2.5">
-          <ChMetric label="Résilience AVWAP 18h" value={`${chRes}%`} bar={chRes}/>
-          <ChMetric label="Rebonds sur Le Chef"   value="3× session" bar={null}/>
+      {/* ── ROW 2 : NAV TABS ── */}
+      <div style={{
+        height: 38, background: '#060c16', borderBottom: '1px solid #1e293b',
+        display: 'flex', alignItems: 'stretch', padding: '0 4px',
+        flexShrink: 0, overflowX: 'auto',
+      }}>
+        {navItems.map(({ to, label, icon, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}
+          >
+            <span style={{ fontSize: 10 }}>{icon}</span>
+            {label}
+          </NavLink>
+        ))}
+      </div>
+
+      {/* ── ROW 3 : DATA CARDS ── */}
+      <div style={{
+        display: 'flex', gap: 8, padding: '8px 12px',
+        flexShrink: 0, background: '#0a0f1a', borderBottom: '1px solid #1e293b',
+      }}>
+        {/* RTH J-1 */}
+        <Card title="RTH J-1" icon="📊" accent="#3b82f6">
+          <Row label="Open"   value="21 262"  color="#94a3b8" />
+          <Row label="High"   value="21 455"  color="#f87171" tag="H" />
+          <Row label="Low"    value="21 198"  color="#34d399" tag="L" />
+          <Row label="Settle" value="21 340"  color="#e2e8f0" />
+          <Row label="VAH"    value="21 420"  color="#f87171" />
+          <Row label="VAL"    value="21 240"  color="#34d399" />
+          <Row label="POC"    value="21 340"  color="#a78bfa" tag="KEY" />
+        </Card>
+
+        {/* OVN */}
+        <Card title="OVN · Overnight" icon="🌙" accent="#8b5cf6">
+          <Row label="Inventaire"   value="NET SHORT"  color="#f87171" />
+          <Row label="OVN Points"   value="− 38 pts"   color="#f87171" />
+          <Row label="AVWAP OVN"    value="21 380"     color="#a78bfa" />
+          <Row label="Excess High"  value="21 455"     color="#fbbf24" tag="EXC" />
+          <Row label="OFT4 Dir."    value="BEARISH"    color="#f87171" />
+          <Row label="London High"  value="21 412"     color="#60a5fa" />
+          <Row label="Asia High"    value="21 390"     color="#60a5fa" />
+        </Card>
+
+        {/* ALN */}
+        <Card title="ALN · Pattern" icon="🎯" accent="#10b981">
+          <Row label="Structure"    value="P4 London"   color="#10b981" tag="ALN" />
+          <Row label="London High"  value="21 412"      color="#60a5fa" />
+          <Row label="London Low"   value="21 298"      color="#f87171" />
+          <Row label="Asia High"    value="21 390"      color="#94a3b8" />
+          <Row label="Call Wall"    value="21 500"      color="#f87171" tag="GEX" />
+          <Row label="Put Wall"     value="21 200"      color="#34d399" tag="GEX" />
+          <Row label="IB Class"     value="Normal IB"   color="#fbbf24" />
+        </Card>
+
+        {/* IB + GEX */}
+        <Card title="IB · GEX · Structure" icon="⚡" accent="#f59e0b">
+          <Row label="IB High"      value="21 380"   color="#f87171" />
+          <Row label="IB Low"       value="21 280"   color="#34d399" />
+          <Row label="IB Range"     value="100 pts"  color="#94a3b8" />
+          <Row label="AVWAP 18h"    value="21 380"   color="#3b82f6" tag="KEY" />
+          <Row label="GEX Bias"     value="LONG γ"   color="#10b981" />
+          <Row label="GEX Attract." value="21 340"   color="#fbbf24" />
+          <Row label="OTE 61.8%"    value="21 348"   color="#a78bfa" tag="OTE" />
+        </Card>
+      </div>
+
+      {/* ── ROW 4 : CHART ── */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden', gap: 0 }}>
+        {/* Chart */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b' }}>
+          {/* chart toolbar */}
+          <div style={{
+            height: 26, background: '#060c16', borderBottom: '1px solid #1e293b',
+            display: 'flex', alignItems: 'center', padding: '0 10px', gap: 6, flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#60a5fa', letterSpacing: 1 }}>NQ1! · 5M</span>
+            <div style={{ width: 1, height: 14, background: '#1e293b', margin: '0 2px' }}/>
+            {['1m','5m','15m','1h','D'].map(tf => (
+              <span key={tf} style={{
+                fontSize: 8, padding: '1px 5px', borderRadius: 2, cursor: 'pointer',
+                color: tf === '5m' ? '#10b981' : '#475569',
+                background: tf === '5m' ? '#064e3b' : 'transparent',
+                border: tf === '5m' ? '1px solid #065f46' : '1px solid transparent',
+              }}>{tf}</span>
+            ))}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, fontSize: 8, color: '#475569' }}>
+              <span>MA20 <span style={{ color: '#f59e0b' }}>──</span></span>
+              <span>AVWAP <span style={{ color: '#3b82f6' }}>- -</span></span>
+              <span>GEX <span style={{ color: '#f59e0b88' }}>···</span></span>
+              <span style={{ color: '#a855f766' }}>BPR ░</span>
+            </div>
+          </div>
+          <MiniChart hist={hist} live={live} avwap={avwap} gex={gex}/>
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-1">
-          <span className="text-[9px] tracking-[3px] uppercase" style={{ color: '#f59e0b', opacity: .7 }}>
-            Le Chameau — Force du Marché
-          </span>
-          <ChameauCanvas strength={strength}/>
-          <span className="text-[10px]" style={{ color: '#3d4f6a' }}>{chStatus}</span>
-        </div>
-
-        <div className="p-4 flex flex-col justify-center items-end gap-2.5">
-          <ChMetric label="Intégrité structure" value={`${chInt}%`} bar={chInt} align="right"/>
-          <ChMetric label="POC distance"         value="+28 pts"    bar={null}   align="right"/>
+        {/* Right mini panel */}
+        <div style={{
+          width: 188, flexShrink: 0, display: 'flex', flexDirection: 'column',
+          background: '#0a0f1a', overflow: 'hidden',
+        }}>
+          {/* Scenarios */}
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b', flex: 1 }}>
+            <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase', color: '#334155', fontWeight: 700, marginBottom: 6 }}>
+              Scénarios
+            </div>
+            <div style={{ padding: '5px 7px', background: '#052e16', borderRadius: 4, borderLeft: '2px solid #10b981', marginBottom: 5 }}>
+              <div style={{ fontSize: 8, fontWeight: 700, color: '#34d399', marginBottom: 3 }}>🟢 BULL — Principal</div>
+              <div style={{ fontSize: 8, color: '#6b7280', lineHeight: 1.5 }}>
+                Reclaim 21 380 AVWAP<br/>→ Target 21 500 Call Wall<br/>Stop: 21 280 IB Low
+              </div>
+            </div>
+            <div style={{ padding: '5px 7px', background: '#1c0a0a', borderRadius: 4, borderLeft: '2px solid #ef4444' }}>
+              <div style={{ fontSize: 8, fontWeight: 700, color: '#f87171', marginBottom: 3 }}>🔴 BEAR — Alternatif</div>
+              <div style={{ fontSize: 8, color: '#6b7280', lineHeight: 1.5 }}>
+                Échec 21 380<br/>→ Test 21 200 Put Wall<br/>Stop: 21 412 London High
+              </div>
+            </div>
+          </div>
+          {/* ALN rules */}
+          <div style={{ padding: '8px 10px' }}>
+            <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase', color: '#334155', fontWeight: 700, marginBottom: 5 }}>
+              Règles actives
+            </div>
+            {[
+              { n: 'R1', txt: 'OVN Short → bull bias', c: '#10b981' },
+              { n: 'R7', txt: 'ALN P4 confirmée', c: '#10b981' },
+              { n: 'R13', txt: 'IB Normal IB', c: '#f59e0b' },
+              { n: 'R18', txt: 'GEX Long Gamma', c: '#60a5fa' },
+            ].map(r => (
+              <div key={r.n} style={{ display: 'flex', gap: 5, padding: '2px 0', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 6, padding: '1px 3px', borderRadius: 2, fontWeight: 700,
+                  background: r.c + '20', color: r.c, flexShrink: 0, marginTop: 1 }}>{r.n}</span>
+                <span style={{ fontSize: 8, color: '#64748b', lineHeight: 1.3 }}>{r.txt}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
+      {/* ── ROW 5 : BPR / FVG ZONE ── */}
+      <div style={{
+        background: '#060c16', borderTop: '1px solid #1e293b',
+        padding: '8px 14px', flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+          <span style={{ fontSize: 8, fontWeight: 700, color: '#a855f7', letterSpacing: 2, textTransform: 'uppercase' }}>
+            📦 BPR / FVG Zone
+          </span>
+          <span style={{ fontSize: 8, color: '#475569' }}>Zone : 21 340 – 21 380</span>
+          <div style={{ flex: 1 }}/>
+          <span style={{ fontSize: 8, color: '#7c3aed' }}>OTE 61.8% → 78.6%</span>
+          <span style={{ fontSize: 8, color: '#475569' }}>Profondeur actuelle :</span>
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#a855f7', fontVariantNumeric: 'tabular-nums' }}>
+            {bprPct.toFixed(1)}%
+          </span>
+          <span style={{
+            fontSize: 8, padding: '2px 7px', borderRadius: 3, fontWeight: 700,
+            background: oteLevel ? '#14532d' : '#1c1917', color: oteLevel ? '#4ade80' : '#a8a29e',
+            border: `1px solid ${oteLevel ? '#15803d' : '#292524'}`,
+          }}>
+            {oteLevel ? '✅ IN OTE' : bprPct < 61.8 ? '⏳ ATTENTE' : '⚠️ OVER'}
+          </span>
+        </div>
+        {/* Progress bar */}
+        <div className="bpr-bar">
+          <div className="bpr-fill" style={{ width: `${bprPct}%` }}/>
+          {/* OTE markers */}
+          <div className="bpr-marker" style={{ left: '61.8%', background: '#4ade80' }}/>
+          <div className="bpr-marker" style={{ left: '78.6%', background: '#fbbf24' }}/>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+          <span style={{ fontSize: 7, color: '#334155' }}>21 340 (0%)</span>
+          <span style={{ fontSize: 7, color: '#4ade80' }}>61.8% OTE</span>
+          <span style={{ fontSize: 7, color: '#fbbf24' }}>78.6% OTE</span>
+          <span style={{ fontSize: 7, color: '#334155' }}>21 380 (100%)</span>
+        </div>
+      </div>
+
+      {/* ── ROW 6 : SIGNAL BAR ── */}
+      <div style={{
+        height: 44, background: '#050911', borderTop: `1px solid ${signalColor}33`,
+        display: 'flex', alignItems: 'center', padding: '0 14px', gap: 14,
+        flexShrink: 0, boxShadow: `0 -2px 16px ${signalColor}0a`,
+      }}>
+        {/* Signal */}
+        <div style={{
+          padding: '4px 14px', borderRadius: 4, fontWeight: 700, fontSize: 12,
+          background: signalColor + '18', color: signalColor,
+          border: `1px solid ${signalColor}44`, letterSpacing: .5,
+        }}>
+          Signal : {signalLabel}
+        </div>
+
+        <div style={{ width: 1, height: 24, background: '#1e293b' }}/>
+
+        {/* Setup details */}
+        {[
+          { l: 'SETUP', v: 'BPR OTE', c: '#a855f7' },
+          { l: 'ENTRY', v: fmt(live), c: '#e2e8f0' },
+          { l: 'STOP', v: '21 280', c: '#ef4444' },
+          { l: 'TP1', v: '21 380', c: '#10b981' },
+          { l: 'TP2', v: '21 500', c: '#10b981' },
+          { l: 'RISK', v: `${fmt(live - 21280, 0)} pts`, c: '#f59e0b' },
+          { l: 'RATIO', v: '1 : 2.8R', c: '#60a5fa' },
+        ].map(({ l, v, c }) => (
+          <div key={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+            <span style={{ fontSize: 7, color: '#334155', letterSpacing: 1, textTransform: 'uppercase' }}>{l}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: c, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+          </div>
+        ))}
+
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 8, color: '#334155' }}>@SalahTataouine · NQ100 · Méthode Salah</span>
+        </div>
+      </div>
     </div>
   )
 }
