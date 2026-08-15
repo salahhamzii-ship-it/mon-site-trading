@@ -1,0 +1,24 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - claude/bjr-3hneil
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Deploy via Vercel CLI (builds on Vercel servers)
+        run: npx vercel --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
