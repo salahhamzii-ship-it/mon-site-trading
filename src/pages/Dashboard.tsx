@@ -1,349 +1,582 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import type { SessionSignals, ALNPattern, Inventory, AVWAPBias, IBClass, GEXBias, OTFDirection, SessionClassification } from '../types/methode'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
-// ─── Badge helpers ─────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-function PatternBadge({ pattern }: { pattern: ALNPattern }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    P1: { label: 'P1 — Engulf Total', cls: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' },
-    P2: { label: 'P2 — Inside Asia', cls: 'bg-slate-500/20 text-slate-300 border-slate-500/40' },
-    P3: { label: 'P3 — Haussier', cls: 'bg-profit/20 text-profit border-profit/40' },
-    P4: { label: 'P4 — Baissier', cls: 'bg-loss/20 text-loss border-loss/40' },
-    MIXTE: { label: 'MIXTE', cls: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' },
+interface Candle {
+  open: number; high: number; low: number; close: number; vol: number
+}
+
+// ─── Data helpers ─────────────────────────────────────────────────────────────
+
+function mkCandle(prev?: Candle): Candle {
+  const open  = prev ? prev.close : 21200
+  const body  = (Math.random() - 0.47) * 75
+  const close = open + body
+  const wick  = Math.abs(body) * (0.3 + Math.random() * 0.7)
+  return {
+    open, close,
+    high: Math.max(open, close) + wick * Math.random(),
+    low:  Math.min(open, close) - wick * Math.random(),
+    vol:  30000 + Math.random() * 100000,
   }
-  if (!pattern) return <span className="px-2 py-1 rounded border border-slate-600 text-slate-500 text-xs">—</span>
-  const { label, cls } = map[pattern] ?? { label: pattern, cls: '' }
-  return <span className={`px-2 py-1 rounded border text-xs font-bold ${cls}`}>{label}</span>
 }
 
-function InventoryBadge({ inv }: { inv: Inventory }) {
-  const cls = inv === 'LONG' ? 'text-profit' : inv === 'SHORT' ? 'text-loss' : 'text-slate-400'
-  return <span className={`font-bold ${cls}`}>{inv}</span>
+function genHistory(n: number): Candle[] {
+  const out: Candle[] = []
+  for (let i = 0; i < n; i++) out.push(mkCandle(out[i - 1]))
+  return out
 }
 
-function AVWAPBadge({ bias }: { bias: AVWAPBias }) {
-  if (bias === 'ABOVE') return <span className="text-profit font-bold">↑ ABOVE</span>
-  if (bias === 'BELOW') return <span className="text-loss font-bold">↓ BELOW</span>
-  return <span className="text-yellow-400 font-bold">~ AT</span>
-}
+const N   = 60
+const MA  = 20
+const VR  = 0.14
+const SBI = N - 20     // session base index
 
-function IBBadge({ cls }: { cls: IBClass | null }) {
-  if (!cls) return <span className="text-slate-500">—</span>
-  if (cls === 'BULLISH') return <span className="text-profit font-bold">BULLISH</span>
-  if (cls === 'BEARISH') return <span className="text-loss font-bold">BEARISH</span>
-  return <span className="text-yellow-400 font-bold">MITIGÉ</span>
-}
+// ─── Gauge (SVG arc) ──────────────────────────────────────────────────────────
 
-function GEXBadge({ bias }: { bias: GEXBias | null }) {
-  if (!bias) return <span className="text-slate-500">—</span>
-  if (bias === 'SUPPORT') return <span className="text-profit font-bold">SUPPORT</span>
-  if (bias === 'RESISTANCE') return <span className="text-loss font-bold">RÉSISTANCE</span>
-  return <span className="text-slate-400 font-bold">NEUTRE</span>
-}
-
-function OTFBadge({ otf }: { otf: OTFDirection }) {
-  if (otf === 'HIGHER') return <span className="text-profit font-bold">↑ OTF HIGHER</span>
-  if (otf === 'LOWER') return <span className="text-loss font-bold">↓ OTF LOWER</span>
-  return <span className="text-slate-400 font-bold">~ NEUTRAL</span>
-}
-
-function ClassifBadge({ cls }: { cls: SessionClassification }) {
-  if (cls === 'ROTATIONNEL_85') return <span className="text-yellow-300 font-bold">85% ROTATIONNEL</span>
-  if (cls === 'TREND_DAY_15') return <span className="text-profit font-bold">15% TREND DAY</span>
-  return <span className="text-slate-400 font-bold">INDÉTERMINÉ</span>
-}
-
-// ─── Signal card ───────────────────────────────────────────────────────────────
-
-function SignalCard({ label, children }: { label: string; children: React.ReactNode }) {
+function Gauge({ value, color }: { value: number; color: string }) {
+  const ARC    = 190
+  const offset = ARC - (value / 100) * ARC
   return (
-    <div className="bg-surface-card border border-surface-border rounded-xl p-4 flex flex-col gap-1">
-      <span className="text-xs text-slate-500 uppercase tracking-wider">{label}</span>
-      <div className="text-base">{children}</div>
+    <svg width="164" height="92" viewBox="0 0 164 92" aria-hidden="true">
+      <path d="M22 87 A60 60 0 0 1 142 87" fill="none"
+            stroke={`${color}1a`} strokeWidth="8" strokeLinecap="round"/>
+      <path d="M22 87 A60 60 0 0 1 142 87" fill="none"
+            stroke={color} strokeWidth="8" strokeLinecap="round"
+            strokeDasharray={ARC} strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1)' }}/>
+      <text x="82" y="74" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#3d4f6a">PRESSION</text>
+      <text x="82" y="58" textAnchor="middle" fontFamily="monospace" fontSize="16" fontWeight="700" fill={color}>
+        {value}%
+      </text>
+    </svg>
+  )
+}
+
+// ─── Candlestick Canvas ───────────────────────────────────────────────────────
+
+function CandlestickChart({ hist, live }: { hist: Candle[]; live: Candle }) {
+  const wrapRef   = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current
+    const wrap   = wrapRef.current
+    if (!canvas || !wrap) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const W = wrap.clientWidth
+    const H = wrap.clientHeight
+    canvas.width  = W
+    canvas.height = H
+
+    const all = [...hist, live]
+    const n   = all.length
+    ctx.clearRect(0, 0, W, H)
+
+    const cw     = (W - 60) / n
+    const bw     = Math.max(2, cw * 0.58)
+    const chartH = H * (1 - VR) - 8
+    const volH   = H * VR
+    const volY   = H - volH
+    const pad    = 8
+
+    const hiMax = Math.max(...all.map(c => c.high)) + 15
+    const loMin = Math.min(...all.map(c => c.low))  - 15
+    const pr    = hiMax - loMin
+    const vm    = Math.max(...all.map(c => c.vol))
+
+    const py = (p: number) => pad + (1 - (p - loMin) / pr) * (chartH - pad * 2)
+    const cx = (i: number) => 30 + i * cw + cw / 2
+    const vy = (v: number) => volY + (1 - v / vm) * volH * 0.92
+
+    // Grid
+    ctx.strokeStyle = 'rgba(26,34,54,.9)'
+    ctx.lineWidth   = 1
+    for (let g = 0; g <= 5; g++) {
+      const y = pad + (g / 5) * (chartH - pad * 2)
+      ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(W - 12, y); ctx.stroke()
+      ctx.fillStyle   = 'rgba(61,79,106,.8)'
+      ctx.font        = '9px monospace'
+      ctx.textAlign   = 'left'
+      ctx.fillText(Math.round(hiMax - (g / 5) * pr).toLocaleString(), 2, y + 3)
+    }
+
+    // Vol separator
+    ctx.strokeStyle = 'rgba(26,34,54,.5)'
+    ctx.beginPath(); ctx.moveTo(30, volY); ctx.lineTo(W - 12, volY); ctx.stroke()
+
+    // MA
+    const ma = all.map((_, i) => {
+      if (i < MA - 1) return null
+      const sl = all.slice(i - MA + 1, i + 1)
+      return sl.reduce((s, c) => s + c.close, 0) / MA
+    })
+    ctx.strokeStyle = 'rgba(245,158,11,.55)'
+    ctx.lineWidth   = 1.5
+    ctx.beginPath()
+    let first = true
+    for (let i = 0; i < n; i++) {
+      if (ma[i] == null) continue
+      const x = cx(i), y = py(ma[i]!)
+      if (first) { ctx.moveTo(x, y); first = false } else ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+
+    // AVWAP 18h
+    const avwapY = py(loMin + pr * 0.38)
+    ctx.strokeStyle = 'rgba(96,165,250,.45)'
+    ctx.lineWidth   = 1
+    ctx.setLineDash([4, 5])
+    ctx.beginPath(); ctx.moveTo(30, avwapY); ctx.lineTo(W - 12, avwapY); ctx.stroke()
+    ctx.setLineDash([])
+    ctx.fillStyle = 'rgba(96,165,250,.6)'
+    ctx.font = '9px monospace'; ctx.textAlign = 'right'
+    ctx.fillText('AVWAP 18h', W - 14, avwapY - 3)
+
+    // GEX attracteur
+    const gexY = py(loMin + pr * 0.55)
+    ctx.strokeStyle = 'rgba(245,158,11,.25)'
+    ctx.lineWidth   = 1
+    ctx.setLineDash([2, 6])
+    ctx.beginPath(); ctx.moveTo(30, gexY); ctx.lineTo(W - 12, gexY); ctx.stroke()
+    ctx.setLineDash([])
+    ctx.fillStyle = 'rgba(245,158,11,.5)'
+    ctx.fillText('GEX Attr.', W - 14, gexY - 3)
+
+    // Candles
+    for (let i = 0; i < n; i++) {
+      const c    = all[i]
+      const isUp = c.close >= c.open
+      const col  = isUp ? '#10b981' : '#f43f5e'
+      const x    = cx(i)
+      const last = i === n - 1
+
+      ctx.strokeStyle = last ? col : (isUp ? 'rgba(16,185,129,.4)' : 'rgba(244,63,94,.4)')
+      ctx.lineWidth   = 1
+      ctx.beginPath(); ctx.moveTo(x, py(c.high)); ctx.lineTo(x, py(c.low)); ctx.stroke()
+
+      const top = py(Math.max(c.open, c.close))
+      const bot = py(Math.min(c.open, c.close))
+      ctx.fillStyle = last ? col : (isUp ? 'rgba(16,185,129,.65)' : 'rgba(244,63,94,.65)')
+      ctx.fillRect(x - bw / 2, top, bw, Math.max(1, bot - top))
+
+      if (c.vol) {
+        ctx.fillStyle = isUp ? 'rgba(16,185,129,.18)' : 'rgba(244,63,94,.18)'
+        const vy_ = vy(c.vol)
+        ctx.fillRect(x - bw / 2, vy_, bw, (volY + volH * 0.92) - vy_)
+      }
+    }
+
+    // Price dashed line
+    const priceY = py(live.close)
+    ctx.strokeStyle = 'rgba(96,165,250,.5)'
+    ctx.lineWidth   = 1
+    ctx.setLineDash([2, 5])
+    ctx.beginPath(); ctx.moveTo(30, priceY); ctx.lineTo(W - 64, priceY); ctx.stroke()
+    ctx.setLineDash([])
+
+    // Price tag
+    const tx = W - 62, tw = 54, th = 17, ty = priceY - th / 2, tr = 3
+    ctx.fillStyle = 'rgba(96,165,250,.88)'
+    ctx.beginPath()
+    ctx.moveTo(tx + tr, ty)
+    ctx.lineTo(tx + tw - tr, ty)
+    ctx.quadraticCurveTo(tx + tw, ty, tx + tw, ty + tr)
+    ctx.lineTo(tx + tw, ty + th - tr)
+    ctx.quadraticCurveTo(tx + tw, ty + th, tx + tw - tr, ty + th)
+    ctx.lineTo(tx + tr, ty + th)
+    ctx.quadraticCurveTo(tx, ty + th, tx, ty + th - tr)
+    ctx.lineTo(tx, ty + tr)
+    ctx.quadraticCurveTo(tx, ty, tx + tr, ty)
+    ctx.closePath()
+    ctx.fill()
+    ctx.fillStyle = '#07090f'
+    ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'
+    ctx.fillText(live.close.toFixed(2), tx + tw / 2, priceY + 4)
+  }, [hist, live])
+
+  useEffect(() => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+    const ro = new ResizeObserver(draw)
+    ro.observe(wrap)
+    return () => ro.disconnect()
+  }, [draw])
+
+  useEffect(() => { draw() }, [draw])
+
+  return (
+    <div ref={wrapRef} className="relative flex-1 min-w-0 overflow-hidden" style={{ background: '#07090f' }}>
+      {/* Chromatic edge bleed: red left, green right */}
+      <div className="absolute inset-0 pointer-events-none z-10" style={{
+        background: [
+          'linear-gradient(to right, rgba(244,63,94,.07) 0%, transparent 16%)',
+          'linear-gradient(to left, rgba(16,185,129,.07) 0%, transparent 16%)',
+        ].join(', '),
+      }}/>
+      <canvas ref={canvasRef} className="block"/>
+      {/* OHLC overlay */}
+      <div className="absolute top-2.5 left-3 z-20 flex gap-3.5 pointer-events-none"
+           style={{ fontFamily: 'monospace', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
+        {[
+          ['O', hist[hist.length - 1]?.open.toFixed(2)],
+          ['H', live.high.toFixed(2)],
+          ['L', live.low.toFixed(2)],
+          ['C', live.close.toFixed(2)],
+        ].map(([l, v]) => (
+          <span key={l} style={{ color: '#3d4f6a' }}>
+            {l} <span style={{ color: '#8892a4' }}>{v}</span>
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
 
-// ─── Demo signals ──────────────────────────────────────────────────────────────
+// ─── Le Chameau Canvas ────────────────────────────────────────────────────────
 
-const demoSignals: SessionSignals = {
-  alnPattern: 'P3',
-  alnStats: {
-    casseLondonHigh: 80.8,
-    casseLondonLow: 44.4,
-    casseLesDeuxPct: 25.3,
-    ibConfirmation: 100,
-    description: 'P3 — London engulf Asia vers le haut. Biais haussier fort.',
-    signal: 'LONG privilege. Attendre confirmation IB bullish pour IBGW/IBGP.',
-  },
-  inventory: 'LONG',
-  inventoryPts: 42,
-  classification: 'ROTATIONNEL_85',
-  ibClass: 'BULLISH',
-  gexAttracteur: 21240,
-  gexBias: 'SUPPORT',
-  avwapBias: 'ABOVE',
-  otf: 'HIGHER',
-  activeRules: [
-    {
-      id: 'R3',
-      label: 'Règle 3 — Inventaire LONG',
-      detail: '+42 pts au-dessus du settle J-1. Biais acheteur.',
-      severity: 'HIGH',
-      color: 'profit',
-    },
-    {
-      id: 'R4',
-      label: 'Règle 4 — AVWAP 18h Chef',
-      detail: 'Prix au-dessus AVWAP 18h. Long privilégié.',
-      severity: 'HIGH',
-      color: 'profit',
-    },
-    {
-      id: 'R6',
-      label: 'Règle 6 — P3 signal',
-      detail: 'P3 détecté. casseLondonHigh 80.8% — signal fort.',
-      severity: 'HIGH',
-      color: 'profit',
-    },
-    {
-      id: 'R8',
-      label: 'Règle 8 — IB Bullish',
-      detail: 'Close B > Mid IB. Attendre extension haussière.',
-      severity: 'MEDIUM',
-      color: 'profit',
-    },
-  ],
-  scenarios: [
-    {
-      id: 'S1',
-      condition: 'Prix > London High + IB Bullish confirmé',
-      action: 'IBGW Long — target VAH J-1 puis GEX attracteur 21 240',
-      type: 'LONG',
-    },
-    {
-      id: 'S2',
-      condition: 'Pullback sur London High après cassure',
-      action: 'IBGP Long — entry close candle de rejet, stop sous London High',
-      type: 'LONG',
-    },
-    {
-      id: 'S3',
-      condition: 'IB range > 1,5× IB moyen + OTF Higher',
-      action: 'Attendre retracement 50% IB — extension long',
-      type: 'LONG',
-    },
-    {
-      id: 'S4',
-      condition: 'Excess haut en pré-marché avec rejet fort',
-      action: 'Règle 13 — Short sur excess haut, stop derrière, cible Mid IB',
-      type: 'SHORT',
-    },
-  ],
-  noonCurveSignal: {
-    signal: 'AM_HIGH_PM_LOW',
-    probability: 82.12,
-    description: 'Q2 a cassé Q1 High sans casser Q1 Low → AM High probable. Vendre en PM.',
-  },
+function ChameauCanvas({ strength }: { strength: number }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const cW = 440, cH = 88
+    ctx.clearRect(0, 0, cW, cH)
+
+    // Camel silhouette: two humps + neck/head
+    ctx.beginPath()
+    ctx.moveTo(16, 78)
+    ctx.bezierCurveTo(45, 78, 65, 12, 108, 12)
+    ctx.bezierCurveTo(150, 12, 155, 46, 172, 46)
+    ctx.bezierCurveTo(183, 46, 190, 48, 200, 48)
+    ctx.bezierCurveTo(210, 48, 218, 18, 256, 18)
+    ctx.bezierCurveTo(294, 18, 298, 48, 312, 48)
+    ctx.bezierCurveTo(322, 48, 336, 38, 350, 26)
+    ctx.bezierCurveTo(356, 22, 364, 18, 372, 18)
+    ctx.bezierCurveTo(378, 18, 382, 24, 382, 30)
+    ctx.lineTo(382, 78)
+    ctx.closePath()
+
+    const fillG = ctx.createLinearGradient(0, 12, 0, 78)
+    fillG.addColorStop(0, `rgba(245,158,11,${strength * 0.28})`)
+    fillG.addColorStop(1, 'rgba(245,158,11,.03)')
+    ctx.fillStyle = fillG; ctx.fill()
+    ctx.strokeStyle = `rgba(245,158,11,${0.22 + strength * 0.45})`
+    ctx.lineWidth = 1.5; ctx.stroke()
+
+    // Ground
+    ctx.strokeStyle = 'rgba(245,158,11,.08)'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(16, 78); ctx.lineTo(400, 78); ctx.stroke()
+
+    // Hump labels
+    ctx.fillStyle = 'rgba(245,158,11,.35)'; ctx.font = '8px monospace'; ctx.textAlign = 'center'
+    ctx.fillText('AVWAP', 108, 6); ctx.fillText('POC', 256, 10)
+
+    // Dot position along spine
+    const sx = 60 + strength * 280
+    let sy: number
+    if      (sx < 108) sy = 78 - (78-12) * (sx-16)  / (108-16)
+    else if (sx < 172) sy = 12 + (46-12) * (sx-108) / (172-108)
+    else if (sx < 200) sy = 46 + (48-46) * (sx-172) / (200-172)
+    else if (sx < 256) sy = 48 - (48-18) * (sx-200) / (256-200)
+    else if (sx < 312) sy = 18 + (48-18) * (sx-256) / (312-256)
+    else               sy = 48 - (48-26) * (sx-312) / (382-312)
+
+    const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 14)
+    glow.addColorStop(0, `rgba(245,158,11,${strength * 0.7})`)
+    glow.addColorStop(1, 'rgba(245,158,11,0)')
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sx, sy, 14, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2); ctx.fill()
+
+    ctx.fillStyle = `rgba(245,158,11,${0.5 + strength * 0.5})`
+    ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center'
+    ctx.fillText(`${Math.round(strength * 100)}%`, sx, sy - 12)
+  }, [strength])
+
+  return <canvas ref={ref} width={440} height={88}/>
 }
 
-// ─── Dashboard ─────────────────────────────────────────────────────────────────
+// ─── Panel sub-components ─────────────────────────────────────────────────────
+
+function SecLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[9px] tracking-[2.5px] uppercase px-1.5 py-2"
+         style={{ color: '#3d4f6a', fontFamily: 'monospace' }}>
+      {children}
+    </div>
+  )
+}
+
+function Sig({ children, dotColor, value, valColor }: {
+  children: React.ReactNode
+  dotColor: string
+  value: string
+  valColor: string
+}) {
+  return (
+    <div className="flex items-start gap-2 px-2 py-1.5 rounded" style={{ fontSize: 12 }}>
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-0.5 inline-block" style={{ background: dotColor }}/>
+      <span className="flex-1" style={{ color: '#8892a4' }}>{children}</span>
+      <span className="text-[10px] tabular-nums" style={{ color: valColor, fontFamily: 'monospace' }}>{value}</span>
+    </div>
+  )
+}
+
+function Level({ name, value, side }: { name: string; value: string; side: 'r' | 'g' }) {
+  const tc = side === 'r' ? '#f43f5e' : '#10b981'
+  const bc = side === 'r' ? 'rgba(244,63,94,.4)' : 'rgba(16,185,129,.4)'
+  return (
+    <div className="flex justify-between items-center px-2 py-1.5 mb-0.5"
+         style={{ borderLeft: `2px solid ${bc}` }}>
+      <span className="text-[10px]" style={{ color: '#3d4f6a' }}>{name}</span>
+      <span className="text-[11px] tabular-nums" style={{ color: tc, fontFamily: 'monospace' }}>{value}</span>
+    </div>
+  )
+}
+
+function ALNBadge({ p }: { p: 'P3' | 'P4' | 'P2' }) {
+  const s = {
+    P3: { bg: 'rgba(16,185,129,.12)',  fg: '#10b981', br: 'rgba(16,185,129,.25)' },
+    P4: { bg: 'rgba(244,63,94,.12)',   fg: '#f43f5e', br: 'rgba(244,63,94,.25)'  },
+    P2: { bg: 'rgba(245,158,11,.1)',   fg: '#f59e0b', br: 'rgba(245,158,11,.2)'  },
+  }[p]
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-[1px]"
+          style={{ background: s.bg, color: s.fg, border: `1px solid ${s.br}` }}>
+      {p}
+    </span>
+  )
+}
+
+function ChMetric({ label, value, bar, align = 'left' }: {
+  label: string; value: string; bar: number | null; align?: 'left' | 'right'
+}) {
+  return (
+    <div className={`flex flex-col gap-1 ${align === 'right' ? 'items-end' : ''}`}>
+      <span className="text-[9px] tracking-[2px] uppercase" style={{ color: '#3d4f6a', fontFamily: 'monospace' }}>{label}</span>
+      <span className="text-[15px] font-bold tabular-nums" style={{ color: '#f59e0b', fontFamily: 'monospace' }}>{value}</span>
+      {bar !== null && (
+        <div className="h-[3px] w-32 rounded-full overflow-hidden" style={{ background: 'rgba(245,158,11,.1)' }}>
+          <div className="h-full rounded-full" style={{ width: `${bar}%`, background: '#f59e0b', transition: 'width 1.5s ease' }}/>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Bears & Bulls panels ─────────────────────────────────────────────────────
+
+function BearsPanel({ pressure }: { pressure: number }) {
+  return (
+    <aside className="flex-shrink-0 flex flex-col overflow-hidden"
+           style={{ width: 256, background: 'linear-gradient(170deg,#110810 0%,#0d1118 100%)', borderRight: '1px solid #1a2236' }}>
+      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: '#1a2236' }}>
+        <span className="text-[11px] tracking-[3px] uppercase font-bold" style={{ color: '#f43f5e' }}>⬇ Bears</span>
+        <span className="text-xl font-bold tabular-nums" style={{ color: '#f43f5e', fontFamily: 'monospace' }}>{pressure}</span>
+      </div>
+      <div className="flex justify-center py-1">
+        <Gauge value={pressure} color="#f43f5e"/>
+      </div>
+      <div className="flex-1 overflow-y-auto px-2.5 pb-2" style={{ scrollbarWidth: 'none' }}>
+        <SecLabel>Pattern ALN</SecLabel>
+        <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
+          <ALNBadge p="P4"/>
+          <span className="text-xs flex-1" style={{ color: '#8892a4' }}>London inside Asia</span>
+          <span className="text-[10px]" style={{ color: '#f43f5e', fontFamily: 'monospace' }}>ACTIF</span>
+        </div>
+        <SecLabel>Résistances</SecLabel>
+        <Level name="London High" value="21 340" side="r"/>
+        <Level name="Asia High"   value="21 388" side="r"/>
+        <Level name="Call Wall"   value="21 400" side="r"/>
+        <SecLabel>Signaux vendeurs</SecLabel>
+        <Sig dotColor="#f43f5e" value="EN DESSOUS" valColor="#f43f5e">AVWAP 18h (Chef)</Sig>
+        <Sig dotColor="#f43f5e" value="SHORT –38"  valColor="#f43f5e">Inventaire OVN</Sig>
+        <Sig dotColor="#f43f5e" value="↓ LOWER"    valColor="#f43f5e">OTF</Sig>
+        <Sig dotColor="#f43f5e" value="REJETÉ"     valColor="#f43f5e">Excess Haut</Sig>
+        <Sig dotColor="#f59e0b" value="MITIGÉ"     valColor="#f59e0b">IB Classification</Sig>
+      </div>
+    </aside>
+  )
+}
+
+function BullsPanel({ pressure }: { pressure: number }) {
+  return (
+    <aside className="flex-shrink-0 flex flex-col overflow-hidden"
+           style={{ width: 256, background: 'linear-gradient(170deg,#071210 0%,#0d1118 100%)', borderLeft: '1px solid #1a2236' }}>
+      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: '#1a2236' }}>
+        <span className="text-[11px] tracking-[3px] uppercase font-bold" style={{ color: '#10b981' }}>⬆ Bulls</span>
+        <span className="text-xl font-bold tabular-nums" style={{ color: '#10b981', fontFamily: 'monospace' }}>{pressure}</span>
+      </div>
+      <div className="flex justify-center py-1">
+        <Gauge value={pressure} color="#10b981"/>
+      </div>
+      <div className="flex-1 overflow-y-auto px-2.5 pb-2" style={{ scrollbarWidth: 'none' }}>
+        <SecLabel>Pattern ALN</SecLabel>
+        <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
+          <ALNBadge p="P3"/>
+          <span className="text-xs flex-1" style={{ color: '#8892a4' }}>Haussier actif</span>
+          <span className="text-[10px]" style={{ color: '#10b981', fontFamily: 'monospace' }}>80.8%</span>
+        </div>
+        <SecLabel>Supports</SecLabel>
+        <Level name="London Low"  value="21 180" side="g"/>
+        <Level name="Put Wall"    value="21 120" side="g"/>
+        <Level name="VAL J-1"     value="21 062" side="g"/>
+        <SecLabel>Signaux acheteurs</SecLabel>
+        <Sig dotColor="#10b981" value="AU-DESSUS" valColor="#10b981">AVWAP 18h (Chef)</Sig>
+        <Sig dotColor="#10b981" value="LONG +62"  valColor="#10b981">Inventaire OVN</Sig>
+        <Sig dotColor="#10b981" value="21 240"    valColor="#10b981">GEX Attracteur</Sig>
+        <Sig dotColor="#10b981" value="100%"      valColor="#10b981">IB Bullish conf.</Sig>
+        <Sig dotColor="#10b981" value="82.12%"    valColor="#10b981">Noon Curve PM Low</Sig>
+      </div>
+    </aside>
+  )
+}
+
+// ─── Dashboard (Command Center) ───────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [signals] = useState<SessionSignals>(demoSignals)
-  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const [hist] = useState<Candle[]>(() => genHistory(N))
+  const sessionBase = hist[SBI].open
 
-  const severityBorder = {
-    HIGH: 'border-l-profit',
-    MEDIUM: 'border-l-yellow-400',
-    LOW: 'border-l-slate-500',
-  }
-  const ruleTextColor = {
-    profit: 'text-profit',
-    loss: 'text-loss',
-    neutral: 'text-slate-400',
-    warning: 'text-yellow-400',
-  }
-  const scenarioColor = {
-    LONG: 'bg-profit/10 border-profit/30 text-profit',
-    SHORT: 'bg-loss/10 border-loss/30 text-loss',
-    FADE: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300',
-    WAIT: 'bg-slate-600/10 border-slate-600/30 text-slate-400',
-  }
+  const [live, setLive] = useState<Candle>({
+    open: hist[N-1].close, close: hist[N-1].close,
+    high: hist[N-1].close, low:   hist[N-1].close, vol: 0,
+  })
+
+  const [pressure, setPressure] = useState({ bears: 38, bulls: 62 })
+  const [strength, setStrength] = useState(0.77)
+  const [chRes,    setChRes]    = useState(74)
+  const [chInt,    setChInt]    = useState(81)
+  const [chStatus, setChStatus] = useState('Résilience haute — Structure intacte')
+  const [clock,    setClock]    = useState('')
+
+  // Clock
+  useEffect(() => {
+    const tick = () => {
+      try {
+        const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+        setClock(`${String(et.getHours()).padStart(2,'0')}:${String(et.getMinutes()).padStart(2,'0')}:${String(et.getSeconds()).padStart(2,'0')} ET`)
+      } catch { setClock('--:--:-- ET') }
+    }
+    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id)
+  }, [])
+
+  // Price tick
+  useEffect(() => {
+    const id = setInterval(() => {
+      setLive(prev => {
+        const d = (Math.random() - 0.488) * 14
+        const close = parseFloat((prev.close + d).toFixed(2))
+        return { ...prev, close, high: Math.max(prev.high, close), low: Math.min(prev.low, close) }
+      })
+    }, 900)
+    return () => clearInterval(id)
+  }, [])
+
+  // Pressure tick
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPressure(prev => {
+        const b = Math.max(20, Math.min(75, prev.bears + Math.round((Math.random() - 0.48) * 6)))
+        return { bears: b, bulls: 100 - b }
+      })
+    }, 4500)
+    return () => clearInterval(id)
+  }, [])
+
+  // Chameau tick
+  useEffect(() => {
+    const msgs = [
+      'Résilience haute — Structure intacte',
+      'Le Chameau tient — AVWAP respecté 3×',
+      'Consolidation saine — continuation probable',
+      'Structure solide — inventaire LONG préservé',
+    ]
+    const id = setInterval(() => {
+      setStrength(s => Math.max(.28, Math.min(.96, s + (Math.random() - .47) * .06)))
+      setChRes(r => Math.max(30, Math.min(96, r + Math.round((Math.random() - .47) * 4))))
+      setChInt(i => Math.max(30, Math.min(96, i + Math.round((Math.random() - .47) * 4))))
+      setChStatus(msgs[Math.floor(Math.random() * msgs.length)])
+    }, 7000)
+    return () => clearInterval(id)
+  }, [])
+
+  const delta   = live.close - sessionBase
+  const deltaPct = (delta / sessionBase * 100).toFixed(2)
+  const up      = delta >= 0
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard — Méthode Salah</h1>
-          <p className="text-slate-400 text-sm capitalize mt-0.5">{today}</p>
+    <div
+      className="-mx-6 -mt-6 flex flex-col overflow-hidden"
+      style={{ height: 'calc(100vh - 56px)', background: '#07090f', fontFamily: "'SF Mono',Consolas,monospace", userSelect: 'none' }}
+    >
+      {/* ── Command header ──────────────────────────────────────────────────── */}
+      <header
+        className="relative flex-shrink-0 flex items-center justify-between px-5"
+        style={{ height: 48, background: '#0d1118', borderBottom: '1px solid #1a2236' }}
+      >
+        <div className="flex items-baseline gap-2.5">
+          <span className="font-bold tracking-[3px] text-sm text-white uppercase">NQ100</span>
+          <span className="text-[9px] tracking-[3px] uppercase" style={{ color: '#3d4f6a' }}>Command Terminal</span>
         </div>
-        <div className="flex gap-3 flex-wrap">
-          <span className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-300 text-xs border border-yellow-500/30">
-            DEMO — entrer les données via Analyseur
+
+        {/* Centered live price */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-baseline gap-2.5">
+          <span className="text-[22px] font-bold tracking-[-0.5px] tabular-nums" style={{ color: '#60a5fa' }}>
+            {live.close.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
-          <Link
-            to="/session"
-            className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors"
-          >
-            Analyser la session →
-          </Link>
-        </div>
-      </div>
-
-      {/* Top signal grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <SignalCard label="Pattern ALN">
-          <PatternBadge pattern={signals.alnPattern} />
-        </SignalCard>
-        <SignalCard label="Inventaire OVN">
-          <InventoryBadge inv={signals.inventory} />
-          <span className="text-slate-400 text-xs ml-1">
-            {signals.inventoryPts > 0 ? '+' : ''}{signals.inventoryPts} pts
+          <span className="text-[13px] tabular-nums" style={{ color: up ? '#10b981' : '#f43f5e' }}>
+            {up ? '+' : ''}{delta.toFixed(2)} ({up ? '+' : ''}{deltaPct}%)
           </span>
-        </SignalCard>
-        <SignalCard label="AVWAP 18h (Chef)">
-          <AVWAPBadge bias={signals.avwapBias} />
-        </SignalCard>
-        <SignalCard label="OTF">
-          <OTFBadge otf={signals.otf} />
-        </SignalCard>
-        <SignalCard label="Classification 85/15">
-          <ClassifBadge cls={signals.classification} />
-        </SignalCard>
-        <SignalCard label="IB Classification">
-          <IBBadge cls={signals.ibClass} />
-        </SignalCard>
-        <SignalCard label="GEX Attracteur">
-          {signals.gexAttracteur
-            ? <span className="font-bold text-brand-300">{signals.gexAttracteur.toLocaleString()}</span>
-            : <span className="text-slate-500">—</span>}
-        </SignalCard>
-        <SignalCard label="GEX Bias">
-          <GEXBadge bias={signals.gexBias} />
-        </SignalCard>
+        </div>
+
+        <div className="flex items-center gap-3.5">
+          <span className="text-[10px] tracking-[2px] uppercase px-2 py-0.5 rounded"
+                style={{ background: 'rgba(16,185,129,.12)', color: '#10b981', border: '1px solid rgba(16,185,129,.25)' }}>
+            RTH LIVE
+          </span>
+          <span className="text-xs" style={{ color: '#8892a4' }}>{clock}</span>
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#10b981', boxShadow: '0 0 8px #10b981', animation: 'blink 2s ease-in-out infinite' }}/>
+        </div>
+      </header>
+
+      {/* ── Arena (3 col) ───────────────────────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <BearsPanel pressure={pressure.bears}/>
+        <CandlestickChart hist={hist} live={live}/>
+        <BullsPanel pressure={pressure.bulls}/>
       </div>
 
-      {/* ALN Stats */}
-      {signals.alnStats && (
-        <div className="bg-surface-card border border-surface-border rounded-xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
-            Statistiques ALN — {signals.alnPattern}
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <div>
-              <div className="text-slate-500 text-xs">Casse London High</div>
-              <div className="text-profit font-bold text-lg">{signals.alnStats.casseLondonHigh}%</div>
-            </div>
-            <div>
-              <div className="text-slate-500 text-xs">Casse London Low</div>
-              <div className="text-loss font-bold text-lg">{signals.alnStats.casseLondonLow}%</div>
-            </div>
-            <div>
-              <div className="text-slate-500 text-xs">Casse les deux</div>
-              <div className="text-yellow-300 font-bold text-lg">{signals.alnStats.casseLesDeuxPct}%</div>
-            </div>
-            {signals.alnStats.ibConfirmation !== null && (
-              <div>
-                <div className="text-slate-500 text-xs">Conf. IB P3</div>
-                <div className="text-brand-300 font-bold text-lg">{signals.alnStats.ibConfirmation}%</div>
-              </div>
-            )}
-          </div>
-          <p className="text-sm text-slate-300 border-t border-surface-border pt-3">{signals.alnStats.description}</p>
-          <p className="text-sm text-brand-300 font-medium">{signals.alnStats.signal}</p>
-          {signals.alnStats.warning && (
-            <p className="text-xs text-yellow-400">{signals.alnStats.warning}</p>
-          )}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Active rules */}
-        <div className="bg-surface-card border border-surface-border rounded-xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
-            Règles actives
-          </h2>
-          <div className="space-y-2">
-            {signals.activeRules.map((rule) => (
-              <div
-                key={rule.id}
-                className={`border-l-2 pl-3 py-1 ${severityBorder[rule.severity]}`}
-              >
-                <div className={`text-sm font-medium ${ruleTextColor[rule.color]}`}>{rule.label}</div>
-                <div className="text-xs text-slate-400">{rule.detail}</div>
-              </div>
-            ))}
-            {signals.activeRules.length === 0 && (
-              <p className="text-slate-500 text-sm">Aucune règle active — entrer les données via Analyseur.</p>
-            )}
-          </div>
+      {/* ── Le Chameau ──────────────────────────────────────────────────────── */}
+      <div
+        className="flex-shrink-0 grid"
+        style={{ height: 164, gridTemplateColumns: '200px 1fr 200px', background: 'linear-gradient(180deg,#0d1118 0%,#080a0f 100%)', borderTop: '1px solid #1a2236' }}
+      >
+        <div className="p-4 flex flex-col justify-center gap-2.5">
+          <ChMetric label="Résilience AVWAP 18h" value={`${chRes}%`} bar={chRes}/>
+          <ChMetric label="Rebonds sur Le Chef"   value="3× session" bar={null}/>
         </div>
 
-        {/* Scenarios */}
-        <div className="bg-surface-card border border-surface-border rounded-xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
-            Scénarios du jour
-          </h2>
-          <div className="space-y-2">
-            {signals.scenarios.map((s) => (
-              <div
-                key={s.id}
-                className={`border rounded-lg px-3 py-2 text-xs ${scenarioColor[s.type]}`}
-              >
-                <div className="font-bold mb-0.5">{s.type} — {s.condition}</div>
-                <div className="opacity-80">{s.action}</div>
-              </div>
-            ))}
-          </div>
+        <div className="flex flex-col items-center justify-center gap-1">
+          <span className="text-[9px] tracking-[3px] uppercase" style={{ color: '#f59e0b', opacity: .7 }}>
+            Le Chameau — Force du Marché
+          </span>
+          <ChameauCanvas strength={strength}/>
+          <span className="text-[10px]" style={{ color: '#3d4f6a' }}>{chStatus}</span>
+        </div>
+
+        <div className="p-4 flex flex-col justify-center items-end gap-2.5">
+          <ChMetric label="Intégrité structure" value={`${chInt}%`} bar={chInt} align="right"/>
+          <ChMetric label="POC distance"         value="+28 pts"    bar={null}   align="right"/>
         </div>
       </div>
 
-      {/* Noon Curve */}
-      {signals.noonCurveSignal && (
-        <div className="bg-surface-card border border-surface-border rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">
-            Noon Curve Signal
-          </h2>
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className={`px-3 py-1.5 rounded-lg border text-sm font-bold ${
-              signals.noonCurveSignal.signal === 'AM_HIGH_PM_LOW'
-                ? 'bg-profit/10 border-profit/40 text-profit'
-                : signals.noonCurveSignal.signal === 'AM_LOW_PM_HIGH'
-                ? 'bg-loss/10 border-loss/40 text-loss'
-                : 'bg-slate-600/20 border-slate-500/40 text-slate-400'
-            }`}>
-              {signals.noonCurveSignal.signal.replace(/_/g, ' ')}
-            </span>
-            <span className="text-2xl font-bold text-brand-300">
-              {signals.noonCurveSignal.probability}%
-            </span>
-            <p className="text-sm text-slate-400 flex-1">{signals.noonCurveSignal.description}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Quick links */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { to: '/session', label: 'Analyser session', icon: '🧮', desc: 'Entrer RTH/OVN/ALN/GEX' },
-          { to: '/gex', label: 'GEX Panel', icon: '⚡', desc: 'Options QQQ → NQ niveaux' },
-          { to: '/journal', label: 'Journal', icon: '📓', desc: 'Enregistrer un trade' },
-          { to: '/bible', label: 'Bible', icon: '📖', desc: '32 règles + Règles 13-26' },
-        ].map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            className="bg-surface-card border border-surface-border rounded-xl p-4 hover:border-brand-600/40 hover:bg-surface-hover transition-colors"
-          >
-            <div className="text-2xl mb-1">{link.icon}</div>
-            <div className="text-sm font-medium text-white">{link.label}</div>
-            <div className="text-xs text-slate-500 mt-0.5">{link.desc}</div>
-          </Link>
-        ))}
-      </div>
+      <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
     </div>
   )
 }
