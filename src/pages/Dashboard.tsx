@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-} from 'react'
-import axios from 'axios'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import {
   Chart,
   LinearScale,
@@ -14,263 +8,171 @@ import {
   LineElement,
   PointElement,
   LineController,
+  Filler,
 } from 'chart.js'
 import {
   CandlestickController,
   CandlestickElement,
-  OhlcController,
-  OhlcElement,
 } from 'chartjs-chart-financial'
 import 'chartjs-adapter-date-fns'
+import { TRADES } from '../data/tradesData'
+import { calcAccountStats } from '../utils/tradeCalc'
+import { formatCurrency, formatPercent } from '../utils/formatters'
+import type { Trade } from '../types'
 
 Chart.register(
-  LinearScale,
-  TimeScale,
-  Tooltip,
-  Legend,
-  LineElement,
-  PointElement,
-  LineController,
-  CandlestickController,
-  CandlestickElement,
-  OhlcController,
-  OhlcElement,
+  LinearScale, TimeScale, Tooltip, Legend,
+  LineElement, PointElement, LineController, Filler,
+  CandlestickController, CandlestickElement,
 )
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
-interface Candle {
-  x: number   // timestamp ms
-  o: number
-  h: number
-  l: number
-  c: number
-}
+const STARTING_BALANCE = 50_000
 
-type Interval = '1m' | '5m' | '15m' | '1h' | '1d'
+type ViewMode = 'equity' | 'candles'
+type Period   = '1M' | '3M' | 'ALL'
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+const PERIODS: Period[] = ['1M', '3M', 'ALL']
 
-const INTERVALS: { label: string; value: Interval; range: string }[] = [
-  { label: '1m',  value: '1m',  range: '1d'  },
-  { label: '5m',  value: '5m',  range: '5d'  },
-  { label: '15m', value: '15m', range: '5d'  },
-  { label: '1h',  value: '1h',  range: '60d' },
-  { label: '1D',  value: '1d',  range: '1y'  },
-]
+// ─── Indicateurs techniques ───────────────────────────────────────────────────
 
-const SYMBOL = 'NQ=F'
-
-// ─── Indicator math ───────────────────────────────────────────────────────────
-
-function calcSMA(closes: number[], period: number): (number | null)[] {
-  return closes.map((_, i) => {
+function calcSMA(values: number[], period: number): (number | null)[] {
+  return values.map((_, i) => {
     if (i < period - 1) return null
-    const slice = closes.slice(i - period + 1, i + 1)
-    return slice.reduce((a, b) => a + b, 0) / period
+    return values.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period
   })
 }
 
-function calcRSI(closes: number[], period = 14): (number | null)[] {
-  const result: (number | null)[] = Array(closes.length).fill(null)
-  if (closes.length < period + 1) return result
+function calcRSI(values: number[], period = 14): (number | null)[] {
+  const result: (number | null)[] = Array(values.length).fill(null)
+  if (values.length < period + 1) return result
 
-  let avgGain = 0
-  let avgLoss = 0
-
+  let avgGain = 0, avgLoss = 0
   for (let i = 1; i <= period; i++) {
-    const delta = closes[i] - closes[i - 1]
-    if (delta > 0) avgGain += delta
-    else avgLoss += Math.abs(delta)
+    const d = values[i] - values[i - 1]
+    if (d > 0) avgGain += d; else avgLoss += Math.abs(d)
   }
-  avgGain /= period
-  avgLoss /= period
+  avgGain /= period; avgLoss /= period
 
   const rs = avgLoss === 0 ? 100 : avgGain / avgLoss
   result[period] = 100 - 100 / (1 + rs)
 
-  for (let i = period + 1; i < closes.length; i++) {
-    const delta = closes[i] - closes[i - 1]
-    const gain = delta > 0 ? delta : 0
-    const loss = delta < 0 ? Math.abs(delta) : 0
+  for (let i = period + 1; i < values.length; i++) {
+    const d = values[i] - values[i - 1]
+    const gain = d > 0 ? d : 0
+    const loss = d < 0 ? Math.abs(d) : 0
     avgGain = (avgGain * (period - 1) + gain) / period
     avgLoss = (avgLoss * (period - 1) + loss) / period
-    const r = avgLoss === 0 ? 100 : avgGain / avgLoss
-    result[i] = 100 - 100 / (1 + r)
+    result[i] = 100 - 100 / (1 + (avgLoss === 0 ? 100 : avgGain / avgLoss))
   }
   return result
 }
 
-function calcEMA(closes: number[], period: number): (number | null)[] {
-  const result: (number | null)[] = Array(closes.length).fill(null)
-  if (closes.length < period) return result
+function calcEMA(values: number[], period: number): (number | null)[] {
+  const result: (number | null)[] = Array(values.length).fill(null)
+  if (values.length < period) return result
   const k = 2 / (period + 1)
-
-  let ema = closes.slice(0, period).reduce((a, b) => a + b, 0) / period
+  let ema = values.slice(0, period).reduce((a, b) => a + b, 0) / period
   result[period - 1] = ema
-
-  for (let i = period; i < closes.length; i++) {
-    ema = closes[i] * k + ema * (1 - k)
+  for (let i = period; i < values.length; i++) {
+    ema = values[i] * k + ema * (1 - k)
     result[i] = ema
   }
   return result
 }
 
-function calcMACD(closes: number[]): {
-  macd: (number | null)[]
-  signal: (number | null)[]
-  hist: (number | null)[]
-} {
-  const ema12 = calcEMA(closes, 12)
-  const ema26 = calcEMA(closes, 26)
-
-  const macd: (number | null)[] = closes.map((_, i) => {
-    const a = ema12[i]
-    const b = ema26[i]
+function calcMACD(values: number[]) {
+  const ema12 = calcEMA(values, 12)
+  const ema26 = calcEMA(values, 26)
+  const macd  = values.map((_, i) => {
+    const a = ema12[i], b = ema26[i]
     return a !== null && b !== null ? a - b : null
   })
-
-  const macdValues = macd.map((v) => v ?? 0)
-  const rawSignal = calcEMA(macdValues, 9)
-  const signal: (number | null)[] = rawSignal.map((v, i) =>
+  const signal = calcEMA(macd.map(v => v ?? 0), 9).map((v, i) =>
     macd[i] !== null ? v : null,
   )
-
-  const hist: (number | null)[] = macd.map((m, i) => {
+  const hist = macd.map((m, i) => {
     const s = signal[i]
     return m !== null && s !== null ? m - s : null
   })
-
   return { macd, signal, hist }
 }
 
-// ─── Demo data fallback ───────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function generateDemoCandles(count = 200): Candle[] {
-  const candles: Candle[] = []
-  const now = Date.now()
-  let price = 21800 + Math.random() * 400
-
-  for (let i = count; i >= 0; i--) {
-    const ts = now - i * 5 * 60 * 1000
-    const open = price + (Math.random() - 0.5) * 20
-    const volatility = 15 + Math.random() * 25
-    const close = open + (Math.random() - 0.48) * volatility
-    const high = Math.max(open, close) + Math.random() * volatility * 0.5
-    const low  = Math.min(open, close) - Math.random() * volatility * 0.5
-    candles.push({ x: ts, o: +open.toFixed(2), h: +high.toFixed(2), l: +low.toFixed(2), c: +close.toFixed(2) })
-    price = close
-  }
-  return candles
+function filterByPeriod(trades: Trade[], period: Period): Trade[] {
+  const now  = new Date()
+  const from = new Date(now)
+  if (period === '1M') from.setMonth(from.getMonth() - 1)
+  else if (period === '3M') from.setMonth(from.getMonth() - 3)
+  else return [...trades]
+  return trades.filter(t => new Date(t.date) >= from)
 }
 
-// ─── Yahoo Finance fetch ──────────────────────────────────────────────────────
+/** Série de prix d'entrée ordonnée → base des indicateurs techniques */
+function priceSeriesFrom(trades: Trade[]): number[] {
+  return trades.map(t => t.entry)
+}
 
-async function fetchCandles(interval: Interval, range: string): Promise<Candle[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(SYMBOL)}?interval=${interval}&range=${range}&includePrePost=false`
-  const { data } = await axios.get(url, {
-    headers: { 'Accept': 'application/json' },
-    timeout: 10_000,
+/** Courbe d'équité : solde cumulé après chaque trade */
+function equityCurve(trades: Trade[], startBalance: number) {
+  let balance = startBalance
+  return trades.map(t => {
+    balance += t.pnl
+    return { x: new Date(t.date).getTime(), y: +balance.toFixed(2) }
   })
-
-  const result = data?.chart?.result?.[0]
-  if (!result) throw new Error('No data')
-
-  const timestamps: number[]  = result.timestamp
-  const ohlcv = result.indicators.quote[0]
-
-  return timestamps.map((t: number, i: number) => ({
-    x: t * 1000,
-    o: +ohlcv.open[i]?.toFixed(2)  ?? 0,
-    h: +ohlcv.high[i]?.toFixed(2)  ?? 0,
-    l: +ohlcv.low[i]?.toFixed(2)   ?? 0,
-    c: +ohlcv.close[i]?.toFixed(2) ?? 0,
-  })).filter((c: Candle) => c.o && c.h && c.l && c.c)
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+/** Chaque trade → bougie OHLC (entry=open, exit=close, SL=low/high, TP=high/low) */
+function tradesToCandles(trades: Trade[]) {
+  return trades.map(t => {
+    const isLong = t.direction === 'LONG'
+    return {
+      x: new Date(t.date).getTime(),
+      o: t.entry,
+      c: t.exit,
+      h: isLong ? Math.max(t.exit, t.takeProfit, t.entry) : Math.max(t.entry, t.stopLoss),
+      l: isLong ? Math.min(t.entry, t.stopLoss)           : Math.min(t.exit, t.takeProfit, t.entry),
+    }
+  })
+}
 
-function PriceTicker({ candles, isDemo }: { candles: Candle[]; isDemo: boolean }) {
-  if (!candles.length) return null
+// ─── Sous-composants UI ───────────────────────────────────────────────────────
 
-  const last  = candles[candles.length - 1]
-  const prev  = candles[candles.length - 2]
-  const change = prev ? last.c - prev.c : 0
-  const pct    = prev ? (change / prev.c) * 100 : 0
-  const up     = change >= 0
-
-  const firstClose = candles[0].c
-  const dayChange  = last.c - firstClose
-  const dayPct     = (dayChange / firstClose) * 100
-
+function StatCard({ label, value, sub, trend }: {
+  label: string; value: string; sub?: string; trend?: 'up' | 'down' | 'neutral'
+}) {
+  const color = trend === 'up' ? 'text-profit-light' : trend === 'down' ? 'text-loss-light' : 'text-slate-300'
   return (
-    <div className="flex flex-wrap items-end gap-4 mb-6">
-      <div>
-        <div className="text-xs text-slate-500 mb-1 flex items-center gap-2">
-          NQ100 FUTURES (NQ=F)
-          {isDemo && (
-            <span className="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.5 rounded font-mono">
-              DEMO
-            </span>
-          )}
-        </div>
-        <div className="flex items-baseline gap-3">
-          <span className={`text-4xl font-mono font-bold ${up ? 'text-profit-light' : 'text-loss-light'}`}>
-            {last.c.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </span>
-          <div className={`flex items-center gap-1 text-sm font-mono ${up ? 'text-profit-light' : 'text-loss-light'}`}>
-            <span>{up ? '▲' : '▼'}</span>
-            <span>{Math.abs(change).toFixed(2)}</span>
-            <span>({up ? '+' : ''}{pct.toFixed(2)}%)</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-4 text-xs font-mono ml-auto text-slate-400">
-        {[
-          ['OPEN',  candles[0].o],
-          ['HIGH',  Math.max(...candles.map(c => c.h))],
-          ['LOW',   Math.min(...candles.map(c => c.l))],
-        ].map(([label, val]) => (
-          <div key={label as string} className="text-center">
-            <div className="text-slate-600 mb-0.5">{label}</div>
-            <div className="text-slate-300">{(val as number).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-          </div>
-        ))}
-        <div className="text-center">
-          <div className="text-slate-600 mb-0.5">DAY</div>
-          <div className={dayChange >= 0 ? 'text-profit-light' : 'text-loss-light'}>
-            {dayChange >= 0 ? '+' : ''}{dayPct.toFixed(2)}%
-          </div>
-        </div>
-      </div>
+    <div className="bg-surface-card border border-surface-border rounded-xl p-4">
+      <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-mono">{label}</div>
+      <div className={`text-xl font-mono font-bold ${color}`}>{value}</div>
+      {sub && <div className="text-[11px] text-slate-500 mt-0.5 font-mono">{sub}</div>}
     </div>
   )
 }
 
 function RSIGauge({ value }: { value: number | null }) {
-  const val = value ?? 50
-  const pct = Math.min(100, Math.max(0, val))
+  const val   = value ?? 50
+  const pct   = Math.min(100, Math.max(0, val))
   const color = val >= 70 ? '#ef4444' : val <= 30 ? '#22c55e' : '#94a3b8'
   const label = val >= 70 ? 'OVERBOUGHT' : val <= 30 ? 'OVERSOLD' : 'NEUTRAL'
-
   return (
     <div className="bg-surface-card border border-surface-border rounded-xl p-4">
-      <div className="text-xs text-slate-500 mb-3 font-mono uppercase tracking-wider">RSI (14)</div>
+      <div className="text-[10px] text-slate-500 mb-3 font-mono uppercase tracking-wider">RSI (14)</div>
       <div className="flex items-center gap-3 mb-2">
         <span className="text-2xl font-mono font-bold" style={{ color }}>{val.toFixed(1)}</span>
-        <span className="text-xs px-2 py-0.5 rounded font-mono" style={{ background: `${color}20`, color }}>{label}</span>
+        <span className="text-[10px] px-2 py-0.5 rounded font-mono" style={{ background: `${color}20`, color }}>{label}</span>
       </div>
       <div className="relative h-2 bg-surface-hover rounded-full overflow-hidden">
         <div className="absolute inset-0 flex">
           <div className="h-full bg-profit-light/30" style={{ width: '30%' }} />
-          <div className="h-full bg-slate-600/30" style={{ width: '40%' }} />
-          <div className="h-full bg-loss-light/30"   style={{ width: '30%' }} />
+          <div className="h-full bg-slate-600/30"   style={{ width: '40%' }} />
+          <div className="h-full bg-loss-light/30"  style={{ width: '30%' }} />
         </div>
-        <div
-          className="absolute top-0 h-full w-0.5 -translate-x-1/2 rounded"
-          style={{ left: `${pct}%`, background: color }}
-        />
+        <div className="absolute top-0 h-full w-0.5 -translate-x-1/2 rounded"
+             style={{ left: `${pct}%`, background: color }} />
       </div>
       <div className="flex justify-between text-[10px] text-slate-600 mt-1 font-mono">
         <span>0</span><span>30</span><span>70</span><span>100</span>
@@ -279,73 +181,58 @@ function RSIGauge({ value }: { value: number | null }) {
   )
 }
 
-interface MACDValues { macd: number | null; signal: number | null; hist: number | null }
-
-function MACDPanel({ values }: { values: MACDValues }) {
-  const { macd, signal, hist } = values
-  const histColor = (hist ?? 0) >= 0 ? '#16a34a' : '#ef4444'
-  const cross = macd !== null && signal !== null
-    ? macd > signal ? 'BULLISH' : 'BEARISH'
-    : '--'
-  const crossColor = cross === 'BULLISH' ? '#22c55e' : cross === 'BEARISH' ? '#ef4444' : '#94a3b8'
-
+function MACDPanel({ macd, signal, hist }: { macd: number | null; signal: number | null; hist: number | null }) {
+  const hColor  = (hist ?? 0) >= 0 ? '#16a34a' : '#ef4444'
+  const cross   = macd !== null && signal !== null
+    ? (macd > signal ? 'BULLISH' : 'BEARISH') : '--'
+  const cColor  = cross === 'BULLISH' ? '#22c55e' : cross === 'BEARISH' ? '#ef4444' : '#94a3b8'
   return (
     <div className="bg-surface-card border border-surface-border rounded-xl p-4">
-      <div className="text-xs text-slate-500 mb-3 font-mono uppercase tracking-wider">MACD (12,26,9)</div>
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'MACD',   val: macd,   color: '#38bdf8' },
-          { label: 'SIGNAL', val: signal, color: '#f59e0b' },
-          { label: 'HIST',   val: hist,   color: histColor  },
-        ].map(({ label, val, color }) => (
-          <div key={label} className="text-center">
-            <div className="text-[10px] text-slate-600 mb-1 font-mono">{label}</div>
-            <div className="font-mono font-semibold text-sm" style={{ color }}>
-              {val !== null ? (val > 0 ? '+' : '') + val.toFixed(2) : '--'}
+      <div className="text-[10px] text-slate-500 mb-3 font-mono uppercase tracking-wider">MACD (12,26,9)</div>
+      <div className="grid grid-cols-3 gap-3 mb-3">
+        {([['MACD', macd, '#38bdf8'], ['SIGNAL', signal, '#f59e0b'], ['HIST', hist, hColor]] as const).map(
+          ([lbl, val, col]) => (
+            <div key={lbl} className="text-center">
+              <div className="text-[10px] text-slate-600 mb-1 font-mono">{lbl}</div>
+              <div className="font-mono font-semibold text-sm" style={{ color: col }}>
+                {val !== null ? (val > 0 ? '+' : '') + val.toFixed(2) : '--'}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
-      <div className="mt-3 pt-3 border-t border-surface-border/50 flex items-center justify-between">
+      <div className="pt-2 border-t border-surface-border/50 flex items-center justify-between">
         <span className="text-[10px] text-slate-600 font-mono">CROSS</span>
-        <span className="text-xs font-mono font-semibold" style={{ color: crossColor }}>{cross}</span>
+        <span className="text-xs font-mono font-semibold" style={{ color: cColor }}>{cross}</span>
       </div>
     </div>
   )
 }
 
-function SMAPanel({ closes, candles }: { closes: number[]; candles: Candle[] }) {
-  const last   = candles.length ? candles[candles.length - 1].c : 0
-  const sma20  = calcSMA(closes, 20).findLast(v => v !== null) ?? null
-  const sma50  = calcSMA(closes, 50).findLast(v => v !== null) ?? null
-  const sma200 = calcSMA(closes, 200).findLast(v => v !== null) ?? null
-
-  const rows = [
-    { label: 'SMA 20',  val: sma20 },
-    { label: 'SMA 50',  val: sma50 },
-    { label: 'SMA 200', val: sma200 },
-  ]
+function SMAPanel({ prices, lastPrice }: { prices: number[]; lastPrice: number }) {
+  const sma20  = calcSMA(prices, 20).findLast(v => v !== null) ?? null
+  const sma50  = calcSMA(prices, 50).findLast(v => v !== null) ?? null
+  const sma200 = calcSMA(prices, 200).findLast(v => v !== null) ?? null
 
   return (
     <div className="bg-surface-card border border-surface-border rounded-xl p-4">
-      <div className="text-xs text-slate-500 mb-3 font-mono uppercase tracking-wider">Moving Averages</div>
+      <div className="text-[10px] text-slate-500 mb-3 font-mono uppercase tracking-wider">Moving Averages</div>
       <div className="space-y-2">
-        {rows.map(({ label, val }) => {
-          const above = val !== null && last > val
-          const diff  = val !== null ? ((last - val) / val * 100) : null
+        {([['SMA 20', sma20], ['SMA 50', sma50], ['SMA 200', sma200]] as const).map(([lbl, val]) => {
+          const above = val !== null && lastPrice > val
+          const diff  = val !== null ? (lastPrice - val) / val * 100 : null
           return (
-            <div key={label} className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-mono w-16">{label}</span>
+            <div key={lbl} className="flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-mono w-16">{lbl}</span>
               <span className="text-xs font-mono text-slate-300">
                 {val !== null ? val.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '--'}
               </span>
               {diff !== null ? (
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${above ? 'bg-profit-light/10 text-profit-light' : 'bg-loss-light/10 text-loss-light'}`}>
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${above
+                  ? 'bg-profit-light/10 text-profit-light'
+                  : 'bg-loss-light/10 text-loss-light'}`}>
                   {above ? '▲' : '▼'} {Math.abs(diff).toFixed(2)}%
                 </span>
-              ) : (
-                <span className="text-[10px] text-slate-600">--</span>
-              )}
+              ) : <span className="text-[10px] text-slate-600">--</span>}
             </div>
           )
         })}
@@ -354,78 +241,38 @@ function SMAPanel({ closes, candles }: { closes: number[]; candles: Candle[] }) 
   )
 }
 
-// ─── Main chart ───────────────────────────────────────────────────────────────
+// ─── Graphique courbe d'équité ─────────────────────────────────────────────
 
-function CandlestickChart({
-  candles,
-  closes,
-  showSMA,
-}: {
-  candles: Candle[]
-  closes: number[]
-  showSMA: boolean
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const chartRef  = useRef<Chart | null>(null)
+function EquityChart({ points }: { points: { x: number; y: number }[] }) {
+  const ref  = useRef<HTMLCanvasElement>(null)
+  const inst = useRef<Chart | null>(null)
 
   useEffect(() => {
-    if (!canvasRef.current || !candles.length) return
+    if (!ref.current || !points.length) return
+    inst.current?.destroy()
 
-    if (chartRef.current) {
-      chartRef.current.destroy()
-      chartRef.current = null
-    }
+    const startY  = points[0]?.y ?? STARTING_BALANCE
+    const gradient = ref.current.getContext('2d')!.createLinearGradient(0, 0, 0, 300)
+    gradient.addColorStop(0, 'rgba(14,165,233,0.25)')
+    gradient.addColorStop(1, 'rgba(14,165,233,0)')
 
-    const sma20  = calcSMA(closes, 20)
-    const sma50  = calcSMA(closes, 50)
-    const times  = candles.map(c => c.x)
-
-    const smaDs = showSMA ? [
-      {
-        type: 'line' as const,
-        label: 'SMA 20',
-        data: times.map((x, i) => ({ x, y: sma20[i] })),
-        borderColor: '#f59e0b',
-        borderWidth: 1.2,
-        pointRadius: 0,
-        tension: 0.3,
-        spanGaps: true,
-        yAxisID: 'y',
-      },
-      {
-        type: 'line' as const,
-        label: 'SMA 50',
-        data: times.map((x, i) => ({ x, y: sma50[i] })),
-        borderColor: '#818cf8',
-        borderWidth: 1.2,
-        pointRadius: 0,
-        tension: 0.3,
-        spanGaps: true,
-        yAxisID: 'y',
-      },
-    ] : []
-
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'candlestick',
+    inst.current = new Chart(ref.current, {
+      type: 'line',
       data: {
-        datasets: [
-          {
-            type: 'candlestick' as const,
-            label: 'NQ100',
-            data: candles,
-            color: {
-              up:   '#22c55e',
-              down: '#ef4444',
-              unchanged: '#94a3b8',
-            } as never,
-            borderColor: {
-              up:   '#16a34a',
-              down: '#dc2626',
-              unchanged: '#64748b',
-            } as never,
-          },
-          ...smaDs,
-        ],
+        datasets: [{
+          label: 'Équité',
+          data: points,
+          borderColor: '#0ea5e9',
+          borderWidth: 2,
+          backgroundColor: gradient,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: points.map(p =>
+            p.y >= (points[points.indexOf(p) - 1]?.y ?? startY) ? '#22c55e' : '#ef4444',
+          ),
+          pointBorderColor: 'transparent',
+          tension: 0.3,
+        }],
       },
       options: {
         responsive: true,
@@ -433,15 +280,7 @@ function CandlestickChart({
         animation: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            display: showSMA,
-            labels: {
-              color: '#94a3b8',
-              font: { family: 'JetBrains Mono, monospace', size: 11 },
-              boxWidth: 20,
-              padding: 12,
-            },
-          },
+          legend: { display: false },
           tooltip: {
             backgroundColor: '#1e293b',
             borderColor: '#334155',
@@ -451,18 +290,86 @@ function CandlestickChart({
             titleFont: { family: 'JetBrains Mono, monospace', size: 11 },
             bodyFont:  { family: 'JetBrains Mono, monospace', size: 11 },
             callbacks: {
-              label(ctx) {
-                const raw = ctx.raw as Candle
-                if (raw && 'o' in raw) {
-                  return [
-                    `O: ${raw.o.toFixed(2)}`,
-                    `H: ${raw.h.toFixed(2)}`,
-                    `L: ${raw.l.toFixed(2)}`,
-                    `C: ${raw.c.toFixed(2)}`,
-                  ]
-                }
-                const y = (ctx.raw as { y: number })?.y
-                return `${ctx.dataset.label}: ${y !== null && y !== undefined ? y.toFixed(2) : '--'}`
+              title: ([ctx]) => new Date(ctx.parsed.x).toLocaleDateString('fr-FR', {
+                day: '2-digit', month: 'short', year: 'numeric',
+              }),
+              label: (ctx) => `Équité : $${ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: { tooltipFormat: 'dd/MM/yyyy' },
+            grid:  { color: '#1e293b' },
+            ticks: { color: '#475569', font: { family: 'JetBrains Mono, monospace', size: 10 }, maxTicksLimit: 8 },
+          },
+          y: {
+            position: 'right',
+            grid:  { color: '#1e293b' },
+            ticks: {
+              color: '#475569',
+              font:  { family: 'JetBrains Mono, monospace', size: 10 },
+              callback: v => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 0 })}`,
+            },
+          },
+        },
+      },
+    })
+    return () => { inst.current?.destroy(); inst.current = null }
+  }, [points])
+
+  return <canvas ref={ref} />
+}
+
+// ─── Graphique bougies trades ──────────────────────────────────────────────
+
+function TradesCandleChart({ candles }: {
+  candles: { x: number; o: number; h: number; l: number; c: number }[]
+}) {
+  const ref  = useRef<HTMLCanvasElement>(null)
+  const inst = useRef<Chart | null>(null)
+
+  useEffect(() => {
+    if (!ref.current || !candles.length) return
+    inst.current?.destroy()
+
+    inst.current = new Chart(ref.current, {
+      type: 'candlestick',
+      data: {
+        datasets: [{
+          type: 'candlestick' as const,
+          label: 'Trades',
+          data: candles,
+          color: { up: '#22c55e', down: '#ef4444', unchanged: '#94a3b8' } as never,
+          borderColor: { up: '#16a34a', down: '#dc2626', unchanged: '#64748b' } as never,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            borderColor: '#334155',
+            borderWidth: 1,
+            titleColor: '#94a3b8',
+            bodyColor: '#e2e8f0',
+            titleFont: { family: 'JetBrains Mono, monospace', size: 11 },
+            bodyFont:  { family: 'JetBrains Mono, monospace', size: 11 },
+            callbacks: {
+              title: ([ctx]) => new Date((ctx.raw as { x: number }).x).toLocaleDateString('fr-FR'),
+              label: (ctx) => {
+                const r = ctx.raw as { o: number; h: number; l: number; c: number }
+                const pnl = (r.c - r.o) * 5
+                return [
+                  `Entrée  : ${r.o.toFixed(2)}`,
+                  `Sortie  : ${r.c.toFixed(2)}`,
+                  `Écart   : ${(r.c - r.o > 0 ? '+' : '') + (r.c - r.o).toFixed(2)} pts`,
+                  `P&L est.: ${pnl > 0 ? '+' : ''}$${pnl.toFixed(0)}`,
+                ]
               },
             },
           },
@@ -470,7 +377,7 @@ function CandlestickChart({
         scales: {
           x: {
             type: 'time',
-            time: { tooltipFormat: 'HH:mm dd/MM' },
+            time: { tooltipFormat: 'dd/MM/yyyy HH:mm' },
             grid:  { color: '#1e293b' },
             ticks: { color: '#475569', font: { family: 'JetBrains Mono, monospace', size: 10 }, maxTicksLimit: 10 },
           },
@@ -480,158 +387,214 @@ function CandlestickChart({
             ticks: {
               color: '#475569',
               font:  { family: 'JetBrains Mono, monospace', size: 10 },
-              callback: (v) => Number(v).toLocaleString('en-US', { minimumFractionDigits: 0 }),
+              callback: v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 0 }),
             },
           },
         },
       },
     })
+    return () => { inst.current?.destroy(); inst.current = null }
+  }, [candles])
 
-    return () => { chartRef.current?.destroy(); chartRef.current = null }
-  }, [candles, closes, showSMA])
-
-  return <canvas ref={canvasRef} />
+  return <canvas ref={ref} />
 }
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ─── Tableau des derniers trades ───────────────────────────────────────────
+
+function TradeRow({ t }: { t: Trade }) {
+  const isWin = t.pnl > 0
+  const setup = t.setup.replace(/_/g, ' ')
+  return (
+    <tr className="border-b border-surface-border/40 hover:bg-surface-hover/20 transition-colors">
+      <td className="p-3 text-slate-400 font-mono text-xs whitespace-nowrap">
+        {new Date(t.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+        {' '}
+        <span className="text-slate-600">{new Date(t.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+      </td>
+      <td className="p-3">
+        <span className={`text-xs font-mono font-semibold ${t.direction === 'LONG' ? 'text-profit-light' : 'text-loss-light'}`}>
+          {t.direction}
+        </span>
+      </td>
+      <td className="p-3 text-slate-400 text-xs font-mono">{t.symbol}</td>
+      <td className="p-3 text-slate-300 text-xs">{setup}</td>
+      <td className="p-3 text-right font-mono text-xs text-slate-400">
+        {t.entry.toFixed(2)} → {t.exit.toFixed(2)}
+      </td>
+      <td className={`p-3 text-right font-mono text-xs font-semibold ${isWin ? 'text-profit-light' : 'text-loss-light'}`}>
+        {t.pnlPoints > 0 ? '+' : ''}{t.pnlPoints.toFixed(2)} pts
+      </td>
+      <td className={`p-3 text-right font-mono text-sm font-bold ${isWin ? 'text-profit-light' : 'text-loss-light'}`}>
+        {t.pnl > 0 ? '+' : ''}${t.pnl.toFixed(0)}
+      </td>
+      <td className="p-3 text-center">
+        {isWin
+          ? <span className="text-[10px] bg-profit-light/10 text-profit-light px-1.5 py-0.5 rounded font-mono">WIN</span>
+          : <span className="text-[10px] bg-loss-light/10 text-loss-light px-1.5 py-0.5 rounded font-mono">LOSS</span>}
+      </td>
+    </tr>
+  )
+}
+
+// ─── Dashboard principal ───────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [candles,  setCandles]  = useState<Candle[]>([])
-  const [interval, setInterval] = useState<Interval>('5m')
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState<string | null>(null)
-  const [isDemo,   setIsDemo]   = useState(false)
-  const [showSMA,  setShowSMA]  = useState(true)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [period,   setPeriod]   = useState<Period>('ALL')
+  const [viewMode, setViewMode] = useState<ViewMode>('equity')
 
-  const load = useCallback(async (iv: Interval) => {
-    setLoading(true)
-    setError(null)
-    const conf = INTERVALS.find(i => i.value === iv)!
-    try {
-      const data = await fetchCandles(iv, conf.range)
-      setCandles(data)
-      setIsDemo(false)
-    } catch {
-      setCandles(generateDemoCandles(200))
-      setIsDemo(true)
-      setError('API Yahoo Finance inaccessible — données de démonstration affichées.')
-    } finally {
-      setLoading(false)
-      setLastRefresh(new Date())
-    }
-  }, [])
+  const trades = useMemo(() => {
+    const sorted = [...TRADES].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    return filterByPeriod(sorted, period)
+  }, [period])
 
-  useEffect(() => { load(interval) }, [interval, load])
+  const stats   = useMemo(() => calcAccountStats(trades, STARTING_BALANCE), [trades])
+  const prices  = useMemo(() => priceSeriesFrom(trades), [trades])
+  const equity  = useMemo(() => equityCurve(trades, STARTING_BALANCE), [trades])
+  const candles = useMemo(() => tradesToCandles(trades), [trades])
 
-  // auto-refresh every 60s
-  useEffect(() => {
-    const id = setInterval(() => load(interval), 60_000)
-    return () => clearInterval(id)
-  }, [interval, load])
-
-  const closes = candles.map(c => c.c)
-
-  const rsiValues  = calcRSI(closes)
+  const rsiValues  = useMemo(() => calcRSI(prices), [prices])
   const currentRSI = rsiValues.findLast(v => v !== null) ?? null
+  const { macd, signal, hist } = useMemo(() => calcMACD(prices), [prices])
+  const lastPrice  = prices[prices.length - 1] ?? 0
 
-  const { macd, signal, hist } = calcMACD(closes)
-  const macdLast   = macd.findLast(v => v !== null) ?? null
-  const signalLast = signal.findLast(v => v !== null) ?? null
-  const histLast   = hist.findLast(v => v !== null) ?? null
-
-  const last  = candles[candles.length - 1]
-  const prev  = candles[candles.length - 2]
-  const chg   = last && prev ? last.c - prev.c : 0
-  const trend = chg >= 0 ? 'up' : 'down'
+  const todayStr   = new Date().toISOString().slice(0, 10)
+  const todayTrades = trades.filter(t => t.date.startsWith(todayStr))
+  const todayPnl    = todayTrades.reduce((s, t) => s + t.pnl, 0)
 
   return (
     <div className="min-h-screen bg-surface text-white font-sans px-4 py-6 max-w-screen-xl mx-auto">
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* En-tête */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">Dashboard NQ100</h1>
-          <p className="text-slate-500 text-xs mt-0.5">
-            {lastRefresh
-              ? `Mis à jour ${lastRefresh.toLocaleTimeString('fr-FR')}`
-              : 'Chargement…'}
-          </p>
+          <p className="text-slate-500 text-xs mt-0.5">{trades.length} trades · balance départ ${STARTING_BALANCE.toLocaleString()}</p>
         </div>
-        <button
-          onClick={() => load(interval)}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 bg-surface-card border border-surface-border rounded-lg text-xs text-slate-400 hover:text-white hover:border-brand-500 transition-colors disabled:opacity-40"
-        >
-          <span className={loading ? 'animate-spin' : ''}>↻</span>
-          Actualiser
-        </button>
-      </div>
 
-      {/* Error banner */}
-      {error && (
-        <div className="mb-4 px-4 py-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 text-xs font-mono">
-          ⚠ {error}
-        </div>
-      )}
-
-      {/* Price ticker */}
-      {!loading && <PriceTicker candles={candles} isDemo={isDemo} />}
-
-      {/* Interval selector + SMA toggle */}
-      <div className="flex items-center gap-3 mb-4">
+        {/* Sélecteur de période */}
         <div className="flex gap-1 bg-surface-card border border-surface-border rounded-lg p-1">
-          {INTERVALS.map(i => (
-            <button
-              key={i.value}
-              onClick={() => setInterval(i.value)}
+          {PERIODS.map(p => (
+            <button key={p} onClick={() => setPeriod(p)}
               className={`px-3 py-1 rounded text-xs font-mono transition-colors ${
-                interval === i.value
-                  ? 'bg-brand-600 text-white'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {i.label}
+                period === p ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}>
+              {p}
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setShowSMA(v => !v)}
-          className={`px-3 py-1 rounded-lg text-xs font-mono border transition-colors ${
-            showSMA
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+        <StatCard label="Balance"     value={`$${stats.balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+          sub={`${stats.totalPnl >= 0 ? '+' : ''}$${stats.totalPnl.toFixed(0)}`}
+          trend={stats.totalPnl >= 0 ? 'up' : 'down'} />
+        <StatCard label="Aujourd'hui" value={formatCurrency(todayPnl, 0)}
+          sub={`${todayTrades.length} trade(s)`}
+          trend={todayPnl >= 0 ? 'up' : 'down'} />
+        <StatCard label="Win Rate"    value={formatPercent(stats.winRate)}
+          trend={stats.winRate >= 50 ? 'up' : 'down'} />
+        <StatCard label="Profit F."   value={stats.profitFactor >= 999 ? '∞' : stats.profitFactor.toFixed(2)}
+          trend={stats.profitFactor >= 1.5 ? 'up' : 'down'} />
+        <StatCard label="Avg R:R"     value={`${stats.avgRR.toFixed(2)}R`}
+          trend={stats.avgRR >= 1 ? 'up' : 'down'} />
+        <StatCard label="Max DD"      value={formatCurrency(-stats.maxDrawdown, 0)} trend="down" />
+        <StatCard label="Trades"      value={String(stats.totalTrades)} trend="neutral" />
+        <StatCard label="Streak"
+          value={`${stats.currentStreak > 0 ? '+' : ''}${stats.currentStreak}`}
+          sub={stats.currentStreak > 0 ? 'Gagnante' : stats.currentStreak < 0 ? 'Perdante' : '-'}
+          trend={stats.currentStreak > 0 ? 'up' : stats.currentStreak < 0 ? 'down' : 'neutral'} />
+      </div>
+
+      {/* Toggle vue graphique */}
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => setViewMode('equity')}
+          className={`px-4 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+            viewMode === 'equity'
               ? 'bg-brand-600/20 border-brand-500/50 text-brand-300'
               : 'bg-surface-card border-surface-border text-slate-400 hover:text-white'
-          }`}
-        >
-          SMA 20/50
+          }`}>
+          Courbe d'équité
         </button>
-        <span className={`ml-auto text-xs font-mono flex items-center gap-1.5 ${trend === 'up' ? 'text-profit-light' : 'text-loss-light'}`}>
-          <span className={`w-2 h-2 rounded-full ${trend === 'up' ? 'bg-profit-light' : 'bg-loss-light'} animate-pulse`} />
-          {trend === 'up' ? 'BULLISH' : 'BEARISH'}
+        <button onClick={() => setViewMode('candles')}
+          className={`px-4 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+            viewMode === 'candles'
+              ? 'bg-brand-600/20 border-brand-500/50 text-brand-300'
+              : 'bg-surface-card border-surface-border text-slate-400 hover:text-white'
+          }`}>
+          Bougies par trade
+        </button>
+        <span className="ml-auto text-xs font-mono text-slate-500 self-center">
+          {trades.length > 0
+            ? `${new Date(trades[0].date).toLocaleDateString('fr-FR')} → ${new Date(trades[trades.length - 1].date).toLocaleDateString('fr-FR')}`
+            : 'Aucun trade'}
         </span>
       </div>
 
-      {/* Candlestick chart */}
+      {/* Graphique principal */}
       <div className="bg-surface-card border border-surface-border rounded-xl mb-4 overflow-hidden">
-        <div className="relative h-[420px] p-2">
-          {loading ? (
+        <div className="relative h-[400px] p-3">
+          {trades.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm font-mono">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-                Chargement des données…
-              </div>
+              Aucun trade sur cette période.
             </div>
+          ) : viewMode === 'equity' ? (
+            <EquityChart points={equity} />
           ) : (
-            <CandlestickChart candles={candles} closes={closes} showSMA={showSMA} />
+            <TradesCandleChart candles={candles} />
           )}
         </div>
+        {viewMode === 'candles' && (
+          <div className="px-4 pb-3 flex gap-4 text-[10px] font-mono text-slate-500">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-profit-light inline-block" /> Long (gagnant)</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-loss-light inline-block" /> Short ou perdant</span>
+            <span className="text-slate-600">Chaque bougie = 1 trade · Ombre haute = TP · Ombre basse = SL</span>
+          </div>
+        )}
       </div>
 
-      {/* Indicators row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Indicateurs techniques */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
         <RSIGauge value={currentRSI} />
-        <MACDPanel values={{ macd: macdLast, signal: signalLast, hist: histLast }} />
-        <SMAPanel closes={closes} candles={candles} />
+        <MACDPanel
+          macd={macd.findLast(v => v !== null) ?? null}
+          signal={signal.findLast(v => v !== null) ?? null}
+          hist={hist.findLast(v => v !== null) ?? null}
+        />
+        <SMAPanel prices={prices} lastPrice={lastPrice} />
+      </div>
+
+      {/* Tableau des trades */}
+      <div className="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between">
+          <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Trades récents</span>
+          <span className="text-[10px] font-mono text-slate-600">{trades.length} trades affichés</span>
+        </div>
+        {trades.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 text-sm font-mono">
+            Aucun trade sur cette période. Ajoute tes trades dans <code className="text-brand-400">src/data/tradesData.ts</code>.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-surface-border text-slate-500 text-[10px] uppercase font-mono tracking-wider">
+                  <th className="text-left p-3">Date</th>
+                  <th className="text-left p-3">Dir.</th>
+                  <th className="text-left p-3">Sym.</th>
+                  <th className="text-left p-3">Setup</th>
+                  <th className="text-right p-3">Entrée → Sortie</th>
+                  <th className="text-right p-3">Points</th>
+                  <th className="text-right p-3">P&L</th>
+                  <th className="text-center p-3">Résultat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...trades].reverse().map(t => <TradeRow key={t.id} t={t} />)}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
