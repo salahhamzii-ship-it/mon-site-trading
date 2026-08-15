@@ -1,0 +1,6 @@
+{
+  "name": "salah-tataouine-terminal",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite"
+}
