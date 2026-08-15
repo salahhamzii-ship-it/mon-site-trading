@@ -1,532 +1,777 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { NavLink } from 'react-router-dom'
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { NavLink } from 'react-router-dom';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 interface Candle { o: number; h: number; l: number; c: number; v: number }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function genCandles(n: number): Candle[] {
-  const out: Candle[] = []
-  let p = 21340
-  for (let i = 0; i < n; i++) {
-    const o = p, d = Math.random() > 0.46 ? 1 : -1
-    const c = o + d * (5 + Math.random() * 20)
-    out.push({ o, h: Math.max(o, c) + Math.random() * 6, l: Math.min(o, c) - Math.random() * 6, c, v: 400 + Math.random() * 2000 })
-    p = c
+// ─── Palette ─────────────────────────────────────────────────────────────────
+const C = {
+  bg:            '#060810',
+  surface:       '#090d15',
+  surfaceUp:     '#0d1220',
+  gold:          '#c9a84c',
+  goldBright:    '#f0d070',
+  goldDim:       'rgba(201,168,76,0.5)',
+  goldFaint:     'rgba(201,168,76,0.10)',
+  turquoise:     '#1eb3bc',
+  turquoiseFaint:'rgba(30,179,188,0.12)',
+  sand:          '#d8cdb8',
+  sandMuted:     '#7a6a50',
+  border:        'rgba(201,168,76,0.14)',
+  borderUp:      'rgba(201,168,76,0.40)',
+  red:           '#ef4444',
+  redFaint:      'rgba(239,68,68,0.12)',
+  green:         '#34d399',
+  greenFaint:    'rgba(52,211,153,0.12)',
+  purple:        'rgba(139,92,246,0.70)',
+  amber:         '#f59e0b',
+};
+
+// ─── Gradient text style (reusable) ──────────────────────────────────────────
+const GRAD = {
+  background:           'linear-gradient(135deg, #f0d070, #c9a84c)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor:  'transparent',
+  backgroundClip:       'text',
+} as React.CSSProperties;
+
+// ─── Global CSS ───────────────────────────────────────────────────────────────
+const CSS = `
+  .nav-tab {
+    font-family: 'Orbitron', monospace;
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #7a6a50;
+    padding: 0 12px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
   }
-  return out
+  .nav-tab:hover { color: #f0d070; border-bottom-color: rgba(201,168,76,0.35); }
+  .nav-tab.active {
+    color: #f0d070;
+    border-bottom-color: #c9a84c;
+    text-shadow: 0 0 14px rgba(240,208,112,0.55);
+  }
+  .bpr-bar {
+    position: relative;
+    height: 8px;
+    background: rgba(201,168,76,0.07);
+    border-radius: 4px;
+    overflow: visible;
+  }
+  .bpr-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+  .bpr-marker {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 16px;
+    border-radius: 1px;
+  }
+  .bpr-lbl {
+    position: absolute;
+    top: 14px;
+    font-size: 8px;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+  }
+`;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function genCandles(n: number): Candle[] {
+  let p = 21340;
+  return Array.from({ length: n }, () => {
+    const o = p;
+    const move = (Math.random() - 0.5) * 60;
+    const h = o + Math.abs(move) + Math.random() * 20;
+    const l = o - Math.abs(move) - Math.random() * 20;
+    const c = o + move;
+    p = c;
+    return { o, h, l, c, v: 800 + Math.random() * 1200 };
+  });
 }
 
-function fmt(p: number, dec = 2) {
-  const [i, d] = p.toFixed(dec).split('.')
-  return i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (dec > 0 ? '.' + d : '')
+function fmt(p: number, dec = 2): string {
+  return p.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
-// ── Chart ─────────────────────────────────────────────────────────────────────
+function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ─── MiniChart ────────────────────────────────────────────────────────────────
 function MiniChart({ hist, live, avwap, gex }: { hist: Candle[]; live: number; avwap: number; gex: number }) {
-  const cvRef = useRef<HTMLCanvasElement>(null)
-  const boxRef = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLCanvasElement>(null);
 
   const draw = useCallback(() => {
-    const cv = cvRef.current, ct = cv?.getContext('2d')
-    if (!cv || !ct) return
-    const W = cv.width, H = cv.height
-    if (!W || !H) return
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const W = canvas.offsetWidth;
+    const H = canvas.offsetHeight;
+    if (!W || !H) return;
 
-    const PL = 6, PR = 66, PT = 10, PB = 24, VH = 22
-    const pw = W - PL - PR, ph = H - PT - PB - VH
-    ct.clearRect(0, 0, W, H)
-
-    const fm: Candle = { o: hist.at(-1)!.c, h: Math.max(hist.at(-1)!.c, live), l: Math.min(hist.at(-1)!.c, live), c: live, v: 600 }
-    const cs = [...hist.slice(-58), fm]
-    const n = cs.length
-    const pMn = Math.min(...cs.map(c => c.l)) - 2, pMx = Math.max(...cs.map(c => c.h)) + 2
-    const pR = pMx - pMn || 1, mV = Math.max(...cs.map(c => c.v))
-    const py = (p: number) => PT + (1 - (p - pMn) / pR) * ph
-    const bS = pw / n, bW = Math.max(1.5, bS * 0.65)
-
-    // grid
-    ct.strokeStyle = '#1e293b'; ct.lineWidth = 1; ct.setLineDash([])
-    for (let i = 0; i <= 4; i++) {
-      const y = PT + (i / 4) * ph
-      ct.beginPath(); ct.moveTo(PL, y); ct.lineTo(W - PR, y); ct.stroke()
-      ct.fillStyle = '#475569'; ct.font = '7px monospace'; ct.textAlign = 'right'
-      ct.fillText(fmt(pMx - (i / 4) * pR, 0), W - PR + 62, y + 2.5)
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
+      canvas.width  = W * dpr;
+      canvas.height = H * dpr;
+      ctx.scale(dpr, dpr);
     }
 
-    // AVWAP
-    const avY = py(avwap)
-    if (avY > PT && avY < PT + ph) {
-      ct.setLineDash([3, 3]); ct.strokeStyle = '#3b82f6bb'; ct.lineWidth = 1.2
-      ct.beginPath(); ct.moveTo(PL, avY); ct.lineTo(W - PR, avY); ct.stroke()
-      ct.setLineDash([]); ct.fillStyle = '#3b82f6aa'; ct.font = '6px monospace'; ct.textAlign = 'left'
-      ct.fillText('AVWAP 18h', PL + 2, avY - 2)
-    }
+    ctx.clearRect(0, 0, W, H);
 
-    // GEX attracteur
-    const gY = py(gex)
-    if (gY > PT && gY < PT + ph) {
-      ct.setLineDash([2, 5]); ct.strokeStyle = '#f59e0b77'; ct.lineWidth = 1
-      ct.beginPath(); ct.moveTo(PL, gY); ct.lineTo(W - PR, gY); ct.stroke(); ct.setLineDash([])
-    }
+    // Background
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#0c1020');
+    bg.addColorStop(1, '#060810');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
 
-    // BPR zone fill
-    const bprHi = py(21380), bprLo = py(21340)
-    if (bprHi < PT + ph && bprLo > PT) {
-      ct.fillStyle = '#7c3aed11'
-      ct.fillRect(PL, bprHi, W - PR - PL, bprLo - bprHi)
-    }
+    // Grid
+    ctx.strokeStyle = 'rgba(201,168,76,0.04)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 6; i++) { const y = H / 6 * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    for (let i = 1; i < 10; i++) { const x = W / 10 * i; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
 
-    // candles
-    for (let i = 0; i < n; i++) {
-      const c = cs[i], x = PL + (i + .5) * bS, bull = c.c >= c.o
-      const col = bull ? '#10b981' : '#ef4444'
-      ct.globalAlpha = i === n - 1 ? 0.5 : 1
-      ct.strokeStyle = col; ct.lineWidth = 1; ct.setLineDash([])
-      ct.beginPath(); ct.moveTo(x, py(c.h)); ct.lineTo(x, py(c.l)); ct.stroke()
-      const bY = Math.min(py(c.o), py(c.c)), bH = Math.max(1, Math.abs(py(c.o) - py(c.c)))
-      ct.fillStyle = bull ? '#064e3b' : '#7f1d1d'; ct.fillRect(x - bW / 2, bY, bW, bH)
-      ct.strokeRect(x - bW / 2, bY, bW, bH)
-      const vH = (c.v / mV) * (VH - 2), vY = H - PB - vH
-      ct.fillStyle = bull ? '#10b98118' : '#ef444418'; ct.fillRect(x - bW / 2, vY, bW, vH)
-      ct.globalAlpha = 1
-    }
+    // Price range
+    const all = hist.flatMap(c => [c.h, c.l]);
+    all.push(live, avwap, gex);
+    const mn = Math.min(...all) - 15;
+    const mx = Math.max(...all) + 15;
+    const py = (p: number) => H - ((p - mn) / (mx - mn)) * H;
 
-    // live price tag
-    const lY = py(live), bull = live >= 21262
-    const tc = bull ? '#10b981' : '#ef4444'
-    ct.setLineDash([2, 3]); ct.strokeStyle = tc + '55'; ct.lineWidth = 1
-    ct.beginPath(); ct.moveTo(PL, lY); ct.lineTo(W - PR, lY); ct.stroke(); ct.setLineDash([])
-    const tag = fmt(live); ct.font = 'bold 8px monospace'
-    const tw = ct.measureText(tag).width
-    ct.fillStyle = tc; ct.shadowColor = tc; ct.shadowBlur = 5
-    ct.beginPath(); ct.roundRect(W - PR + 2, lY - 7, tw + 8, 14, 2); ct.fill()
-    ct.shadowBlur = 0; ct.fillStyle = '#fff'; ct.textAlign = 'left'
-    ct.fillText(tag, W - PR + 6, lY + 3)
-  }, [hist, live, avwap, gex])
+    const N   = hist.length;
+    const pad = 60;
+    const cw  = (W - pad) / N;
+    const cx  = (i: number) => pad / 2 + i * cw + cw / 2;
+
+    // Volume bars
+    const maxV = Math.max(...hist.map(c => c.v));
+    hist.forEach((c, i) => {
+      ctx.fillStyle = c.c >= c.o ? 'rgba(52,211,153,0.06)' : 'rgba(239,68,68,0.06)';
+      const vh = (c.v / maxV) * H * 0.28;
+      ctx.fillRect(cx(i) - cw * 0.4, H - vh, cw * 0.8, vh);
+    });
+
+    // BPR zone
+    const bTop = py(Math.max(avwap, gex));
+    const bBot = py(Math.min(avwap, gex));
+    const bprGrad = ctx.createLinearGradient(0, bTop, 0, bBot);
+    bprGrad.addColorStop(0, 'rgba(139,92,246,0.14)');
+    bprGrad.addColorStop(1, 'rgba(139,92,246,0.04)');
+    ctx.fillStyle = bprGrad;
+    ctx.fillRect(0, bTop, W, Math.max(bBot - bTop, 1));
+
+    // AVWAP line
+    ctx.strokeStyle = 'rgba(201,168,76,0.75)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(0, py(avwap)); ctx.lineTo(W - pad, py(avwap)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(201,168,76,0.85)';
+    ctx.font = '8px JetBrains Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('AVWAP', W - pad + 4, py(avwap) + 3);
+
+    // GEX line
+    ctx.strokeStyle = 'rgba(30,179,188,0.65)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 5]);
+    ctx.beginPath(); ctx.moveTo(0, py(gex)); ctx.lineTo(W - pad, py(gex)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(30,179,188,0.85)';
+    ctx.fillText('GEX', W - pad + 4, py(gex) + 3);
+
+    // Candles
+    hist.forEach((c, i) => {
+      const bull  = c.c >= c.o;
+      const x     = cx(i);
+      const half  = Math.max(cw * 0.36, 1.2);
+      ctx.strokeStyle = bull ? '#34d399' : '#ef4444';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, py(c.h)); ctx.lineTo(x, py(c.l)); ctx.stroke();
+      ctx.fillStyle = bull ? 'rgba(52,211,153,0.82)' : 'rgba(239,68,68,0.82)';
+      const top = py(Math.max(c.o, c.c));
+      const bot = py(Math.min(c.o, c.c));
+      ctx.fillRect(x - half, top, half * 2, Math.max(bot - top, 1));
+    });
+
+    // Live price dashed
+    const ly = py(live);
+    ctx.strokeStyle = 'rgba(240,208,112,0.7)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(W, ly); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Live price pill
+    const lbl = fmt(live);
+    const lw  = lbl.length * 6.2 + 14;
+    const px2 = W - lw - 4;
+    const py2 = ly - 9;
+    ctx.fillStyle = '#f0d070';
+    rrect(ctx, px2, py2, lw, 17, 3);
+    ctx.fillStyle = '#060810';
+    ctx.font = 'bold 8.5px JetBrains Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(lbl, px2 + 6, py2 + 11);
+  }, [hist, live, avwap, gex]);
 
   useEffect(() => {
-    const ro = new ResizeObserver(() => {
-      if (cvRef.current && boxRef.current) {
-        cvRef.current.width = boxRef.current.clientWidth
-        cvRef.current.height = boxRef.current.clientHeight
-        draw()
-      }
-    })
-    if (boxRef.current) ro.observe(boxRef.current)
-    return () => ro.disconnect()
-  }, [draw])
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ro = new ResizeObserver(() => { draw(); });
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, [draw]);
 
-  useEffect(() => { draw() }, [draw])
+  useEffect(() => { draw(); }, [draw]);
 
-  return (
-    <div ref={boxRef} style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
-        background: 'linear-gradient(to right,rgba(239,68,68,.04) 0%,transparent 12%,transparent 88%,rgba(16,185,129,.04) 100%)'
-      }}/>
-      <canvas ref={cvRef} style={{ display: 'block', width: '100%', height: '100%' }}/>
-    </div>
-  )
+  return <canvas ref={ref} style={{ width: '100%', height: '100%', display: 'block' }} />;
 }
 
-// ── Data card ──────────────────────────────────────────────────────────────────
-function Card({ title, icon, accent, children }: {
-  title: string; icon: string; accent: string; children: React.ReactNode
-}) {
+// ─── Card ─────────────────────────────────────────────────────────────────────
+function Card({ title, icon, accent, children }: { title: string; icon: string; accent?: string; children: React.ReactNode }) {
   return (
     <div style={{
-      background: '#0f172a', borderRadius: 6, border: `1px solid ${accent}22`,
-      display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1,
-      boxShadow: `0 0 0 1px ${accent}11, inset 0 1px 0 ${accent}18`,
+      flex: 1,
+      background: C.surface,
+      border: `1px solid ${C.border}`,
+      borderTop: `2px solid ${accent ?? C.gold}`,
+      borderRadius: 4,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,
     }}>
       <div style={{
-        padding: '5px 10px', borderBottom: `1px solid #1e293b`,
-        display: 'flex', alignItems: 'center', gap: 6,
-        background: `linear-gradient(135deg, ${accent}0e 0%, transparent 100%)`,
+        padding: '3px 10px',
+        background: C.goldFaint,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        borderBottom: `1px solid ${C.border}`,
+        flexShrink: 0,
       }}>
         <span style={{ fontSize: 10 }}>{icon}</span>
-        <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: accent }}>{title}</span>
+        <span style={{
+          fontFamily: "'Orbitron', monospace",
+          fontSize: 7.5,
+          fontWeight: 700,
+          letterSpacing: '0.18em',
+          color: accent ?? C.gold,
+          textTransform: 'uppercase' as const,
+        }}>{title}</span>
       </div>
-      <div style={{ padding: '6px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{
+        padding: '4px 10px',
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2.5,
+        overflow: 'hidden',
+      }}>
         {children}
       </div>
     </div>
-  )
+  );
 }
 
-function Row({ label, value, color = '#94a3b8', tag }: { label: string; value: string; color?: string; tag?: string }) {
+// ─── Row ──────────────────────────────────────────────────────────────────────
+function Row({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1px 0' }}>
-      <span style={{ fontSize: 8, color: '#475569', letterSpacing: .5 }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        {tag && (
-          <span style={{ fontSize: 6, padding: '1px 3px', borderRadius: 2, fontWeight: 700, background: color + '22', color }}>{tag}</span>
-        )}
-        <span style={{ fontSize: 9, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-      </div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <span style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 8.5,
+        color: C.sandMuted,
+        letterSpacing: '0.05em',
+      }}>{label}</span>
+      <span style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 9.5,
+        fontWeight: 700,
+        color: color ?? C.sand,
+      }}>{value}</span>
     </div>
-  )
+  );
 }
 
-// ── Main Dashboard ─────────────────────────────────────────────────────────────
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [hist] = useState(() => genCandles(80))
-  const [live, setLive] = useState(21340.0)
-  const [clock, setClock] = useState('')
-  const [bprPct, setBprPct] = useState(61.8)
+  const [hist]   = useState(() => genCandles(80));
+  const [live, setLive]     = useState(21340.0);
+  const [clock, setClock]   = useState('');
+  const [bprPct, setBprPct] = useState(63.4);
+  const [bull, setBull]     = useState(true);
 
-  const open = 21262
-  const avwap = 21380
-  const gex   = 21340
-
-  useEffect(() => {
-    const t = () => {
-      const n = new Date()
-      setClock([n.getHours(), n.getMinutes(), n.getSeconds()].map(v => String(v).padStart(2, '0')).join(':'))
-    }
-    t(); const id = setInterval(t, 1000); return () => clearInterval(id)
-  }, [])
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setLive(p => Math.round((p + (Math.random() - 0.48) * 3) * 4) / 4)
-    }, 900)
-    return () => clearInterval(id)
-  }, [])
+  // Key levels
+  const open   = 21262;
+  const high   = 21425;
+  const low    = 21198;
+  const settle = 21385;
+  const vah    = 21410;
+  const val    = 21250;
+  const poc    = 21320;
+  const avwap  = 21380;
+  const gex    = 21340;
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setBprPct(p => Math.min(90, Math.max(30, p + (Math.random() - .5) * 8)))
-    }, 5000)
-    return () => clearInterval(id)
-  }, [])
+    const t = setInterval(() => setLive(p => +(p + (Math.random() - 0.49) * 3).toFixed(2)), 900);
+    return () => clearInterval(t);
+  }, []);
 
-  const chg = live - open
-  const chgPct = ((chg / open) * 100).toFixed(2)
-  const bull = chg >= 0
-  const priceColor = bull ? '#10b981' : '#ef4444'
+  useEffect(() => {
+    const t = setInterval(() => {
+      setBprPct(p => { const n = p + (Math.random() - 0.5) * 2; return Math.min(90, Math.max(40, n)); });
+      setBull(Math.random() > 0.35);
+    }, 4500);
+    return () => clearInterval(t);
+  }, []);
 
-  const oteLevel = bprPct > 61.8 && bprPct < 78.6
-  const signalReady = oteLevel && bull
-  const signalColor = signalReady ? '#10b981' : bprPct > 78.6 ? '#ef4444' : '#f59e0b'
-  const signalLabel = signalReady ? '🟢 PRÊT' : bprPct > 78.6 ? '🔴 DÉPASSÉ' : '🟡 EN ATTENTE'
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      setClock(now.toLocaleTimeString('fr-FR', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' ET');
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, []);
 
-  // Nav items
-  const navItems = [
-    { to: '/', label: 'Dashboard', icon: '📊', end: true },
-    { to: '/session', label: 'Analyseur', icon: '🧮' },
-    { to: '/gex', label: 'GEX Panel', icon: '⚡' },
-    { to: '/journal', label: 'Journal', icon: '📓' },
-    { to: '/setups', label: 'Setups NQ', icon: '🎯' },
-    { to: '/bible', label: 'Bible', icon: '📖' },
-    { to: '/plan', label: 'Plan', icon: '📅' },
-    { to: '/stats', label: 'Stats', icon: '📈' },
-  ]
+  const change    = live - open;
+  const changePct = (change / open * 100).toFixed(2);
+  const up        = change >= 0;
 
-  const C = {
-    root: {
-      marginLeft: '-24px', marginRight: '-24px', marginTop: '-24px',
-      height: 'calc(100vh - 56px)',
-      display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
-      background: '#0a0f1a', color: '#e2e8f0',
-      fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif', fontSize: 12,
-    },
-  }
+  const oteZone    = bprPct > 61.8 && bprPct < 78.6;
+  const signalReady = oteZone && bull;
+  const sigColor   = signalReady ? C.green : bprPct > 78.6 ? C.red : C.amber;
+  const sigLabel   = signalReady ? 'PRÊT' : bprPct > 78.6 ? 'DÉPASSÉ' : 'EN ATTENTE';
+
+  const bprFill = bprPct > 78.6
+    ? `linear-gradient(90deg, rgba(239,68,68,0.3), rgba(239,68,68,0.65))`
+    : bprPct > 61.8
+      ? `linear-gradient(90deg, rgba(139,92,246,0.35), rgba(201,168,76,0.45))`
+      : `linear-gradient(90deg, rgba(52,211,153,0.3), rgba(139,92,246,0.3))`;
+
+  const ORBITRON = "'Orbitron', monospace";
+  const JB_MONO  = "'JetBrains Mono', monospace";
 
   return (
-    <div style={C.root}>
-      <style>{`
-        @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px #10b981}50%{opacity:.25;box-shadow:none}}
-        .nav-tab{display:flex;align-items:center;gap:5px;padding:0 14px;height:100%;border:none;
-          background:transparent;color:#64748b;font-size:11px;font-weight:600;cursor:pointer;
-          border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;text-decoration:none;}
-        .nav-tab:hover{color:#cbd5e1;background:#ffffff08}
-        .nav-tab.active{color:#e2e8f0;border-bottom-color:#3b82f6;background:#1e3a5f22}
-        .bpr-bar{height:8px;border-radius:4px;background:#1e293b;position:relative;overflow:hidden}
-        .bpr-fill{height:100%;border-radius:4px;transition:width 1s ease;
-          background:linear-gradient(90deg,#7c3aed,#a855f7)}
-        .bpr-marker{position:absolute;top:-2px;width:2px;height:12px;border-radius:1px;transition:left 1s ease}
-      `}</style>
+    <div style={{
+      marginLeft: -24, marginRight: -24, marginTop: -24,
+      height: 'calc(100vh - 56px)',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      background: C.bg,
+    }}>
+      <style>{CSS}</style>
 
-      {/* ── ROW 1 : PRICE HEADER ── */}
+      {/* ── Row 1 : Header ─────────────────────────────────────────────── */}
       <div style={{
-        height: 50, background: '#060c16', borderBottom: '1px solid #1e293b',
-        display: 'flex', alignItems: 'center', padding: '0 16px', gap: 16,
-        flexShrink: 0, boxShadow: '0 1px 0 #1e293b',
+        height: 56, minHeight: 56,
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 16px',
+        gap: 16,
+        background: 'linear-gradient(180deg, rgba(201,168,76,0.07) 0%, transparent 100%)',
+        borderBottom: `1px solid ${C.border}`,
+        position: 'relative',
+        overflow: 'hidden',
+        flexShrink: 0,
       }}>
+        {/* Horizon glow */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: '5%', right: '5%', height: 1,
+          background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.5), transparent)',
+        }} />
+
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-            background: 'linear-gradient(135deg,#10b981,#3b82f6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 900, fontSize: 11, color: '#000', letterSpacing: -.5,
-          }}>ST</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <span style={{ fontSize: 24, filter: 'drop-shadow(0 0 8px rgba(201,168,76,0.45))' }}>🐪</span>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#f1f5f9' }}>NQ100 • Méthode Salah</div>
-            <div style={{ fontSize: 8, color: '#10b981', letterSpacing: 1 }}>@SalahTataouine</div>
+            <div style={{
+              ...GRAD,
+              fontFamily: ORBITRON,
+              fontWeight: 900,
+              fontSize: 13,
+              letterSpacing: '0.16em',
+              lineHeight: 1.1,
+              filter: 'drop-shadow(0 0 10px rgba(201,168,76,0.3))',
+            }}>CAMEL MARKET COCKPIT</div>
+            <div style={{
+              fontFamily: JB_MONO,
+              fontSize: 8,
+              color: C.sandMuted,
+              letterSpacing: '0.12em',
+              marginTop: 1,
+            }}>by SalahTataouine · NQ·ES MARKET READING SYSTEM</div>
           </div>
         </div>
 
-        {/* Divider */}
-        <div style={{ width: 1, height: 28, background: '#1e293b' }}/>
+        <div style={{ flex: 1 }} />
 
-        {/* Price */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', fontVariantNumeric: 'tabular-nums', letterSpacing: .5 }}>
-            {fmt(live)}
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: priceColor, fontVariantNumeric: 'tabular-nums' }}>
-            {bull ? '▲' : '▼'} {bull ? '+' : ''}{fmt(chg)} ({bull ? '+' : ''}{chgPct}%)
-          </span>
+        {/* Live Price */}
+        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+          <div style={{
+            ...GRAD,
+            fontFamily: ORBITRON,
+            fontWeight: 900,
+            fontSize: 22,
+            lineHeight: 1,
+            filter: 'drop-shadow(0 0 12px rgba(201,168,76,0.35))',
+          }}>{fmt(live)}</div>
+          <div style={{
+            fontFamily: JB_MONO,
+            fontSize: 10,
+            color: up ? C.green : C.red,
+            marginTop: 2,
+          }}>{up ? '▲' : '▼'} {fmt(Math.abs(change))} ({up ? '+' : ''}{changePct}%)</div>
         </div>
+
+        <div style={{ flex: 1 }} />
 
         {/* Quick stats */}
-        <div style={{ display: 'flex', gap: 12, marginLeft: 8 }}>
-          {[
-            { l: 'Open', v: fmt(open), c: '#94a3b8' },
-            { l: 'VAH', v: '21 420', c: '#f87171' },
-            { l: 'VAL', v: '21 240', c: '#34d399' },
-            { l: 'POC', v: '21 340', c: '#a78bfa' },
-          ].map(({ l, v, c }) => (
-            <div key={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: 7, color: '#475569', letterSpacing: 1, textTransform: 'uppercase' }}>{l}</span>
-              <span style={{ fontSize: 9, fontWeight: 700, color: c, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexShrink: 0 }}>
+          {([['VAH', vah], ['POC', poc], ['VAL', val], ['OPEN', open]] as [string, number][]).map(([k, v]) => (
+            <div key={k} style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: JB_MONO, fontSize: 7.5, color: C.sandMuted, letterSpacing: '0.1em' }}>{k}</div>
+              <div style={{ fontFamily: JB_MONO, fontSize: 9.5, color: C.sand }}>{fmt(v)}</div>
             </div>
           ))}
-        </div>
 
-        {/* Right side */}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', animation: 'blink 1.4s infinite' }}/>
-          <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 3, fontWeight: 700, letterSpacing: 1,
-            background: '#0a2318', color: '#10b981', border: '1px solid #0d3d24' }}>LIVE RTH</span>
-          <span style={{ fontSize: 8, padding: '2px 7px', borderRadius: 3, fontWeight: 700, letterSpacing: 1,
-            background: '#0d1f3d', color: '#60a5fa', border: '1px solid #1a3a6a' }}>NQ · CME</span>
-          <span style={{ fontSize: 9, color: '#475569', letterSpacing: 2, fontVariantNumeric: 'tabular-nums',
-            fontFamily: '"Courier New", monospace' }}>{clock} ET</span>
+          <div style={{
+            padding: '2px 8px',
+            background: C.turquoiseFaint,
+            border: `1px solid ${C.turquoise}`,
+            borderRadius: 3,
+            fontFamily: ORBITRON,
+            fontSize: 7,
+            fontWeight: 700,
+            color: C.turquoise,
+            letterSpacing: '0.1em',
+          }}>● LIVE RTH</div>
+
+          <div style={{
+            fontFamily: JB_MONO,
+            fontSize: 10,
+            color: C.goldBright,
+            minWidth: 88,
+            textAlign: 'right',
+          }}>{clock}</div>
         </div>
       </div>
 
-      {/* ── ROW 2 : NAV TABS ── */}
+      {/* ── Row 2 : Nav Tabs ────────────────────────────────────────────── */}
       <div style={{
-        height: 38, background: '#060c16', borderBottom: '1px solid #1e293b',
-        display: 'flex', alignItems: 'stretch', padding: '0 4px',
-        flexShrink: 0, overflowX: 'auto',
+        height: 38, minHeight: 38,
+        display: 'flex',
+        alignItems: 'stretch',
+        background: C.surface,
+        borderBottom: `1px solid ${C.border}`,
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        flexShrink: 0,
       }}>
-        {navItems.map(({ to, label, icon, end }) => (
+        {[
+          { to: '/',         label: 'THE COCKPIT',      end: true },
+          { to: '/analyseur',label: 'MARKET ORBIT' },
+          { to: '/gex',      label: 'FLOW · GEX' },
+          { to: '/journal',  label: 'THE LOGBOOK' },
+          { to: '/setups',   label: 'NQ ROUTES' },
+          { to: '/bible',    label: 'THE CODEX' },
+          { to: '/plan',     label: 'THE WEEKLY ROUTE' },
+          { to: '/stats',    label: 'THE ARCHIVE' },
+        ].map(({ to, label, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
             className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}
-          >
-            <span style={{ fontSize: 10 }}>{icon}</span>
-            {label}
-          </NavLink>
+          >{label}</NavLink>
         ))}
       </div>
 
-      {/* ── ROW 3 : DATA CARDS ── */}
+      {/* ── Row 3 : Data Cards ──────────────────────────────────────────── */}
       <div style={{
-        display: 'flex', gap: 8, padding: '8px 12px',
-        flexShrink: 0, background: '#0a0f1a', borderBottom: '1px solid #1e293b',
+        display: 'flex',
+        gap: 4,
+        padding: '4px 8px',
+        height: 112, minHeight: 112,
+        flexShrink: 0,
       }}>
-        {/* RTH J-1 */}
-        <Card title="RTH J-1" icon="📊" accent="#3b82f6">
-          <Row label="Open"   value="21 262"  color="#94a3b8" />
-          <Row label="High"   value="21 455"  color="#f87171" tag="H" />
-          <Row label="Low"    value="21 198"  color="#34d399" tag="L" />
-          <Row label="Settle" value="21 340"  color="#e2e8f0" />
-          <Row label="VAH"    value="21 420"  color="#f87171" />
-          <Row label="VAL"    value="21 240"  color="#34d399" />
-          <Row label="POC"    value="21 340"  color="#a78bfa" tag="KEY" />
+        <Card title="RTH J-1" icon="📊">
+          <Row label="OPEN"   value={fmt(open)} />
+          <Row label="HIGH"   value={fmt(high)}   color={C.green} />
+          <Row label="LOW"    value={fmt(low)}    color={C.red} />
+          <Row label="SETTLE" value={fmt(settle)} color={C.goldBright} />
+          <Row label="VAH"    value={fmt(vah)}    color={C.green} />
+          <Row label="VAL"    value={fmt(val)}    color={C.red} />
+          <Row label="POC"    value={fmt(poc)}    color={C.gold} />
         </Card>
 
-        {/* OVN */}
-        <Card title="OVN · Overnight" icon="🌙" accent="#8b5cf6">
-          <Row label="Inventaire"   value="NET SHORT"  color="#f87171" />
-          <Row label="OVN Points"   value="− 38 pts"   color="#f87171" />
-          <Row label="AVWAP OVN"    value="21 380"     color="#a78bfa" />
-          <Row label="Excess High"  value="21 455"     color="#fbbf24" tag="EXC" />
-          <Row label="OFT4 Dir."    value="BEARISH"    color="#f87171" />
-          <Row label="London High"  value="21 412"     color="#60a5fa" />
-          <Row label="Asia High"    value="21 390"     color="#60a5fa" />
+        <Card title="OVN" icon="🌙">
+          <Row label="INVENTAIRE" value="HAUSSIER"   color={C.green} />
+          <Row label="AVWAP 18H"  value={fmt(avwap)} color={C.gold} />
+          <Row label="EXCESS"     value="+1.8%"      color={C.green} />
+          <Row label="OTF4"       value="ACHETEUR"   color={C.green} />
+          <Row label="GAP RTH"    value="21,295" />
+          <Row label="RANGE"      value="127 pts" />
+          <Row label="BIAIS"      value="▲ LONG"     color={C.green} />
         </Card>
 
-        {/* ALN */}
-        <Card title="ALN · Pattern" icon="🎯" accent="#10b981">
-          <Row label="Structure"    value="P4 London"   color="#10b981" tag="ALN" />
-          <Row label="London High"  value="21 412"      color="#60a5fa" />
-          <Row label="London Low"   value="21 298"      color="#f87171" />
-          <Row label="Asia High"    value="21 390"      color="#94a3b8" />
-          <Row label="Call Wall"    value="21 500"      color="#f87171" tag="GEX" />
-          <Row label="Put Wall"     value="21 200"      color="#34d399" tag="GEX" />
-          <Row label="IB Class"     value="Normal IB"   color="#fbbf24" />
+        <Card title="ALN" icon="🧭" accent={C.turquoise}>
+          <Row label="PATTERN"   value="P4 LONDON"    color={C.turquoise} />
+          <Row label="LONDON H"  value={fmt(21415)}   color={C.goldBright} />
+          <Row label="ASIA H"    value={fmt(21390)} />
+          <Row label="CALL WALL" value={fmt(21500)}   color={C.green} />
+          <Row label="PUT WALL"  value={fmt(21200)}   color={C.red} />
+          <Row label="IB CLASS." value="NORMAL"       color={C.amber} />
+          <Row label="STRUCTURE" value="HAUSSIÈRE"    color={C.green} />
         </Card>
 
-        {/* IB + GEX */}
-        <Card title="IB · GEX · Structure" icon="⚡" accent="#f59e0b">
-          <Row label="IB High"      value="21 380"   color="#f87171" />
-          <Row label="IB Low"       value="21 280"   color="#34d399" />
-          <Row label="IB Range"     value="100 pts"  color="#94a3b8" />
-          <Row label="AVWAP 18h"    value="21 380"   color="#3b82f6" tag="KEY" />
-          <Row label="GEX Bias"     value="LONG γ"   color="#10b981" />
-          <Row label="GEX Attract." value="21 340"   color="#fbbf24" />
-          <Row label="OTE 61.8%"    value="21 348"   color="#a78bfa" tag="OTE" />
+        <Card title="IB · GEX" icon="⚡" accent={C.amber}>
+          <Row label="IB HIGH"     value={fmt(21350)} color={C.green} />
+          <Row label="IB LOW"      value={fmt(21280)} color={C.red} />
+          <Row label="IB RANGE"    value="70 pts" />
+          <Row label="AVWAP 18H"   value={fmt(avwap)} color={C.gold} />
+          <Row label="GEX BIAS"    value="▲ CALLS"   color={C.green} />
+          <Row label="GEX ATTRAC." value={fmt(gex)}   color={C.turquoise} />
+          <Row label="OTE 61.8%"   value={fmt(21318)} color={C.amber} />
         </Card>
       </div>
 
-      {/* ── ROW 4 : CHART ── */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden', gap: 0 }}>
+      {/* ── Row 4 : Chart + Right Panel ─────────────────────────────────── */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        gap: 4,
+        padding: '0 8px',
+        minHeight: 0,
+      }}>
         {/* Chart */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid #1e293b' }}>
-          {/* chart toolbar */}
+        <div style={{
+          flex: 1,
+          background: C.surface,
+          border: `1px solid ${C.border}`,
+          borderRadius: 4,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+        }}>
           <div style={{
-            height: 26, background: '#060c16', borderBottom: '1px solid #1e293b',
-            display: 'flex', alignItems: 'center', padding: '0 10px', gap: 6, flexShrink: 0,
+            padding: '4px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            borderBottom: `1px solid ${C.border}`,
+            flexShrink: 0,
           }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#60a5fa', letterSpacing: 1 }}>NQ1! · 5M</span>
-            <div style={{ width: 1, height: 14, background: '#1e293b', margin: '0 2px' }}/>
-            {['1m','5m','15m','1h','D'].map(tf => (
+            <span style={{ fontFamily: ORBITRON, fontSize: 7.5, fontWeight: 700, letterSpacing: '0.15em', color: C.gold }}>
+              NQ · PRICE ACTION
+            </span>
+            {['1m', '5m', '15m', '1h'].map(tf => (
               <span key={tf} style={{
-                fontSize: 8, padding: '1px 5px', borderRadius: 2, cursor: 'pointer',
-                color: tf === '5m' ? '#10b981' : '#475569',
-                background: tf === '5m' ? '#064e3b' : 'transparent',
-                border: tf === '5m' ? '1px solid #065f46' : '1px solid transparent',
+                fontFamily: JB_MONO, fontSize: 9,
+                color: tf === '5m' ? C.goldBright : C.sandMuted,
+                cursor: 'pointer',
+                borderBottom: tf === '5m' ? `1px solid ${C.gold}` : 'none',
               }}>{tf}</span>
             ))}
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, fontSize: 8, color: '#475569' }}>
-              <span>MA20 <span style={{ color: '#f59e0b' }}>──</span></span>
-              <span>AVWAP <span style={{ color: '#3b82f6' }}>- -</span></span>
-              <span>GEX <span style={{ color: '#f59e0b88' }}>···</span></span>
-              <span style={{ color: '#a855f766' }}>BPR ░</span>
-            </div>
+            <div style={{ flex: 1 }} />
+            {[
+              { color: C.gold,           label: '─ AVWAP 18H' },
+              { color: C.turquoise,      label: '⋯ GEX' },
+              { color: 'rgba(139,92,246,0.8)', label: '▪ BPR/FVG' },
+            ].map(l => (
+              <span key={l.label} style={{ fontFamily: JB_MONO, fontSize: 8, color: l.color }}>{l.label}</span>
+            ))}
           </div>
-          <MiniChart hist={hist} live={live} avwap={avwap} gex={gex}/>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <MiniChart hist={hist} live={live} avwap={avwap} gex={gex} />
+          </div>
         </div>
 
-        {/* Right mini panel */}
-        <div style={{
-          width: 188, flexShrink: 0, display: 'flex', flexDirection: 'column',
-          background: '#0a0f1a', overflow: 'hidden',
-        }}>
-          {/* Scenarios */}
-          <div style={{ padding: '8px 10px', borderBottom: '1px solid #1e293b', flex: 1 }}>
-            <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase', color: '#334155', fontWeight: 700, marginBottom: 6 }}>
-              Scénarios
-            </div>
-            <div style={{ padding: '5px 7px', background: '#052e16', borderRadius: 4, borderLeft: '2px solid #10b981', marginBottom: 5 }}>
-              <div style={{ fontSize: 8, fontWeight: 700, color: '#34d399', marginBottom: 3 }}>🟢 BULL — Principal</div>
-              <div style={{ fontSize: 8, color: '#6b7280', lineHeight: 1.5 }}>
-                Reclaim 21 380 AVWAP<br/>→ Target 21 500 Call Wall<br/>Stop: 21 280 IB Low
-              </div>
-            </div>
-            <div style={{ padding: '5px 7px', background: '#1c0a0a', borderRadius: 4, borderLeft: '2px solid #ef4444' }}>
-              <div style={{ fontSize: 8, fontWeight: 700, color: '#f87171', marginBottom: 3 }}>🔴 BEAR — Alternatif</div>
-              <div style={{ fontSize: 8, color: '#6b7280', lineHeight: 1.5 }}>
-                Échec 21 380<br/>→ Test 21 200 Put Wall<br/>Stop: 21 412 London High
-              </div>
-            </div>
-          </div>
-          {/* ALN rules */}
-          <div style={{ padding: '8px 10px' }}>
-            <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase', color: '#334155', fontWeight: 700, marginBottom: 5 }}>
-              Règles actives
+        {/* Right Panel */}
+        <div style={{ width: 204, display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+          {/* Scénarios */}
+          <div style={{
+            flex: 1,
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderTop: `2px solid ${C.gold}`,
+            borderRadius: 4,
+            padding: '6px 10px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            overflow: 'hidden',
+          }}>
+            <div style={{ fontFamily: ORBITRON, fontSize: 7, fontWeight: 700, letterSpacing: '0.2em', color: C.gold }}>
+              SCÉNARIOS
             </div>
             {[
-              { n: 'R1', txt: 'OVN Short → bull bias', c: '#10b981' },
-              { n: 'R7', txt: 'ALN P4 confirmée', c: '#10b981' },
-              { n: 'R13', txt: 'IB Normal IB', c: '#f59e0b' },
-              { n: 'R18', txt: 'GEX Long Gamma', c: '#60a5fa' },
-            ].map(r => (
-              <div key={r.n} style={{ display: 'flex', gap: 5, padding: '2px 0', alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 6, padding: '1px 3px', borderRadius: 2, fontWeight: 700,
-                  background: r.c + '20', color: r.c, flexShrink: 0, marginTop: 1 }}>{r.n}</span>
-                <span style={{ fontSize: 8, color: '#64748b', lineHeight: 1.3 }}>{r.txt}</span>
+              { active: bull,  color: C.green, dir: '▲ BULL', text: `Reclaim ${fmt(avwap)} → IB High → ${fmt(21500)}` },
+              { active: !bull, color: C.red,   dir: '▼ BEAR', text: `Fail ${fmt(open)} → ${fmt(21200)} PUT WALL` },
+            ].map(s => (
+              <div key={s.dir} style={{
+                background: s.active ? `${s.color}14` : 'transparent',
+                border: `1px solid ${s.active ? s.color : C.border}`,
+                borderRadius: 3,
+                padding: '4px 8px',
+                transition: 'all 0.4s',
+              }}>
+                <div style={{ fontFamily: ORBITRON, fontSize: 7, color: s.color, letterSpacing: '0.1em', marginBottom: 3 }}>
+                  {s.dir}
+                </div>
+                <div style={{ fontFamily: JB_MONO, fontSize: 8, color: C.sand }}>{s.text}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Règles actives */}
+          <div style={{
+            flex: 1,
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderTop: `2px solid ${C.turquoise}`,
+            borderRadius: 4,
+            padding: '6px 10px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+            overflow: 'hidden',
+          }}>
+            <div style={{ fontFamily: ORBITRON, fontSize: 7, fontWeight: 700, letterSpacing: '0.2em', color: C.turquoise }}>
+              RÈGLES ACTIVES
+            </div>
+            {[
+              '85/15 : veille RTH ouverture',
+              'Chameau : attendre le 85',
+              'GEX > 21300 : zone magnétique',
+              'OVN inventaire long confirmé',
+            ].map((r, i) => (
+              <div key={i} style={{ fontFamily: JB_MONO, fontSize: 8, color: C.sandMuted, display: 'flex', gap: 5 }}>
+                <span style={{ color: C.gold, flexShrink: 0 }}>›</span>
+                <span>{r}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── ROW 5 : BPR / FVG ZONE ── */}
+      {/* ── Row 5 : BPR / FVG Zone ──────────────────────────────────────── */}
       <div style={{
-        background: '#060c16', borderTop: '1px solid #1e293b',
-        padding: '8px 14px', flexShrink: 0,
+        height: 64, minHeight: 64,
+        padding: '6px 12px',
+        background: C.surface,
+        borderTop: `1px solid ${C.border}`,
+        borderBottom: `1px solid ${C.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-          <span style={{ fontSize: 8, fontWeight: 700, color: '#a855f7', letterSpacing: 2, textTransform: 'uppercase' }}>
-            📦 BPR / FVG Zone
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontFamily: ORBITRON, fontSize: 7, fontWeight: 700, letterSpacing: '0.2em', color: C.gold }}>
+            BPR · FVG ZONE
           </span>
-          <span style={{ fontSize: 8, color: '#475569' }}>Zone : 21 340 – 21 380</span>
-          <div style={{ flex: 1 }}/>
-          <span style={{ fontSize: 8, color: '#7c3aed' }}>OTE 61.8% → 78.6%</span>
-          <span style={{ fontSize: 8, color: '#475569' }}>Profondeur actuelle :</span>
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#a855f7', fontVariantNumeric: 'tabular-nums' }}>
-            {bprPct.toFixed(1)}%
-          </span>
-          <span style={{
-            fontSize: 8, padding: '2px 7px', borderRadius: 3, fontWeight: 700,
-            background: oteLevel ? '#14532d' : '#1c1917', color: oteLevel ? '#4ade80' : '#a8a29e',
-            border: `1px solid ${oteLevel ? '#15803d' : '#292524'}`,
-          }}>
-            {oteLevel ? '✅ IN OTE' : bprPct < 61.8 ? '⏳ ATTENTE' : '⚠️ OVER'}
+          <span style={{ fontFamily: JB_MONO, fontSize: 9, color: bprPct > 78.6 ? C.red : bprPct > 61.8 ? C.green : C.amber }}>
+            {bprPct.toFixed(1)}% — {fmt(open + (bprPct / 100) * 200)}
           </span>
         </div>
-        {/* Progress bar */}
-        <div className="bpr-bar">
-          <div className="bpr-fill" style={{ width: `${bprPct}%` }}/>
-          {/* OTE markers */}
-          <div className="bpr-marker" style={{ left: '61.8%', background: '#4ade80' }}/>
-          <div className="bpr-marker" style={{ left: '78.6%', background: '#fbbf24' }}/>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-          <span style={{ fontSize: 7, color: '#334155' }}>21 340 (0%)</span>
-          <span style={{ fontSize: 7, color: '#4ade80' }}>61.8% OTE</span>
-          <span style={{ fontSize: 7, color: '#fbbf24' }}>78.6% OTE</span>
-          <span style={{ fontSize: 7, color: '#334155' }}>21 380 (100%)</span>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+          <div className="bpr-bar" style={{ flex: 1, margin: '8px 0' }}>
+            <div className="bpr-fill" style={{
+              width: `${bprPct}%`,
+              background: bprFill,
+              boxShadow: `0 0 8px ${sigColor}50`,
+            }} />
+            <div className="bpr-marker" style={{ left: '61.8%', background: C.green, boxShadow: `0 0 4px ${C.green}` }} />
+            <div className="bpr-marker" style={{ left: '78.6%', background: C.amber, boxShadow: `0 0 4px ${C.amber}` }} />
+            <span className="bpr-lbl" style={{ left: '61.8%', color: C.green }}>61.8%</span>
+            <span className="bpr-lbl" style={{ left: '78.6%', color: C.amber }}>78.6%</span>
+          </div>
         </div>
       </div>
 
-      {/* ── ROW 6 : SIGNAL BAR ── */}
+      {/* ── Row 6 : Signal Bar ──────────────────────────────────────────── */}
       <div style={{
-        height: 44, background: '#050911', borderTop: `1px solid ${signalColor}33`,
-        display: 'flex', alignItems: 'center', padding: '0 14px', gap: 14,
-        flexShrink: 0, boxShadow: `0 -2px 16px ${signalColor}0a`,
+        height: 44, minHeight: 44,
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 12px',
+        gap: 16,
+        background: `linear-gradient(90deg, ${sigColor}10, transparent 60%)`,
+        borderTop: `1px solid ${sigColor}35`,
+        flexShrink: 0,
       }}>
-        {/* Signal */}
+        {/* Status */}
         <div style={{
-          padding: '4px 14px', borderRadius: 4, fontWeight: 700, fontSize: 12,
-          background: signalColor + '18', color: signalColor,
-          border: `1px solid ${signalColor}44`, letterSpacing: .5,
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '0 14px 0 0',
+          borderRight: `1px solid ${C.border}`,
+          flexShrink: 0,
         }}>
-          Signal : {signalLabel}
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: sigColor,
+            boxShadow: `0 0 8px ${sigColor}`,
+          }} />
+          <span style={{
+            fontFamily: ORBITRON, fontSize: 10, fontWeight: 700,
+            letterSpacing: '0.15em', color: sigColor,
+          }}>{sigLabel}</span>
         </div>
 
-        <div style={{ width: 1, height: 24, background: '#1e293b' }}/>
-
-        {/* Setup details */}
-        {[
-          { l: 'SETUP', v: 'BPR OTE', c: '#a855f7' },
-          { l: 'ENTRY', v: fmt(live), c: '#e2e8f0' },
-          { l: 'STOP', v: '21 280', c: '#ef4444' },
-          { l: 'TP1', v: '21 380', c: '#10b981' },
-          { l: 'TP2', v: '21 500', c: '#10b981' },
-          { l: 'RISK', v: `${fmt(live - 21280, 0)} pts`, c: '#f59e0b' },
-          { l: 'RATIO', v: '1 : 2.8R', c: '#60a5fa' },
-        ].map(({ l, v, c }) => (
-          <div key={l} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-            <span style={{ fontSize: 7, color: '#334155', letterSpacing: 1, textTransform: 'uppercase' }}>{l}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: c, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+        {/* Levels */}
+        {([
+          ['ENTRY',  fmt(live - 5)],
+          ['STOP',   fmt(val)],
+          ['TP1',    fmt(avwap)],
+          ['TP2',    fmt(21500)],
+          ['RISK',   '1%'],
+          ['RATIO',  '1:3'],
+        ] as [string, string][]).map(([k, v]) => (
+          <div key={k} style={{ textAlign: 'center' }}>
+            <div style={{ fontFamily: JB_MONO, fontSize: 7, color: C.sandMuted, letterSpacing: '0.1em' }}>{k}</div>
+            <div style={{ fontFamily: JB_MONO, fontSize: 11, fontWeight: 700, color: C.sand }}>{v}</div>
           </div>
         ))}
 
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 8, color: '#334155' }}>@SalahTataouine · NQ100 · Méthode Salah</span>
+        <div style={{ flex: 1 }} />
+
+        <div style={{ fontFamily: ORBITRON, fontSize: 7, letterSpacing: '0.15em', color: C.sandMuted }}>
+          NQ · CME · MÉTHODE SALAH
         </div>
       </div>
     </div>
-  )
+  );
 }
