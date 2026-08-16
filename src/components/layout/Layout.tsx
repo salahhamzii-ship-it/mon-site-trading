@@ -8,6 +8,7 @@ export function Layout() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#060810' }}>
+      <div id="crt-overlay" />
       <Sidebar />
       <Header />
       <main

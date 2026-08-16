@@ -5,18 +5,20 @@
   --gold-faint:    rgba(201,168,76,0.12);
   --gold-border:   rgba(201,168,76,0.18);
   --turquoise:     #1eb3bc;
+  --amber:         #d4af37;
   --bg:            #060810;
+  --bg-card:       #0a0f1a;
+  --bg-sidebar:    #07090f;
   --surface:       #090d15;
   --surface-hover: #0d1220;
   --sand:          #d8cdb8;
-  --sand-muted:    #7a6a50;
-  --green:         #34d399;
-  --red:           #ef4444;
-  --amber:         #f59e0b;
+  --sand-muted:    #8899bb;
+  --sand-dim:      rgba(136,153,187,0.45);
+  --green:         #00ff88;
+  --red:           #ff4444;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-
 html { background: var(--bg); }
 
 body {
@@ -28,7 +30,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Remove old #root constraint */
 #root {
   width: 100%;
   max-width: 100%;
@@ -38,30 +39,44 @@ body {
   min-height: 100svh;
 }
 
-/* ── Subtle dot grid on body ──────────────────────────────────── */
+/* ── Cockpit grid (44×44 gold) ────────────────────────────────── */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(201,168,76,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(201,168,76,0.025) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(rgba(201,168,76,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201,168,76,0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
   pointer-events: none;
   z-index: 0;
 }
 
-/* ── Horizon glow ─────────────────────────────────────────────── */
+/* ── Horizon glow (bottom, gradient up) ───────────────────────── */
 body::after {
   content: '';
   position: fixed;
-  left: 8%;
-  right: 8%;
-  bottom: 28%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.06), transparent);
+  left: 0; right: 0; bottom: 0;
+  height: 220px;
+  background: linear-gradient(0deg, rgba(201,168,76,0.04), transparent);
   pointer-events: none;
   z-index: 0;
+}
+
+/* ── CRT scanline overlay (global fixed) ──────────────────────── */
+#crt-overlay {
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.045) 3px,
+    rgba(0,0,0,0.045) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: multiply;
 }
 
 /* ── Custom scrollbar ─────────────────────────────────────────── */
@@ -70,73 +85,119 @@ body::after {
 ::-webkit-scrollbar-thumb      { background: rgba(201,168,76,0.3); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover{ background: rgba(201,168,76,0.55); }
 
-/* ── Animations ───────────────────────────────────────────────── */
+/* ── Keyframe animations ──────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes glowGold {
+  0%, 100% {
+    text-shadow:
+      0 0 12px rgba(201,168,76,0.9),
+      0 0 28px rgba(201,168,76,0.4),
+      0 0 56px rgba(201,168,76,0.15);
+  }
+  50% {
+    text-shadow:
+      0 0 4px rgba(201,168,76,0.3);
+  }
+}
+
+@keyframes glowPrice {
+  0%, 100% {
+    text-shadow:
+      0 0 24px rgba(240,208,112,0.9),
+      0 0 48px rgba(240,208,112,0.4),
+      0 0 80px rgba(240,208,112,0.15);
+  }
+  50% {
+    text-shadow:
+      0 0 8px rgba(240,208,112,0.4);
+  }
+}
+
+@keyframes glowGreen {
+  0%, 100% {
+    text-shadow:
+      0 0 16px rgba(0,255,136,0.8),
+      0 0 32px rgba(0,255,136,0.3);
+  }
+  50% {
+    text-shadow: 0 0 6px rgba(0,255,136,0.3);
+  }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px currentColor; }
+  50%       { opacity: 0.35; box-shadow: none; }
+}
+
+@keyframes scanHub {
+  0%   { top: -80px; }
+  100% { top: 100%; }
+}
+
 @keyframes pulseGold {
   0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.5); }
   50%       { box-shadow: 0 0 0 8px rgba(201,168,76,0); }
 }
-@keyframes glowAnim {
-  0%, 100% { filter: drop-shadow(0 0 5px rgba(240,208,112,0.25)); }
-  50%       { filter: drop-shadow(0 0 16px rgba(240,208,112,0.65)); }
-}
-@keyframes pulseDot {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
-}
 
+/* ── Utility classes ──────────────────────────────────────────── */
 .animate-fade-in    { animation: fadeIn 0.25s ease-out; }
 .animate-pulse-gold { animation: pulseGold 1.5s ease-in-out infinite; }
-.animate-glow       { animation: glowAnim 2s ease-in-out infinite; }
-.animate-pulse-dot  { animation: pulseDot 1.2s ease-in-out infinite; }
+.animate-glow-gold  { animation: glowGold 3s ease-in-out infinite; }
+.animate-glow-price { animation: glowPrice 3s ease-in-out infinite; }
+.animate-glow-green { animation: glowGreen 2s ease-in-out infinite; }
+.animate-pulse-dot  { animation: pulseDot 1.4s ease-in-out infinite; }
+.animate-scan       { animation: scanHub 16s linear infinite; }
 
-/* ── CMC utility classes ──────────────────────────────────────── */
 .font-orbitron   { font-family: 'Orbitron', monospace; }
+.font-jb         { font-family: 'JetBrains Mono', monospace; }
 .text-gold       { color: var(--gold); }
 .text-gold-bright{ color: var(--gold-bright); }
 .text-turquoise  { color: var(--turquoise); }
+.text-green      { color: var(--green); }
+.text-red        { color: var(--red); }
+.text-muted      { color: var(--sand-dim); }
 
-/* Page section title */
-.cmc-section-title {
-  font-family: 'Orbitron', monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: var(--gold);
-  text-transform: uppercase;
-}
-
-/* Standard CMC panel */
+/* ── CMC card standard ────────────────────────────────────────── */
 .cmc-card {
-  background: var(--surface);
-  border: 1px solid var(--gold-border);
+  background: var(--bg-card);
+  border: 1px solid rgba(201,168,76,0.14);
   border-top: 2px solid var(--gold);
   border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.cmc-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.06), transparent 65%);
+  pointer-events: none;
 }
 
-/* CMC input style */
+/* ── CMC input ────────────────────────────────────────────────── */
 .cmc-input {
-  background: var(--surface);
-  border: 1px solid var(--gold-border);
-  border-radius: 4px;
-  padding: 6px 10px;
-  color: var(--sand);
+  background: rgba(6,8,16,0.9);
+  border: 1px solid rgba(201,168,76,0.18);
+  border-radius: 2px;
+  padding: 7px 10px;
+  color: rgba(200,190,165,0.85);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 10px;
   outline: none;
   transition: border-color 0.2s;
 }
 .cmc-input:focus { border-color: var(--gold); }
 
-/* Page title override */
-h1.cmc-page-title {
+/* ── Section title ────────────────────────────────────────────── */
+.cmc-section-title {
   font-family: 'Orbitron', monospace;
-  font-size: 16px;
+  font-size: 7px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--gold-bright);
-  margin: 0 0 4px;
+  letter-spacing: 0.2em;
+  color: rgba(201,168,76,0.5);
+  text-transform: uppercase;
 }
