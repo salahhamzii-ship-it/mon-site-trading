@@ -8,6 +8,7 @@ import PlanSemaine from './pages/PlanSemaine'
 import Stats from './pages/Stats'
 import SessionAnalyzer from './pages/SessionAnalyzer'
 import GEXPanel from './pages/GEXPanel'
+import Calculateur from './pages/Calculateur'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="stats" element={<Stats />} />
         <Route path="session" element={<SessionAnalyzer />} />
         <Route path="gex" element={<GEXPanel />} />
+        <Route path="calc" element={<Calculateur />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

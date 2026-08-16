@@ -17,6 +17,7 @@ const navItems = [
   { to: '/bible',   label: 'THE CODEX',        sub: 'Bible Méthode Salah',  icon: '◆' },
   { to: '/plan',    label: 'WEEKLY ROUTE',     sub: 'Plan de la semaine',   icon: '◷' },
   { to: '/stats',   label: 'THE ARCHIVE',      sub: 'Statistiques',         icon: '▣' },
+  { to: '/calc',    label: 'SESSION CALC',     sub: 'Calculateur méthode',  icon: '⚙' },
 ]
 
 export function Sidebar() {
