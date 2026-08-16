@@ -1,34 +1,37 @@
-/* ── CMC Global — Camel Market Cockpit ─────────────────────────── */
+/* ── CMC Global — Camel Market Cockpit · Variante C ──────────────── */
 :root {
   --gold:          #c9a84c;
   --gold-bright:   #f0d070;
-  --gold-faint:    rgba(201,168,76,0.12);
-  --gold-border:   rgba(201,168,76,0.18);
+  --gold-faint:    rgba(201,168,76,0.10);
+  --gold-border:   rgba(201,168,76,0.20);
   --turquoise:     #1eb3bc;
   --amber:         #d4af37;
-  --bg:            #060810;
-  --bg-card:       #0a0f1a;
-  --bg-sidebar:    #07090f;
-  --surface:       #090d15;
-  --surface-hover: #0d1220;
-  --sand:          #d8cdb8;
-  --sand-muted:    #8899bb;
-  --sand-dim:      rgba(136,153,187,0.45);
+  --bg:            #0e1017;
+  --bg-card:       #141820;
+  --bg-sidebar:    #0a0d13;
+  --surface:       #1a2030;
+  --surface-hover: #1e2538;
+  --border:        rgba(255,255,255,0.07);
+  --border-gold:   rgba(201,168,76,0.18);
+  --sand:          #e2e8f0;
+  --sand-muted:    rgba(226,232,240,0.5);
+  --sand-dim:      rgba(255,255,255,0.3);
   --green:         #00ff88;
   --red:           #ff4444;
+  --red-soft:      #ff6b6b;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 html { background: var(--bg); height: 100%; overflow: hidden; }
-body { overflow: hidden; height: 100%; }
-
 body {
   margin: 0;
   background: var(--bg);
   color: var(--sand);
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: 'Inter', 'JetBrains Mono', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+  overflow: hidden;
 }
 
 #root {
@@ -37,34 +40,34 @@ body {
   margin: 0;
   border: none;
   text-align: left;
-  min-height: 100svh;
+  height: 100%;
 }
 
-/* ── Cockpit grid (44×44 gold) ────────────────────────────────── */
+/* ── Cockpit grid 44×44 subtle ────────────────────────────────── */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(201,168,76,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(201,168,76,0.035) 1px, transparent 1px);
+    linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
   background-size: 44px 44px;
   pointer-events: none;
   z-index: 0;
 }
 
-/* ── Horizon glow (bottom, gradient up) ───────────────────────── */
+/* ── Horizon glow ─────────────────────────────────────────────── */
 body::after {
   content: '';
   position: fixed;
   left: 0; right: 0; bottom: 0;
-  height: 220px;
-  background: linear-gradient(0deg, rgba(201,168,76,0.04), transparent);
+  height: 200px;
+  background: radial-gradient(ellipse 80% 100% at 50% 100%, rgba(201,168,76,0.07), transparent);
   pointer-events: none;
   z-index: 0;
 }
 
-/* ── CRT scanline overlay (global fixed) ──────────────────────── */
+/* ── CRT scanline overlay ─────────────────────────────────────── */
 #crt-overlay {
   position: fixed;
   inset: 0;
@@ -72,8 +75,8 @@ body::after {
     0deg,
     transparent,
     transparent 3px,
-    rgba(0,0,0,0.045) 3px,
-    rgba(0,0,0,0.045) 4px
+    rgba(0,0,0,0.04) 3px,
+    rgba(0,0,0,0.04) 4px
   );
   pointer-events: none;
   z-index: 9999;
@@ -81,10 +84,10 @@ body::after {
 }
 
 /* ── Custom scrollbar ─────────────────────────────────────────── */
-::-webkit-scrollbar            { width: 4px; height: 4px; }
+::-webkit-scrollbar            { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track      { background: transparent; }
-::-webkit-scrollbar-thumb      { background: rgba(201,168,76,0.3); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover{ background: rgba(201,168,76,0.55); }
+::-webkit-scrollbar-thumb      { background: rgba(201,168,76,0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover{ background: rgba(201,168,76,0.4); }
 
 /* ── Keyframe animations ──────────────────────────────────────── */
 @keyframes fadeIn {
@@ -92,51 +95,42 @@ body::after {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
+  50%       { opacity: 0.2; box-shadow: none; }
+}
+
 @keyframes glowGold {
   0%, 100% {
     text-shadow:
-      0 0 12px rgba(201,168,76,0.9),
-      0 0 28px rgba(201,168,76,0.4),
-      0 0 56px rgba(201,168,76,0.15);
+      0 0 14px rgba(201,168,76,0.8),
+      0 0 28px rgba(201,168,76,0.3);
   }
-  50% {
-    text-shadow:
-      0 0 4px rgba(201,168,76,0.3);
-  }
+  50% { text-shadow: 0 0 4px rgba(201,168,76,0.3); }
 }
 
 @keyframes glowPrice {
   0%, 100% {
     text-shadow:
-      0 0 24px rgba(240,208,112,0.9),
-      0 0 48px rgba(240,208,112,0.4),
-      0 0 80px rgba(240,208,112,0.15);
+      0 0 20px rgba(240,208,112,1),
+      0 0 40px rgba(240,208,112,0.5),
+      0 0 80px rgba(240,208,112,0.2);
   }
-  50% {
-    text-shadow:
-      0 0 8px rgba(240,208,112,0.4);
-  }
+  50% { text-shadow: 0 0 8px rgba(240,208,112,0.4); }
 }
 
 @keyframes glowGreen {
   0%, 100% {
     text-shadow:
-      0 0 16px rgba(0,255,136,0.8),
-      0 0 32px rgba(0,255,136,0.3);
+      0 0 16px rgba(0,255,136,0.9),
+      0 0 32px rgba(0,255,136,0.4);
   }
-  50% {
-    text-shadow: 0 0 6px rgba(0,255,136,0.3);
-  }
+  50% { text-shadow: 0 0 4px rgba(0,255,136,0.3); }
 }
 
-@keyframes pulseDot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 6px currentColor; }
-  50%       { opacity: 0.35; box-shadow: none; }
-}
-
-@keyframes scanHub {
+@keyframes scan {
   0%   { top: -80px; }
-  100% { top: 100%; }
+  100% { top: 110vh; }
 }
 
 @keyframes pulseGold {
@@ -144,61 +138,63 @@ body::after {
   50%       { box-shadow: 0 0 0 8px rgba(201,168,76,0); }
 }
 
-/* ── Utility classes ──────────────────────────────────────────── */
-.animate-fade-in    { animation: fadeIn 0.25s ease-out; }
-.animate-pulse-gold { animation: pulseGold 1.5s ease-in-out infinite; }
-.animate-glow-gold  { animation: glowGold 3s ease-in-out infinite; }
-.animate-glow-price { animation: glowPrice 3s ease-in-out infinite; }
-.animate-glow-green { animation: glowGreen 2s ease-in-out infinite; }
-.animate-pulse-dot  { animation: pulseDot 1.4s ease-in-out infinite; }
-.animate-scan       { animation: scanHub 16s linear infinite; }
+@keyframes borderGlow {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1; }
+}
 
-.font-orbitron   { font-family: 'Orbitron', monospace; }
-.font-jb         { font-family: 'JetBrains Mono', monospace; }
-.text-gold       { color: var(--gold); }
-.text-gold-bright{ color: var(--gold-bright); }
-.text-turquoise  { color: var(--turquoise); }
-.text-green      { color: var(--green); }
-.text-red        { color: var(--red); }
-.text-muted      { color: var(--sand-dim); }
+/* ── Utility ──────────────────────────────────────────────────── */
+.animate-fade-in      { animation: fadeIn 0.2s ease-out; }
+.animate-dot          { animation: dot 1.8s infinite; }
+.animate-glow-gold    { animation: glowGold 4s ease-in-out infinite; }
+.animate-glow-price   { animation: glowPrice 3s ease-in-out infinite; }
+.animate-glow-green   { animation: glowGreen 2s ease-in-out infinite; }
+.animate-scan         { animation: scan 12s linear infinite; }
 
-/* ── CMC card standard ────────────────────────────────────────── */
-.cmc-card {
+.font-orbitron { font-family: 'Orbitron', monospace; }
+.font-jb       { font-family: 'JetBrains Mono', monospace; }
+.text-gold     { color: var(--gold); }
+.text-teal     { color: var(--turquoise); }
+.text-green    { color: var(--green); }
+.text-red      { color: var(--red); }
+.text-muted    { color: var(--sand-muted); }
+
+/* ── Panel (Variante C card standard) ────────────────────────── */
+.panel {
   background: var(--bg-card);
-  border: 1px solid rgba(201,168,76,0.14);
-  border-top: 2px solid var(--gold);
-  border-radius: 4px;
-  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   overflow: hidden;
 }
-.cmc-card::before {
+
+.panel-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+}
+
+/* ── Setup card hover glow ────────────────────────────────────── */
+.setup-card {
+  background: rgba(10,15,26,0.92);
+  border-radius: 6px;
+  padding: 22px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+.setup-card::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.06), transparent 65%);
+  border-radius: 6px;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  background: radial-gradient(ellipse at 50% 0%, var(--glow-col, rgba(201,168,76,0.06)), transparent 60%);
 }
-
-/* ── CMC input ────────────────────────────────────────────────── */
-.cmc-input {
-  background: rgba(6,8,16,0.9);
-  border: 1px solid rgba(201,168,76,0.18);
-  border-radius: 2px;
-  padding: 7px 10px;
-  color: rgba(200,190,165,0.85);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.cmc-input:focus { border-color: var(--gold); }
-
-/* ── Section title ────────────────────────────────────────────── */
-.cmc-section-title {
-  font-family: 'Orbitron', monospace;
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: rgba(201,168,76,0.5);
-  text-transform: uppercase;
-}
+.setup-card:hover { transform: translateY(-4px); }
+.setup-card:hover::after { opacity: 1; }
