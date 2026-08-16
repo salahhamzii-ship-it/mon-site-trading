@@ -105,6 +105,32 @@ function calcVA(bars: VPBar[]): VA {
   return { poc, vah: bars[up].price, val: bars[dn].price }
 }
 
+/* ── VWAP (daily reset) ───────────────────────────────────────────── */
+function calcVWAP(candles: Candle[]): number[] {
+  const result: number[] = []
+  let cumTP = 0, cumV = 0, lastDay = -1
+  for (const c of candles) {
+    const day = new Date(c.t).getUTCDate()
+    if (day !== lastDay) { cumTP = 0; cumV = 0; lastDay = day }
+    const tp = (c.h + c.l + c.c) / 3
+    cumTP += tp * c.v
+    cumV  += c.v
+    result.push(cumV > 0 ? cumTP / cumV : tp)
+  }
+  return result
+}
+
+/* ── TPO letter for each 30-min period ───────────────────────────── */
+const TPO_CHARS = 'ABCDEFGHIJKLMNOP'
+
+function getTpoChar(candle: Candle): string {
+  // Period index within the day: A=first 30min, B=next, ...
+  const d = new Date(candle.t)
+  const minuteOfDay = d.getUTCHours() * 60 + d.getUTCMinutes()
+  const period = Math.floor(minuteOfDay / 30) % 16
+  return TPO_CHARS[period] ?? 'A'
+}
+
 /* ── Key levels (demo) ────────────────────────────────────────────── */
 const LEVELS = {
   rthHigh:   30080,
@@ -195,6 +221,7 @@ export function CockpitChart({ height = 440 }: Props) {
   const [candles]  = useState<Candle[]>(generateCandles)
   const [vp]       = useState<VPBar[]>(() => buildVP(candles))
   const [va]       = useState<VA>(() => calcVA(vp))
+  const [vwap]     = useState<number[]>(() => calcVWAP(candles))
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -245,10 +272,12 @@ export function CockpitChart({ height = 440 }: Props) {
     }
     ctx.restore()
 
-    // RTH session vertical bands
+    // RTH session vertical bands + day separators
+    let lastDay = -1
     for (let i = 0; i < candles.length; i++) {
       const d = new Date(candles[i].t)
       const h = d.getUTCHours()
+      const day = d.getUTCDate()
       // RTH = 13:30-20:00 UTC (9:30-16:00 ET)
       if (h >= 13 && h < 20) {
         const x0 = px(i)
@@ -256,6 +285,24 @@ export function CockpitChart({ height = 440 }: Props) {
         ctx.fillStyle = 'rgba(201,168,76,0.018)'
         ctx.fillRect(x0, 0, x1 - x0, cH)
       }
+      // Day separator at session start
+      if (day !== lastDay && i > 0) {
+        const xSep = px(i)
+        ctx.save()
+        ctx.strokeStyle = 'rgba(201,168,76,0.18)'
+        ctx.lineWidth = 0.8
+        ctx.setLineDash([2, 3])
+        ctx.beginPath(); ctx.moveTo(xSep, 0); ctx.lineTo(xSep, cH); ctx.stroke()
+        ctx.restore()
+        // Date label
+        const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+        ctx.save()
+        ctx.font = '500 7px \'JetBrains Mono\', monospace'
+        ctx.fillStyle = 'rgba(201,168,76,0.4)'
+        ctx.fillText(label, xSep + 3, 10)
+        ctx.restore()
+      }
+      lastDay = day
     }
 
     // ── Zones ─────────────────────────────────────────────────────
@@ -366,6 +413,44 @@ export function CockpitChart({ height = 440 }: Props) {
         ctx.fillStyle = color
         ctx.fillRect(x - bodyW / 2, bY, bodyW, bH)
       }
+    }
+
+    // ── TPO letters (above each candle wick) ──────────────────────
+    ctx.save()
+    ctx.font = 'bold 8px \'JetBrains Mono\', monospace'
+    for (let i = 0; i < candles.length; i++) {
+      const c = candles[i]
+      const x = px(i) + cW2 / 2
+      const bull = c.c >= c.o
+      const tpoChar = getTpoChar(c)
+      ctx.fillStyle = bull ? 'rgba(0,255,136,0.5)' : 'rgba(255,68,68,0.45)'
+      ctx.textAlign = 'center'
+      ctx.fillText(tpoChar, x, py(c.h) - 4)
+    }
+    ctx.textAlign = 'left'
+    ctx.restore()
+
+    // ── VWAP line ─────────────────────────────────────────────────
+    if (vwap.length === candles.length) {
+      ctx.save()
+      ctx.strokeStyle = 'rgba(212,175,55,0.75)'
+      ctx.lineWidth = 1.2
+      ctx.setLineDash([6, 3])
+      ctx.shadowColor = 'rgba(212,175,55,0.35)'
+      ctx.shadowBlur = 4
+      ctx.beginPath()
+      for (let i = 0; i < candles.length; i++) {
+        const x = px(i) + cW2 / 2
+        const y = py(vwap[i])
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.stroke()
+      ctx.restore()
+      // VWAP label
+      const lastVwap = vwap[vwap.length - 1]
+      const lastVwapX = px(candles.length - 1) + cW2 / 2
+      labelRight(ctx, `VWAP  ${lastVwap.toFixed(2)}`, lastVwapX - 90, py(lastVwap) - 4, 'rgba(212,175,55,0.85)', 'rgba(6,8,16,0.9)', 7)
     }
 
     // ── Volume Profile ─────────────────────────────────────────────
@@ -510,7 +595,7 @@ export function CockpitChart({ height = 440 }: Props) {
       }
     }
 
-  }, [candles, vp, va])
+  }, [candles, vp, va, vwap])
 
   // Resize observer
   useEffect(() => {
@@ -555,6 +640,7 @@ export function CockpitChart({ height = 440 }: Props) {
           { color: '#00ff88', label: 'OTE 61.8%', dash: true },
           { color: '#f0d070', label: 'OTE 78.6%', dash: true },
           { color: 'rgba(200,190,165,0.5)', label: 'RTH H/L', dash: true },
+          { color: 'rgba(212,175,55,0.75)', label: 'VWAP', dash: true },
         ].map(l => (
           <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{
