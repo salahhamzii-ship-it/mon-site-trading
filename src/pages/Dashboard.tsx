@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CockpitChart } from '../components/chart/CockpitChart'
 
 const CSS = `
   @keyframes glowPrice {
@@ -220,6 +221,42 @@ export default function Dashboard() {
           <span style={{ fontFamily: JB, fontSize: 7, letterSpacing: '0.12em', color: 'rgba(136,153,187,0.3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
             NQ · CME · MÉTHODE SALAH
           </span>
+        </div>
+
+        {/* ── COCKPIT CHART ── */}
+        <div style={{
+          background: 'rgba(6,8,16,0.97)',
+          border: '1px solid rgba(201,168,76,0.14)',
+          borderTop: '2px solid rgba(201,168,76,0.6)',
+          borderRadius: 4,
+          overflow: 'hidden',
+          position: 'relative',
+        }}>
+          {/* Chart header bar */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '8px 14px',
+            borderBottom: '1px solid rgba(201,168,76,0.08)',
+            background: 'rgba(10,15,26,0.8)',
+          }}>
+            <span style={{ fontFamily: ORBITRON, fontSize: 7, fontWeight: 700, letterSpacing: '0.18em', color: 'rgba(201,168,76,0.6)' }}>NQ · 30 MIN · CME</span>
+            <div style={{ width: 1, height: 12, background: 'rgba(201,168,76,0.12)' }} />
+            <span style={{ fontFamily: JB, fontSize: 8, color: 'rgba(136,153,187,0.4)' }}>VOLUME PROFILE · BPR · FVG · OTE · RTH LEVELS</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              {[
+                { label: 'DONNÉES SIMULÉES', c: 'rgba(240,208,112,0.5)' },
+                { label: 'SIERRA CHART READY', c: 'rgba(30,179,188,0.5)' },
+              ].map(p => (
+                <span key={p.label} style={{
+                  fontFamily: JB, fontSize: 6.5, color: p.c,
+                  background: `${p.c.replace('0.5)', '0.05)')}`,
+                  border: `1px solid ${p.c.replace('0.5)', '0.18)')}`,
+                  padding: '2px 7px', borderRadius: 2, letterSpacing: '0.06em',
+                }}>{p.label}</span>
+              ))}
+            </div>
+          </div>
+          <CockpitChart height={440} />
         </div>
 
         {/* ── STATS ROW ── */}
