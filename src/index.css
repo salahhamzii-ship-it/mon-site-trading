@@ -19,7 +19,8 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { background: var(--bg); }
+html { background: var(--bg); height: 100%; overflow: hidden; }
+body { overflow: hidden; height: 100%; }
 
 body {
   margin: 0;

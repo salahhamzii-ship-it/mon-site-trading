@@ -212,10 +212,10 @@ function labelRight(
 
 /* ── Main Component ───────────────────────────────────────────────── */
 interface Props {
-  height?: number
+  height?: number | string
 }
 
-export function CockpitChart({ height = 440 }: Props) {
+export function CockpitChart({ height = '100%' }: Props) {
   const canvasRef  = useRef<HTMLCanvasElement>(null)
   const stateRef   = useRef({ mx: -1, my: -1 })
   const [candles]  = useState<Candle[]>(generateCandles)

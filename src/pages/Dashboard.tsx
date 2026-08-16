@@ -3,22 +3,26 @@ import { CockpitChart } from '../components/chart/CockpitChart'
 
 const CSS = `
   @keyframes glowPrice {
-    0%,100% { text-shadow: 0 0 24px rgba(240,208,112,0.9), 0 0 48px rgba(240,208,112,0.4), 0 0 80px rgba(240,208,112,0.15); }
-    50%      { text-shadow: 0 0 8px rgba(240,208,112,0.4); }
+    0%,100% { text-shadow: 0 0 18px rgba(240,208,112,0.9), 0 0 36px rgba(240,208,112,0.4), 0 0 60px rgba(240,208,112,0.12); }
+    50%      { text-shadow: 0 0 6px rgba(240,208,112,0.4); }
   }
   @keyframes glowGreen {
-    0%,100% { text-shadow: 0 0 16px rgba(0,255,136,0.8), 0 0 32px rgba(0,255,136,0.3); }
-    50%      { text-shadow: 0 0 6px rgba(0,255,136,0.3); }
+    0%,100% { text-shadow: 0 0 12px rgba(0,255,136,0.8), 0 0 24px rgba(0,255,136,0.3); }
+    50%      { text-shadow: 0 0 4px rgba(0,255,136,0.3); }
   }
   @keyframes scanHub {
-    0%   { top: -80px; }
+    0%   { top: -60px; }
     100% { top: 100%; }
+  }
+  @keyframes pulseDot {
+    0%,100% { opacity: 1; box-shadow: 0 0 6px currentColor; }
+    50%      { opacity: 0.35; box-shadow: none; }
   }
 `
 
 const NQ_REF = 30044.75
 const ORBITRON = "'Orbitron', monospace"
-const JB      = "'JetBrains Mono', monospace"
+const JB       = "'JetBrains Mono', monospace"
 
 function InfoCard({ accent, glow, icon, title, rows }: {
   accent: string
@@ -32,26 +36,27 @@ function InfoCard({ accent, glow, icon, title, rows }: {
       background: 'rgba(10,15,26,0.85)',
       border: `1px solid ${accent}33`,
       borderTop: `2px solid ${accent}`,
-      borderRadius: 4, padding: 14,
+      borderRadius: 4, padding: '8px 10px',
       position: 'relative', overflow: 'hidden',
+      flex: 1,
     }}>
       <div style={{
         position: 'absolute', inset: 0,
         background: `radial-gradient(ellipse at 50% 0%, ${glow}, transparent 65%)`,
         pointerEvents: 'none',
       }} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <span style={{ fontSize: 13 }}>{icon}</span>
-        <span style={{ fontFamily: ORBITRON, fontSize: 7, fontWeight: 700, letterSpacing: '0.18em', color: accent }}>{title}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+        <span style={{ fontSize: 10 }}>{icon}</span>
+        <span style={{ fontFamily: ORBITRON, fontSize: 6, fontWeight: 700, letterSpacing: '0.16em', color: accent }}>{title}</span>
       </div>
       {rows.map(r => (
-        <div key={r.k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontFamily: JB, fontSize: 8, color: 'rgba(136,153,187,0.5)' }}>{r.k}</span>
+        <div key={r.k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+          <span style={{ fontFamily: JB, fontSize: 7, color: 'rgba(136,153,187,0.45)' }}>{r.k}</span>
           <span style={{
-            fontFamily: JB, fontSize: 9,
+            fontFamily: JB, fontSize: 8,
             fontWeight: r.bold ? 700 : 600,
             color: r.c,
-            textShadow: r.bold ? `0 0 8px ${r.c}80` : 'none',
+            textShadow: r.bold ? `0 0 6px ${r.c}80` : 'none',
           }}>{r.v}</span>
         </div>
       ))}
@@ -72,35 +77,40 @@ export default function Dashboard() {
   const up   = diff >= 0
 
   return (
-    <div style={{ marginLeft: -24, marginRight: -24, marginTop: -24 }}>
+    <div style={{
+      marginLeft: -24, marginRight: -24, marginTop: -24, marginBottom: -24,
+      height: 'calc(100vh - 40px)',
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
       <style>{CSS}</style>
 
       {/* Scan line */}
       <div style={{
-        position: 'fixed', left: 0, right: 0, height: 60,
+        position: 'fixed', left: 0, right: 0, height: 50,
         pointerEvents: 'none', zIndex: 5,
-        background: 'linear-gradient(180deg, transparent, rgba(201,168,76,0.018), transparent)',
+        background: 'linear-gradient(180deg, transparent, rgba(201,168,76,0.015), transparent)',
         animation: 'scanHub 16s linear infinite',
       }} />
 
-      <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
         {/* ── PRICE HERO ── */}
-        <div style={{ textAlign: 'center', padding: '20px 0 14px', position: 'relative' }}>
+        <div style={{ textAlign: 'center', padding: '4px 0', position: 'relative', flexShrink: 0 }}>
           <div style={{
             position: 'absolute', left: '50%', top: '50%',
             transform: 'translate(-50%,-50%)',
-            width: 400, height: 100,
-            background: 'radial-gradient(ellipse, rgba(201,168,76,0.09), transparent 70%)',
+            width: 340, height: 70,
+            background: 'radial-gradient(ellipse, rgba(201,168,76,0.08), transparent 70%)',
             pointerEvents: 'none',
           }} />
           <div style={{
-            fontFamily: ORBITRON, fontSize: 8,
-            letterSpacing: '0.22em', color: 'rgba(201,168,76,0.45)', marginBottom: 4,
+            fontFamily: ORBITRON, fontSize: 6.5,
+            letterSpacing: '0.2em', color: 'rgba(201,168,76,0.4)', marginBottom: 2,
           }}>NQ · NASDAQ 100 FUTURES · CME</div>
           <div style={{
             fontFamily: ORBITRON,
-            fontSize: 'clamp(44px, 6vw, 68px)',
+            fontSize: 'clamp(28px, 3.5vw, 40px)',
             fontWeight: 900, letterSpacing: '0.04em', lineHeight: 1,
             background: 'linear-gradient(135deg, #c9a84c, #f0d070, #e8c86a)',
             WebkitBackgroundClip: 'text',
@@ -110,20 +120,20 @@ export default function Dashboard() {
           } as React.CSSProperties}>
             {nq.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 5 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 2 }}>
             <span style={{
-              fontFamily: JB, fontSize: 13, fontWeight: 700,
-              color: up ? '#00ff88' : '#ff4444', letterSpacing: '0.05em',
-              textShadow: `0 0 10px ${up ? 'rgba(0,255,136,0.5)' : 'rgba(255,68,68,0.5)'}`,
+              fontFamily: JB, fontSize: 10, fontWeight: 700,
+              color: up ? '#00ff88' : '#ff4444', letterSpacing: '0.04em',
+              textShadow: `0 0 8px ${up ? 'rgba(0,255,136,0.45)' : 'rgba(255,68,68,0.45)'}`,
             }}>{up ? '▲' : '▼'} {up ? '+' : ''}{diff.toFixed(2)} pts</span>
-            <span style={{ fontFamily: JB, fontSize: 11, fontWeight: 600, color: up ? '#00ff88' : '#ff4444' }}>
+            <span style={{ fontFamily: JB, fontSize: 9, fontWeight: 600, color: up ? '#00ff88' : '#ff4444' }}>
               {up ? '+' : ''}{pct.toFixed(2)}%
             </span>
           </div>
         </div>
 
         {/* ── INFO CARDS ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <InfoCard
             accent="#c9a84c" glow="rgba(201,168,76,0.05)"
             icon="📊" title="RTH J-1"
@@ -158,69 +168,12 @@ export default function Dashboard() {
             accent="#f0d070" glow="rgba(240,208,112,0.05)"
             icon="⚡" title="IB · GEX"
             rows={[
-              { k: 'IB HIGH',        v: '21,492.50',    c: '#1eb3bc' },
-              { k: 'IB LOW',         v: '21,318.75',    c: '#ff4444' },
-              { k: 'Gamma Exposure', v: 'POSITIF',      c: '#f0d070' },
-              { k: 'QQQ × 40',       v: '540 → 30,600', c: '#c9a84c' },
+              { k: 'IB HIGH',  v: '21,492.50', c: '#1eb3bc' },
+              { k: 'IB LOW',   v: '21,318.75', c: '#ff4444' },
+              { k: 'GEX',      v: 'POSITIF',   c: '#f0d070' },
+              { k: 'QQQ×40',   v: '30,600',    c: '#c9a84c' },
             ]}
           />
-        </div>
-
-        {/* ── SIGNAL BAR ── */}
-        <div style={{
-          background: 'linear-gradient(90deg, rgba(10,15,26,0.95), rgba(6,8,16,0.98))',
-          border: '1px solid rgba(201,168,76,0.25)',
-          borderRadius: 4, padding: '14px 20px',
-          boxShadow: '0 0 24px rgba(201,168,76,0.08), inset 0 0 40px rgba(0,255,136,0.02)',
-          display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
-          position: 'relative', overflow: 'hidden',
-        }}>
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: 1,
-            background: 'linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent)',
-          }} />
-
-          {/* Signal dot + label */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <div style={{
-              width: 10, height: 10, borderRadius: '50%',
-              background: '#00ff88', boxShadow: '0 0 10px #00ff88',
-              animation: 'pulseDot 1.4s ease-in-out infinite',
-              flexShrink: 0,
-            }} />
-            <div>
-              <div style={{
-                fontFamily: ORBITRON, fontSize: 16, fontWeight: 900,
-                color: '#00ff88', letterSpacing: '0.14em', lineHeight: 1,
-                animation: 'glowGreen 2s ease-in-out infinite',
-              }}>ACHAT</div>
-              <div style={{ fontFamily: JB, fontSize: 7, letterSpacing: '0.1em', color: 'rgba(0,255,136,0.5)', marginTop: 1 }}>SIGNAL ACTIF</div>
-            </div>
-          </div>
-
-          <div style={{ width: 1, height: 32, background: 'rgba(201,168,76,0.12)', flexShrink: 0 }} />
-
-          {/* Trade params */}
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-            {[
-              { k: 'ENTRY',  v: '30,141.00', c: '#c9a84c',  glow: false },
-              { k: 'STOP',   v: '30,050.00', c: '#ff4444',  glow: true },
-              { k: 'TARGET', v: '30,400.00', c: '#00ff88',  glow: true },
-              { k: 'R:R',    v: 'R·R  2.8',  c: '#1eb3bc',  glow: false },
-            ].map(p => (
-              <div key={p.k}>
-                <div style={{ fontFamily: JB, fontSize: 7, letterSpacing: '0.1em', color: 'rgba(136,153,187,0.45)', marginBottom: 2 }}>{p.k}</div>
-                <div style={{
-                  fontFamily: JB, fontSize: 13, fontWeight: 700, color: p.c,
-                  textShadow: p.glow ? `0 0 8px ${p.c}66` : 'none',
-                }}>{p.v}</div>
-              </div>
-            ))}
-          </div>
-
-          <span style={{ fontFamily: JB, fontSize: 7, letterSpacing: '0.12em', color: 'rgba(136,153,187,0.3)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-            NQ · CME · MÉTHODE SALAH
-          </span>
         </div>
 
         {/* ── COCKPIT CHART ── */}
@@ -231,36 +184,99 @@ export default function Dashboard() {
           borderRadius: 4,
           overflow: 'hidden',
           position: 'relative',
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
         }}>
           {/* Chart header bar */}
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 14,
-            padding: '8px 14px',
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '5px 10px',
             borderBottom: '1px solid rgba(201,168,76,0.08)',
             background: 'rgba(10,15,26,0.8)',
+            flexShrink: 0,
           }}>
-            <span style={{ fontFamily: ORBITRON, fontSize: 7, fontWeight: 700, letterSpacing: '0.18em', color: 'rgba(201,168,76,0.6)' }}>NQ · 30 MIN · CME</span>
-            <div style={{ width: 1, height: 12, background: 'rgba(201,168,76,0.12)' }} />
-            <span style={{ fontFamily: JB, fontSize: 8, color: 'rgba(136,153,187,0.4)' }}>VOLUME PROFILE · BPR · FVG · OTE · RTH LEVELS</span>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <span style={{ fontFamily: ORBITRON, fontSize: 6.5, fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(201,168,76,0.6)' }}>NQ · 30 MIN · CME</span>
+            <div style={{ width: 1, height: 10, background: 'rgba(201,168,76,0.12)' }} />
+            <span style={{ fontFamily: JB, fontSize: 7, color: 'rgba(136,153,187,0.35)' }}>VOLUME PROFILE · BPR · FVG · OTE · VWAP · TPO</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
               {[
                 { label: 'DONNÉES SIMULÉES', c: 'rgba(240,208,112,0.5)' },
                 { label: 'SIERRA CHART READY', c: 'rgba(30,179,188,0.5)' },
               ].map(p => (
                 <span key={p.label} style={{
-                  fontFamily: JB, fontSize: 6.5, color: p.c,
+                  fontFamily: JB, fontSize: 6, color: p.c,
                   background: `${p.c.replace('0.5)', '0.05)')}`,
-                  border: `1px solid ${p.c.replace('0.5)', '0.18)')}`,
-                  padding: '2px 7px', borderRadius: 2, letterSpacing: '0.06em',
+                  border: `1px solid ${p.c.replace('0.5)', '0.15)')}`,
+                  padding: '1px 5px', borderRadius: 2, letterSpacing: '0.04em',
                 }}>{p.label}</span>
               ))}
             </div>
           </div>
-          <CockpitChart height={440} />
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <CockpitChart height="100%" />
+          </div>
+        </div>
+
+        {/* ── SIGNAL BAR ── */}
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(10,15,26,0.95), rgba(6,8,16,0.98))',
+          border: '1px solid rgba(201,168,76,0.22)',
+          borderRadius: 4, padding: '7px 14px',
+          boxShadow: '0 0 16px rgba(201,168,76,0.07), inset 0 0 30px rgba(0,255,136,0.02)',
+          display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'nowrap',
+          position: 'relative', overflow: 'hidden', flexShrink: 0,
+        }}>
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: 1,
+            background: 'linear-gradient(90deg, transparent, rgba(0,255,136,0.4), transparent)',
+          }} />
+
+          {/* Signal dot + label */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: '#00ff88', boxShadow: '0 0 8px #00ff88',
+              animation: 'pulseDot 1.4s ease-in-out infinite', flexShrink: 0,
+            }} />
+            <div>
+              <div style={{
+                fontFamily: ORBITRON, fontSize: 13, fontWeight: 900,
+                color: '#00ff88', letterSpacing: '0.12em', lineHeight: 1,
+                animation: 'glowGreen 2s ease-in-out infinite',
+              }}>ACHAT</div>
+              <div style={{ fontFamily: JB, fontSize: 6, letterSpacing: '0.08em', color: 'rgba(0,255,136,0.45)', marginTop: 1 }}>SIGNAL ACTIF</div>
+            </div>
+          </div>
+
+          <div style={{ width: 1, height: 26, background: 'rgba(201,168,76,0.12)', flexShrink: 0 }} />
+
+          {/* Trade params */}
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'nowrap' }}>
+            {[
+              { k: 'ENTRY',  v: '30,141.00', c: '#c9a84c',  glow: false },
+              { k: 'STOP',   v: '30,050.00', c: '#ff4444',  glow: true },
+              { k: 'TARGET', v: '30,400.00', c: '#00ff88',  glow: true },
+              { k: 'R:R',    v: 'R·R  2.8',  c: '#1eb3bc',  glow: false },
+            ].map(p => (
+              <div key={p.k}>
+                <div style={{ fontFamily: JB, fontSize: 6, letterSpacing: '0.08em', color: 'rgba(136,153,187,0.4)', marginBottom: 1 }}>{p.k}</div>
+                <div style={{
+                  fontFamily: JB, fontSize: 11, fontWeight: 700, color: p.c,
+                  textShadow: p.glow ? `0 0 6px ${p.c}66` : 'none',
+                }}>{p.v}</div>
+              </div>
+            ))}
+          </div>
+
+          <span style={{ fontFamily: JB, fontSize: 6, letterSpacing: '0.1em', color: 'rgba(136,153,187,0.25)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+            NQ · CME · MÉTHODE SALAH
+          </span>
         </div>
 
         {/* ── STATS ROW ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           {[
             { k: 'WIN RATE',        v: '68.4%',   c: '#00ff88' },
             { k: 'PROFIT FACTOR',   v: '2.14',    c: '#c9a84c' },
@@ -270,10 +286,11 @@ export default function Dashboard() {
             <div key={s.k} style={{
               background: 'rgba(10,15,26,0.7)',
               border: '1px solid rgba(201,168,76,0.1)',
-              borderRadius: 4, padding: 12, textAlign: 'center',
+              borderRadius: 4, padding: '6px 10px',
+              textAlign: 'center', flex: 1,
             }}>
-              <div style={{ fontFamily: JB, fontSize: 7, letterSpacing: '0.12em', color: 'rgba(136,153,187,0.45)', marginBottom: 4 }}>{s.k}</div>
-              <div style={{ fontFamily: ORBITRON, fontSize: 18, fontWeight: 700, color: s.c }}>{s.v}</div>
+              <div style={{ fontFamily: JB, fontSize: 6, letterSpacing: '0.1em', color: 'rgba(136,153,187,0.4)', marginBottom: 2 }}>{s.k}</div>
+              <div style={{ fontFamily: ORBITRON, fontSize: 13, fontWeight: 700, color: s.c }}>{s.v}</div>
             </div>
           ))}
         </div>

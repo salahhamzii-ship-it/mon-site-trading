@@ -7,21 +7,22 @@ export function Layout() {
   const { sidebarOpen } = useApp()
 
   return (
-    <div style={{ minHeight: '100vh', background: '#060810' }}>
+    <div style={{ height: '100vh', overflow: 'hidden', background: '#060810' }}>
       <div id="crt-overlay" />
       <Sidebar />
       <Header />
       <main
         style={{
-          paddingTop: 72,
+          paddingTop: 40,
           marginLeft: sidebarOpen ? 224 : 64,
-          minHeight: '100vh',
+          height: '100vh',
+          overflow: 'hidden',
           transition: 'margin-left 0.3s',
           position: 'relative',
           zIndex: 1,
         }}
       >
-        <div className="p-6 animate-fade-in">
+        <div className="p-6 animate-fade-in" style={{ height: '100%', overflow: 'hidden' }}>
           <Outlet />
         </div>
       </main>
