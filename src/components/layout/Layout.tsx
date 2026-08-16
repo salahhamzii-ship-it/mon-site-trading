@@ -12,7 +12,7 @@ export function Layout() {
       <Header />
       <main
         style={{
-          paddingTop: 56,
+          paddingTop: 72,
           marginLeft: sidebarOpen ? 224 : 64,
           minHeight: '100vh',
           transition: 'margin-left 0.3s',
