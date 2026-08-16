@@ -7,13 +7,18 @@ export function Layout() {
   const { sidebarOpen } = useApp()
 
   return (
-    <div className="min-h-screen bg-surface text-white">
+    <div style={{ minHeight: '100vh', background: '#060810' }}>
       <Sidebar />
       <Header />
       <main
-        className={`pt-14 min-h-screen transition-all duration-300 ${
-          sidebarOpen ? 'ml-56' : 'ml-16'
-        }`}
+        style={{
+          paddingTop: 56,
+          marginLeft: sidebarOpen ? 224 : 64,
+          minHeight: '100vh',
+          transition: 'margin-left 0.3s',
+          position: 'relative',
+          zIndex: 1,
+        }}
       >
         <div className="p-6 animate-fade-in">
           <Outlet />

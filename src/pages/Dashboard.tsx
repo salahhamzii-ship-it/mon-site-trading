@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { NavLink } from 'react-router-dom';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Candle { o: number; h: number; l: number; c: number; v: number }
@@ -27,39 +26,8 @@ const C = {
   amber:         '#f59e0b',
 };
 
-// ─── Gradient text style (reusable) ──────────────────────────────────────────
-const GRAD = {
-  background:           'linear-gradient(135deg, #f0d070, #c9a84c)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor:  'transparent',
-  backgroundClip:       'text',
-} as React.CSSProperties;
-
 // ─── Global CSS ───────────────────────────────────────────────────────────────
 const CSS = `
-  .nav-tab {
-    font-family: 'Orbitron', monospace;
-    font-size: 7.5px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    color: #7a6a50;
-    padding: 0 12px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-    text-decoration: none;
-    white-space: nowrap;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  .nav-tab:hover { color: #f0d070; border-bottom-color: rgba(201,168,76,0.35); }
-  .nav-tab.active {
-    color: #f0d070;
-    border-bottom-color: #c9a84c;
-    text-shadow: 0 0 14px rgba(240,208,112,0.55);
-  }
   .bpr-bar {
     position: relative;
     height: 8px;
@@ -326,7 +294,6 @@ function Row({ label, value, color }: { label: string; value: string; color?: st
 export default function Dashboard() {
   const [hist]   = useState(() => genCandles(80));
   const [live, setLive]     = useState(21340.0);
-  const [clock, setClock]   = useState('');
   const [bprPct, setBprPct] = useState(63.4);
   const [bull, setBull]     = useState(true);
 
@@ -354,20 +321,6 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      setClock(now.toLocaleTimeString('fr-FR', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' ET');
-    };
-    tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const change    = live - open;
-  const changePct = (change / open * 100).toFixed(2);
-  const up        = change >= 0;
-
   const oteZone    = bprPct > 61.8 && bprPct < 78.6;
   const signalReady = oteZone && bull;
   const sigColor   = signalReady ? C.green : bprPct > 78.6 ? C.red : C.amber;
@@ -393,132 +346,7 @@ export default function Dashboard() {
     }}>
       <style>{CSS}</style>
 
-      {/* ── Row 1 : Header ─────────────────────────────────────────────── */}
-      <div style={{
-        height: 56, minHeight: 56,
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 16px',
-        gap: 16,
-        background: 'linear-gradient(180deg, rgba(201,168,76,0.07) 0%, transparent 100%)',
-        borderBottom: `1px solid ${C.border}`,
-        position: 'relative',
-        overflow: 'hidden',
-        flexShrink: 0,
-      }}>
-        {/* Horizon glow */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: '5%', right: '5%', height: 1,
-          background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.5), transparent)',
-        }} />
-
-        {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <span style={{ fontSize: 24, filter: 'drop-shadow(0 0 8px rgba(201,168,76,0.45))' }}>🐪</span>
-          <div>
-            <div style={{
-              ...GRAD,
-              fontFamily: ORBITRON,
-              fontWeight: 900,
-              fontSize: 13,
-              letterSpacing: '0.16em',
-              lineHeight: 1.1,
-              filter: 'drop-shadow(0 0 10px rgba(201,168,76,0.3))',
-            }}>CAMEL MARKET COCKPIT</div>
-            <div style={{
-              fontFamily: JB_MONO,
-              fontSize: 8,
-              color: C.sandMuted,
-              letterSpacing: '0.12em',
-              marginTop: 1,
-            }}>by SalahTataouine · NQ·ES MARKET READING SYSTEM</div>
-          </div>
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        {/* Live Price */}
-        <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <div style={{
-            ...GRAD,
-            fontFamily: ORBITRON,
-            fontWeight: 900,
-            fontSize: 22,
-            lineHeight: 1,
-            filter: 'drop-shadow(0 0 12px rgba(201,168,76,0.35))',
-          }}>{fmt(live)}</div>
-          <div style={{
-            fontFamily: JB_MONO,
-            fontSize: 10,
-            color: up ? C.green : C.red,
-            marginTop: 2,
-          }}>{up ? '▲' : '▼'} {fmt(Math.abs(change))} ({up ? '+' : ''}{changePct}%)</div>
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        {/* Quick stats */}
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexShrink: 0 }}>
-          {([['VAH', vah], ['POC', poc], ['VAL', val], ['OPEN', open]] as [string, number][]).map(([k, v]) => (
-            <div key={k} style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: JB_MONO, fontSize: 7.5, color: C.sandMuted, letterSpacing: '0.1em' }}>{k}</div>
-              <div style={{ fontFamily: JB_MONO, fontSize: 9.5, color: C.sand }}>{fmt(v)}</div>
-            </div>
-          ))}
-
-          <div style={{
-            padding: '2px 8px',
-            background: C.turquoiseFaint,
-            border: `1px solid ${C.turquoise}`,
-            borderRadius: 3,
-            fontFamily: ORBITRON,
-            fontSize: 7,
-            fontWeight: 700,
-            color: C.turquoise,
-            letterSpacing: '0.1em',
-          }}>● LIVE RTH</div>
-
-          <div style={{
-            fontFamily: JB_MONO,
-            fontSize: 10,
-            color: C.goldBright,
-            minWidth: 88,
-            textAlign: 'right',
-          }}>{clock}</div>
-        </div>
-      </div>
-
-      {/* ── Row 2 : Nav Tabs ────────────────────────────────────────────── */}
-      <div style={{
-        height: 38, minHeight: 38,
-        display: 'flex',
-        alignItems: 'stretch',
-        background: C.surface,
-        borderBottom: `1px solid ${C.border}`,
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        flexShrink: 0,
-      }}>
-        {[
-          { to: '/',         label: 'THE COCKPIT',      end: true },
-          { to: '/analyseur',label: 'MARKET ORBIT' },
-          { to: '/gex',      label: 'FLOW · GEX' },
-          { to: '/journal',  label: 'THE LOGBOOK' },
-          { to: '/setups',   label: 'NQ ROUTES' },
-          { to: '/bible',    label: 'THE CODEX' },
-          { to: '/plan',     label: 'THE WEEKLY ROUTE' },
-          { to: '/stats',    label: 'THE ARCHIVE' },
-        ].map(({ to, label, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}
-          >{label}</NavLink>
-        ))}
-      </div>
-
-      {/* ── Row 3 : Data Cards ──────────────────────────────────────────── */}
+      {/* ── Row 1 : Data Cards ──────────────────────────────────────────── */}
       <div style={{
         display: 'flex',
         gap: 4,

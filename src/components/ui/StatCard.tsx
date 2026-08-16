@@ -7,17 +7,48 @@ interface StatCardProps {
 }
 
 export function StatCard({ label, value, subValue, trend, icon }: StatCardProps) {
-  const trendColor =
-    trend === 'up' ? 'text-profit' : trend === 'down' ? 'text-loss' : 'text-slate-400'
+  const valueColor =
+    trend === 'up'   ? '#34d399' :
+    trend === 'down' ? '#ef4444' :
+                       '#d8cdb8'
 
   return (
-    <div className="bg-surface-card border border-surface-border rounded-xl p-4 flex flex-col gap-1 hover:border-brand-500/40 transition-colors">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-400 uppercase tracking-wider">{label}</span>
-        {icon && <span className="text-lg">{icon}</span>}
+    <div style={{
+      background: '#090d15',
+      border: '1px solid rgba(201,168,76,0.16)',
+      borderTop: '2px solid #c9a84c',
+      borderRadius: 4,
+      padding: '10px 14px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 5,
+      transition: 'border-color 0.2s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          fontFamily: "'Orbitron', monospace",
+          fontSize: 7.5,
+          fontWeight: 700,
+          letterSpacing: '0.18em',
+          color: '#7a6a50',
+          textTransform: 'uppercase',
+        }}>{label}</span>
+        {icon && <span style={{ fontSize: 13 }}>{icon}</span>}
       </div>
-      <span className={`text-2xl font-bold font-mono ${trendColor}`}>{value}</span>
-      {subValue && <span className="text-xs text-slate-500">{subValue}</span>}
+      <span style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 20,
+        fontWeight: 700,
+        color: valueColor,
+        letterSpacing: '-0.02em',
+      }}>{value}</span>
+      {subValue && (
+        <span style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9,
+          color: '#7a6a50',
+        }}>{subValue}</span>
+      )}
     </div>
   )
 }
