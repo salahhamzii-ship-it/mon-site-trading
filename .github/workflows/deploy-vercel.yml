@@ -22,3 +22,6 @@ jobs:
 
       - name: Deploy via Vercel CLI (builds on Vercel servers)
         run: npx vercel --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: team_CSDmZraqkuPAifBYRZT9jasT
+          VERCEL_PROJECT_ID: prj_zk71If7ZYdvETjI8l4eKsXzpj1W3
