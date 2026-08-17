@@ -9,6 +9,7 @@ const GRAD = {
 } as React.CSSProperties
 
 const navItems = [
+  { to: '/cockpit', label: 'CMC COCKPIT',       sub: 'Camel Market Cockpit', icon: '🐪' },
   { to: '/',        label: 'THE COCKPIT',      sub: 'Dashboard principal',  icon: '◉', end: true },
   { to: '/session', label: 'SESSION CALC',      sub: 'Calculateur méthode',  icon: '⚙' },
   { to: '/gex',     label: 'FLOW · GEX',       sub: 'GEX Panel · Options',  icon: '⚡' },

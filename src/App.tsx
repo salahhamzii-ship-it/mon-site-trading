@@ -9,10 +9,14 @@ import Stats from './pages/Stats'
 import SessionAnalyzer from './pages/SessionAnalyzer'
 import GEXPanel from './pages/GEXPanel'
 import Calculateur from './pages/Calculateur'
+import CockpitApp from './pages/CockpitApp'
 
 export default function App() {
   return (
     <Routes>
+      {/* Cockpit — full-screen, no Layout wrapper */}
+      <Route path="/cockpit" element={<CockpitApp />} />
+
       <Route path="/" element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="journal" element={<Journal />} />
@@ -23,7 +27,6 @@ export default function App() {
         <Route path="session" element={<SessionAnalyzer />} />
         <Route path="gex" element={<GEXPanel />} />
         <Route path="calc" element={<Calculateur />} />
-        {/* /session is handled by SessionAnalyzer which re-exports Calculateur */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
