@@ -40,9 +40,9 @@ function Field({ label, value, onChange, ro, color, note, span }: {
 }) {
   return (
     <div style={span ? { gridColumn: `span ${span}` } : undefined}>
-      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
-        <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.13em', color:'rgba(136,153,187,0.5)' }}>{label}</span>
-        {note && <span style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.35)' }}>{note}</span>}
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
+        <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.11em', color:'rgba(136,153,187,0.5)' }}>{label}</span>
+        {note && <span style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.3)' }}>{note}</span>}
       </div>
       <input
         value={value} readOnly={ro}
@@ -51,8 +51,8 @@ function Field({ label, value, onChange, ro, color, note, span }: {
           width:'100%', boxSizing:'border-box',
           background: ro ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.45)',
           border: ro ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(201,168,76,0.2)',
-          borderRadius:3, padding:'5px 8px',
-          fontFamily:JB, fontSize:12, fontWeight:600,
+          borderRadius:3, padding:'3px 6px', height:24,
+          fontFamily:JB, fontSize:10, fontWeight:600,
           color: ro ? (color ?? '#c9a84c') : '#e2e8f0',
           outline:'none', cursor: ro ? 'default' : 'text',
         } as React.CSSProperties}
@@ -68,44 +68,44 @@ function Sec({ title, icon, accent, children }: {
   title: string; icon: string; accent: string; children: React.ReactNode
 }) {
   return (
-    <div style={{ background:'#141820', borderRadius:6, overflow:'hidden', border:'1px solid rgba(255,255,255,0.07)', borderTop:`2px solid ${accent}` }}>
-      <div style={{ padding:'9px 16px', background:'rgba(0,0,0,0.2)', borderBottom:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center', gap:8 }}>
-        <span style={{ fontSize:13, filter:`drop-shadow(0 0 5px ${accent}80)` }}>{icon}</span>
-        <span style={{ fontFamily:ORB, fontSize:8, fontWeight:700, letterSpacing:'0.16em', color:accent }}>{title}</span>
+    <div style={{ background:'#141820', borderRadius:5, overflow:'hidden', border:'1px solid rgba(255,255,255,0.07)', borderTop:`2px solid ${accent}` }}>
+      <div style={{ padding:'5px 10px', background:'rgba(0,0,0,0.2)', borderBottom:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center', gap:6 }}>
+        <span style={{ fontSize:11, filter:`drop-shadow(0 0 4px ${accent}80)` }}>{icon}</span>
+        <span style={{ fontFamily:ORB, fontSize:7, fontWeight:700, letterSpacing:'0.15em', color:accent }}>{title}</span>
       </div>
-      <div style={{ padding:'12px 16px' }}>{children}</div>
+      <div style={{ padding:'8px 10px' }}>{children}</div>
     </div>
   )
 }
 
-function G({ cols=4, gap=8, children }: { cols?:number; gap?:number; children:React.ReactNode }) {
+function G({ cols=4, gap=4, children }: { cols?:number; gap?:number; children:React.ReactNode }) {
   return <div style={{ display:'grid', gridTemplateColumns:`repeat(${cols},1fr)`, gap }}>{children}</div>
 }
 
 /* ── IB Quarter bar ────────────────────────────────────────────────── */
 function QuarterBar({ pct, zone }: { pct: number; zone: string }) {
   const zones = [
-    { from:0,  to:25,  c:'rgba(255,107,107,0.12)', label:'IBL' },
-    { from:25, to:50,  c:'rgba(201,168,76,0.08)',  label:'Q1' },
-    { from:50, to:75,  c:'rgba(30,179,188,0.08)',  label:'MID' },
-    { from:75, to:100, c:'rgba(0,255,136,0.12)',   label:'Q3' },
+    { from:0,  to:25,  c:'rgba(255,107,107,0.12)' },
+    { from:25, to:50,  c:'rgba(201,168,76,0.08)'  },
+    { from:50, to:75,  c:'rgba(30,179,188,0.08)'  },
+    { from:75, to:100, c:'rgba(0,255,136,0.12)'   },
   ]
   return (
-    <div style={{ marginTop:10 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-        <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.13em', color:'rgba(136,153,187,0.5)' }}>POSITION CLOSE — IB QUARTERS</span>
+    <div style={{ marginTop:6 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
+        <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.11em', color:'rgba(136,153,187,0.5)' }}>POSITION CLOSE — IB QUARTERS</span>
         <span style={{ fontFamily:JB, fontSize:8, color:'#c9a84c', fontWeight:700 }}>{zone}</span>
       </div>
-      <div style={{ position:'relative', height:20, background:'rgba(0,0,0,0.35)', borderRadius:3, overflow:'hidden', border:'1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ position:'relative', height:16, background:'rgba(0,0,0,0.35)', borderRadius:3, overflow:'hidden', border:'1px solid rgba(255,255,255,0.05)' }}>
         {zones.map(z => (
           <div key={z.from} style={{ position:'absolute', left:`${z.from}%`, width:`${z.to-z.from}%`, height:'100%', background:z.c, borderRight:'1px solid rgba(255,255,255,0.05)' }} />
         ))}
         {['IBL','Q1','MID','Q3','IBH'].map((lbl, i) => (
-          <div key={lbl} style={{ position:'absolute', left:`${i*25}%`, top:'50%', transform:'translate(-50%,-50%)', fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.35)', pointerEvents:'none' }}>{lbl}</div>
+          <div key={lbl} style={{ position:'absolute', left:`${i*25}%`, top:'50%', transform:'translate(-50%,-50%)', fontFamily:JB, fontSize:6, color:'rgba(136,153,187,0.35)', pointerEvents:'none' }}>{lbl}</div>
         ))}
         <div style={{ position:'absolute', left:`${Math.max(0,Math.min(100,pct))}%`, top:0, bottom:0, width:2, background:'#c9a84c', transform:'translateX(-50%)', boxShadow:'0 0 6px rgba(201,168,76,0.9)' }} />
       </div>
-      <div style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.4)', marginTop:3, textAlign:'right' }}>{pct.toFixed(1)}% dans l'IB</div>
+      <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', marginTop:2, textAlign:'right' }}>{pct.toFixed(1)}% dans l'IB</div>
     </div>
   )
 }
@@ -114,8 +114,6 @@ function QuarterBar({ pct, zone }: { pct: number; zone: string }) {
 function parseCSV(text: string): Partial<Record<string, string>> {
   const lines = text.trim().split('\n').filter(Boolean)
   const last = lines[lines.length - 1].split(',')
-  // Try to detect Sierra Chart format: Date,Time,Open,High,Low,Close[,Vol]
-  // or simple: Open,High,Low,Close
   if (last.length >= 6) {
     const [, , open, high, low, close] = last
     return { open: open?.trim(), high: high?.trim(), low: low?.trim(), settle: close?.trim() }
@@ -180,8 +178,8 @@ export default function Calculateur() {
   const alnC = useMemo(() => {
     const ah = n(aln.asiaHigh), al = n(aln.asiaLow)
     const lh = n(aln.londonHigh), ll = n(aln.londonLow)
-    if (lh > ah && ll > al)  return { p:'P3', c:'#00ff88', desc:'London H/L > Asia → Haussier', rel:'80.8%' }
-    if (lh < ah && ll < al)  return { p:'P4', c:'#ff4444', desc:'London H/L < Asia → Baissier', rel:'68.6%' }
+    if (lh > ah && ll > al)   return { p:'P3', c:'#00ff88', desc:'London H/L > Asia → Haussier', rel:'80.8%' }
+    if (lh < ah && ll < al)   return { p:'P4', c:'#ff4444', desc:'London H/L < Asia → Baissier', rel:'68.6%' }
     if (lh >= ah && ll <= al) return { p:'P1', c:'#f0d070', desc:'London englobe Asia → Mixte',   rel:'—' }
     if (lh <= ah && ll >= al) return { p:'P2', c:'#1eb3bc', desc:'London inside Asia → Rotation', rel:'—' }
     return { p:'?', c:'rgba(255,255,255,0.4)', desc:'Inconclusive', rel:'—' }
@@ -248,7 +246,6 @@ export default function Calculateur() {
     if (ibC.cls === 'BULL A')   score += 3; else if (ibC.cls === 'BEAR A')   score -= 3
     else if (ibC.cls === 'BULL B') score += 1; else if (ibC.cls === 'BEAR B') score -= 1
     if (n(ovn.close) > n(ovn.avwap18h)) score += 1; else score -= 1
-    // §9: adjust if ES data provided
     if (esIb.ibHigh) { if (s9.aligned) score += 1; else score -= 1 }
 
     let sig='', fid='', sc=''
@@ -279,33 +276,33 @@ export default function Calculateur() {
 
   /* ── Render ──────────────────────────────────────────────────────── */
   return (
-    <div style={{ padding:0 }}>
+    <div style={{ maxWidth:'75vw', margin:'0 auto', padding:'0 0 16px' }}>
+
       {/* Header */}
-      <div style={{ marginBottom:14 }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <span style={{ fontSize:18 }}>⚙</span>
+      <div style={{ marginBottom:10 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:3 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:14 }}>⚙</span>
             <div style={{
-              fontFamily:ORB, fontSize:'clamp(14px,2vw,20px)', fontWeight:900, letterSpacing:'0.2em',
+              fontFamily:ORB, fontSize:'clamp(11px,1.5vw,16px)', fontWeight:900, letterSpacing:'0.2em',
               background:'linear-gradient(135deg,#c9a84c,#f0d070)',
               WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text',
             } as React.CSSProperties}>SESSION CALCULATOR</div>
-            <div style={{ padding:'3px 10px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:3, fontSize:8, letterSpacing:'0.14em', color:'rgba(201,168,76,0.7)', fontFamily:ORB }}>MÉTHODE SALAH v2</div>
+            <div style={{ padding:'2px 8px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:3, fontSize:7, letterSpacing:'0.14em', color:'rgba(201,168,76,0.7)', fontFamily:ORB }}>MÉTHODE SALAH v2</div>
           </div>
-          {/* Preset + CSV buttons */}
-          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+          <div style={{ display:'flex', gap:5, alignItems:'center' }}>
             {Object.keys(PRESETS).map(key => (
               <button key={key} onClick={() => loadPreset(key)} style={{
-                padding:'4px 10px', cursor:'pointer', borderRadius:3,
-                fontFamily:JB, fontSize:9, fontWeight:700,
+                padding:'3px 8px', cursor:'pointer', borderRadius:3,
+                fontFamily:JB, fontSize:8, fontWeight:700,
                 background: activePreset === key ? 'rgba(201,168,76,0.18)' : 'rgba(0,0,0,0.4)',
                 border:`1px solid ${activePreset === key ? 'rgba(201,168,76,0.5)' : 'rgba(255,255,255,0.07)'}`,
                 color: activePreset === key ? '#c9a84c' : 'rgba(136,153,187,0.5)',
               }}>{key}</button>
             ))}
             <label style={{
-              padding:'4px 10px', cursor:'pointer', borderRadius:3,
-              fontFamily:JB, fontSize:9, fontWeight:700,
+              padding:'3px 8px', cursor:'pointer', borderRadius:3,
+              fontFamily:JB, fontSize:8, fontWeight:700,
               background:'rgba(0,0,0,0.4)', border:'1px solid rgba(255,255,255,0.07)',
               color:'rgba(136,153,187,0.5)', display:'inline-block',
             }}>
@@ -322,68 +319,68 @@ export default function Calculateur() {
             </label>
           </div>
         </div>
-        <div style={{ fontSize:10, color:'rgba(136,153,187,0.5)', letterSpacing:'0.08em', fontFamily:JB }}>
+        <div style={{ fontSize:9, color:'rgba(136,153,187,0.45)', letterSpacing:'0.08em', fontFamily:JB }}>
           RTH J-1 → OVN → ALN → IB → GEX → §9 → RÉSULTAT
         </div>
-        <div style={{ marginTop:6, height:1, background:'linear-gradient(90deg,rgba(201,168,76,0.3),rgba(30,179,188,0.2),transparent)' }} />
+        <div style={{ marginTop:5, height:1, background:'linear-gradient(90deg,rgba(201,168,76,0.3),rgba(30,179,188,0.2),transparent)' }} />
       </div>
 
       {/* Row 1: RTH + OVN */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
         <Sec title="RTH J-1" icon="📊" accent="#c9a84c">
-          <G cols={4}>
-            <Field label="OPEN"   value={rth.open}   onChange={v => upRth('open', v)} />
-            <Field label="HIGH"   value={rth.high}   onChange={v => upRth('high', v)} />
-            <Field label="LOW"    value={rth.low}    onChange={v => upRth('low', v)} />
-            <Field label="SETTLE" value={rth.settle} onChange={v => upRth('settle', v)} />
-            <Field label="VAH"    value={rth.vah}    onChange={v => upRth('vah', v)} />
-            <Field label="VAL"    value={rth.val}    onChange={v => upRth('val', v)} />
-            <Field label="POC"    value={rth.poc}    onChange={v => upRth('poc', v)} />
+          <G cols={4} gap={4}>
+            <Field label="OPEN"      value={rth.open}   onChange={v => upRth('open', v)} />
+            <Field label="HIGH"      value={rth.high}   onChange={v => upRth('high', v)} />
+            <Field label="LOW"       value={rth.low}    onChange={v => upRth('low', v)} />
+            <Field label="SETTLE"    value={rth.settle} onChange={v => upRth('settle', v)} />
+            <Field label="VAH"       value={rth.vah}    onChange={v => upRth('vah', v)} />
+            <Field label="VAL"       value={rth.val}    onChange={v => upRth('val', v)} />
+            <Field label="POC"       value={rth.poc}    onChange={v => upRth('poc', v)} />
             <Field label="HALF BACK" value={fmt(rthC.halfBack)} ro color="#c9a84c" note="(H+L)÷2" />
           </G>
         </Sec>
 
         <Sec title="OVERNIGHT (OVN)" icon="🌙" accent="#1eb3bc">
-          <G cols={3}>
+          <G cols={3} gap={4}>
             <Field label="OPEN 18H GLOBEX" value={ovn.open18h}  onChange={v => upOvn('open18h', v)} />
             <Field label="AVWAP 18H"       value={ovn.avwap18h} onChange={v => upOvn('avwap18h', v)} />
             <Field label="OVN HIGH"        value={ovn.high}     onChange={v => upOvn('high', v)} />
             <Field label="OVN LOW"         value={ovn.low}      onChange={v => upOvn('low', v)} />
             <Field label="OVN CLOSE"       value={ovn.close}    onChange={v => upOvn('close', v)} />
             <div>
-              <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.13em', color:'rgba(136,153,187,0.5)', display:'block', marginBottom:3 }}>OVN VS SETTLE</span>
-              <div style={{ padding:'6px 8px', borderRadius:3, textAlign:'center', background:`${ovnC.bc}15`, border:`1px solid ${ovnC.bc}45`, fontFamily:ORB, fontSize:14, fontWeight:900, color:ovnC.bc, letterSpacing:'0.1em', textShadow:`0 0 10px ${ovnC.bc}80` }}>{ovnC.biais}</div>
-              <div style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.4)', textAlign:'center', marginTop:3 }}>{ovnC.diff>=0?'+':''}{fmt(ovnC.diff)} pts vs Settle</div>
+              <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.11em', color:'rgba(136,153,187,0.5)', display:'block', marginBottom:2 }}>OVN VS SETTLE</span>
+              <div style={{ padding:'4px 6px', borderRadius:3, textAlign:'center', background:`${ovnC.bc}15`, border:`1px solid ${ovnC.bc}45`, fontFamily:ORB, fontSize:11, fontWeight:900, color:ovnC.bc, letterSpacing:'0.08em', textShadow:`0 0 8px ${ovnC.bc}80` }}>{ovnC.biais}</div>
+              <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', textAlign:'center', marginTop:2 }}>{ovnC.diff>=0?'+':''}{fmt(ovnC.diff)} pts vs Settle</div>
             </div>
           </G>
         </Sec>
       </div>
 
       {/* Row 2: ALN + IB */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
         <Sec title="ALIGNMENT (ALN)" icon="🧭" accent="#d4af37">
-          <G cols={2}>
+          <G cols={2} gap={4}>
             <Field label="ASIA HIGH"   value={aln.asiaHigh}   onChange={v => upAln('asiaHigh', v)} />
             <Field label="ASIA LOW"    value={aln.asiaLow}    onChange={v => upAln('asiaLow', v)} />
             <Field label="LONDON HIGH" value={aln.londonHigh} onChange={v => upAln('londonHigh', v)} />
             <Field label="LONDON LOW"  value={aln.londonLow}  onChange={v => upAln('londonLow', v)} />
           </G>
-          <div style={{ marginTop:10, padding:'10px 12px', borderRadius:4, background:`${alnC.c}10`, border:`1px solid ${alnC.c}30` }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 }}>
-              <span style={{ fontFamily:ORB, fontSize:22, fontWeight:900, color:alnC.c, letterSpacing:'0.1em' }}>{alnC.p}</span>
-              <span style={{ fontFamily:JB, fontSize:13, fontWeight:700, color:alnC.c }}>{alnC.rel}</span>
+          <div style={{ marginTop:6, padding:'6px 10px', borderRadius:4, background:`${alnC.c}10`, border:`1px solid ${alnC.c}30` }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:2 }}>
+              <span style={{ fontFamily:ORB, fontSize:16, fontWeight:900, color:alnC.c, letterSpacing:'0.1em' }}>{alnC.p}</span>
+              <span style={{ fontFamily:JB, fontSize:11, fontWeight:700, color:alnC.c }}>{alnC.rel}</span>
             </div>
-            <span style={{ fontSize:10, color:'rgba(200,190,165,0.7)', fontFamily:JB }}>{alnC.desc}</span>
+            <span style={{ fontSize:9, color:'rgba(200,190,165,0.7)', fontFamily:JB }}>{alnC.desc}</span>
           </div>
-          <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
+          <div style={{ marginTop:5, display:'grid', gridTemplateColumns:'1fr 1fr', gap:3 }}>
             {[
               { p:'P3', d:'LH/LL > Asia · Haussier', c:'#00ff88' },
               { p:'P4', d:'LH/LL < Asia · Baissier',  c:'#ff4444' },
               { p:'P1', d:'London englobe · Mixte',    c:'#f0d070' },
               { p:'P2', d:'London inside · Rotation',  c:'#1eb3bc' },
             ].map(row => (
-              <div key={row.p} style={{ display:'flex', gap:5, alignItems:'center', padding:'3px 6px', background:alnC.p===row.p?`${row.c}15`:'rgba(0,0,0,0.2)', borderRadius:3, border:`1px solid ${alnC.p===row.p?row.c+'40':'rgba(255,255,255,0.04)'}` }}>
-                <span style={{ fontFamily:ORB, fontSize:8, color:row.c, fontWeight:700, flexShrink:0 }}>{row.p}</span>
+              <div key={row.p} style={{ display:'flex', gap:4, alignItems:'center', padding:'2px 5px', background:alnC.p===row.p?`${row.c}15`:'rgba(0,0,0,0.2)', borderRadius:3, border:`1px solid ${alnC.p===row.p?row.c+'40':'rgba(255,255,255,0.04)'}` }}>
+                <span style={{ fontFamily:ORB, fontSize:7, color:row.c, fontWeight:700, flexShrink:0 }}>{row.p}</span>
                 <span style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.5)' }}>{row.d}</span>
               </div>
             ))}
@@ -391,14 +388,14 @@ export default function Calculateur() {
         </Sec>
 
         <Sec title="INITIAL BALANCE (IB)" icon="⚡" accent="#f0d070">
-          <G cols={4} gap={8}>
+          <G cols={4} gap={4}>
             <Field label="RTH OPEN"  value={ibS.rthOpen}  onChange={v => upIb('rthOpen', v)} />
             <Field label="ORB HIGH"  value={ibS.orbHigh}  onChange={v => upIb('orbHigh', v)} note="9h30–9h50" />
             <Field label="ORB LOW"   value={ibS.orbLow}   onChange={v => upIb('orbLow', v)} />
             <Field label="ORB CLOSE" value={ibS.orbClose} onChange={v => upIb('orbClose', v)} />
           </G>
-          <div style={{ height:6 }} />
-          <G cols={4} gap={8}>
+          <div style={{ height:4 }} />
+          <G cols={4} gap={4}>
             <Field label="IB HIGH"   value={ibS.ibHigh}   onChange={v => upIb('ibHigh', v)} />
             <Field label="IB LOW"    value={ibS.ibLow}    onChange={v => upIb('ibLow', v)} />
             <Field label="IB CLOSE"  value={ibS.ibClose}  onChange={v => upIb('ibClose', v)} />
@@ -408,39 +405,37 @@ export default function Calculateur() {
             <Field label="Q3 (75%)"  value={fmt(ibC.q3)}  ro color="#1eb3bc" />
             <Field label="Q4 (100%)" value={fmt(n(ibS.ibHigh))} ro color="#00ff88" note="= IBH" />
           </G>
-          {/* Quarter bar */}
           <QuarterBar pct={ibC.pct} zone={ibC.zone} />
-          {/* HL toggle + classification */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:8 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginTop:6 }}>
             <div>
-              <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.13em', color:'rgba(136,153,187,0.5)', display:'block', marginBottom:5 }}>ORDRE HL</span>
-              <div style={{ display:'flex', gap:5 }}>
+              <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.11em', color:'rgba(136,153,187,0.5)', display:'block', marginBottom:4 }}>ORDRE HL</span>
+              <div style={{ display:'flex', gap:4 }}>
                 {([{label:'LOW FIRST',v:false,c:'#00ff88'},{label:'HIGH FIRST',v:true,c:'#ff4444'}] as const).map(opt => (
-                  <button key={opt.label} onClick={() => setHighFirst(opt.v)} style={{ flex:1, padding:'5px 4px', cursor:'pointer', borderRadius:3, fontFamily:JB, fontSize:9, fontWeight:700, letterSpacing:'0.04em', background:highFirst===opt.v?`${opt.c}18`:'rgba(0,0,0,0.3)', border:`1px solid ${highFirst===opt.v?opt.c+'55':'rgba(255,255,255,0.07)'}`, color:highFirst===opt.v?opt.c:'rgba(136,153,187,0.4)' }}>{opt.label}</button>
+                  <button key={opt.label} onClick={() => setHighFirst(opt.v)} style={{ flex:1, padding:'3px 4px', cursor:'pointer', borderRadius:3, fontFamily:JB, fontSize:8, fontWeight:700, letterSpacing:'0.04em', background:highFirst===opt.v?`${opt.c}18`:'rgba(0,0,0,0.3)', border:`1px solid ${highFirst===opt.v?opt.c+'55':'rgba(255,255,255,0.07)'}`, color:highFirst===opt.v?opt.c:'rgba(136,153,187,0.4)' }}>{opt.label}</button>
                 ))}
               </div>
             </div>
-            <div style={{ padding:'8px 10px', borderRadius:4, background:`${ibC.cc}12`, border:`1px solid ${ibC.cc}35` }}>
-              <div style={{ fontFamily:ORB, fontSize:14, fontWeight:900, color:ibC.cc, letterSpacing:'0.08em', marginBottom:2 }}>{ibC.cls}</div>
-              <div style={{ fontFamily:JB, fontSize:9, color:'rgba(200,190,165,0.6)' }}>{ibC.desc}</div>
+            <div style={{ padding:'6px 8px', borderRadius:4, background:`${ibC.cc}12`, border:`1px solid ${ibC.cc}35` }}>
+              <div style={{ fontFamily:ORB, fontSize:11, fontWeight:900, color:ibC.cc, letterSpacing:'0.08em', marginBottom:1 }}>{ibC.cls}</div>
+              <div style={{ fontFamily:JB, fontSize:8, color:'rgba(200,190,165,0.6)' }}>{ibC.desc}</div>
             </div>
           </div>
         </Sec>
       </div>
 
       {/* Row 3: GEX + §9/85-15 */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
         <Sec title="GEX · OPTIONS FLOW" icon="🎯" accent="#f0d070">
-          <G cols={2} gap={8}>
-            <Field label="GEX FLIP"       value={gex.flip}      onChange={v => upGex('flip', v)} />
-            <Field label="VWAP 10H30"     value={gex.vwap1030}  onChange={v => upGex('vwap1030', v)} />
-            <Field label="CALL WALL"      value={gex.callWall}  onChange={v => upGex('callWall', v)} />
-            <Field label="PUT WALL"       value={gex.putWall}   onChange={v => upGex('putWall', v)} />
-            <Field label="ATR JOUR (pts)" value={gex.atr}       onChange={v => upGex('atr', v)} note="≈ 1 SD" />
+          <G cols={2} gap={4}>
+            <Field label="GEX FLIP"   value={gex.flip}     onChange={v => upGex('flip', v)} />
+            <Field label="VWAP 10H30" value={gex.vwap1030} onChange={v => upGex('vwap1030', v)} />
+            <Field label="CALL WALL"  value={gex.callWall} onChange={v => upGex('callWall', v)} />
+            <Field label="PUT WALL"   value={gex.putWall}  onChange={v => upGex('putWall', v)} />
+            <Field label="ATR"        value={gex.atr}      onChange={v => upGex('atr', v)} note="≈ 1 SD · pts" />
           </G>
-          <div style={{ marginTop:10 }}>
-            <div style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.13em', color:'rgba(136,153,187,0.5)', marginBottom:6 }}>SD NIVEAUX — VWAP 10H30 / SETTLEMENT</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
+          <div style={{ marginTop:8 }}>
+            <div style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.11em', color:'rgba(136,153,187,0.5)', marginBottom:4 }}>SD NIVEAUX — VWAP 10H30 / SETTLEMENT</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:3 }}>
               {([
                 { label:'SD +2 VWAP', val:gexC.v2u, color:'#ff4444' },
                 { label:'SD +2 SETT', val:gexC.s2u, color:'#ff6b6b' },
@@ -451,33 +446,32 @@ export default function Calculateur() {
                 { label:'SD -2 VWAP', val:gexC.v2d, color:'#00ff88' },
                 { label:'SD -2 SETT', val:gexC.s2d, color:'#00ff88' },
               ] as const).map(r => (
-                <div key={r.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'4px 8px', background:'rgba(0,0,0,0.25)', borderRadius:3 }}>
-                  <span style={{ fontFamily:JB, fontSize:9, color:'rgba(136,153,187,0.5)' }}>{r.label}</span>
-                  <span style={{ fontFamily:JB, fontSize:10, fontWeight:700, color:r.color }}>{fmt(r.val)}</span>
+                <div key={r.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'3px 6px', background:'rgba(0,0,0,0.25)', borderRadius:3 }}>
+                  <span style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.5)' }}>{r.label}</span>
+                  <span style={{ fontFamily:JB, fontSize:9, fontWeight:700, color:r.color }}>{fmt(r.val)}</span>
                 </div>
               ))}
             </div>
           </div>
         </Sec>
 
-        {/* 85/15 + §9 */}
-        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           <Sec title="85/15 — ROTATIONNEL VS TREND DAY" icon="🔄" accent="#1eb3bc">
-            <div style={{ padding:'10px 12px', borderRadius:4, background:`${rule8515.c}10`, border:`1px solid ${rule8515.c}30`, marginBottom:10 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:4 }}>
-                <span style={{ fontFamily:ORB, fontSize:14, fontWeight:900, color:rule8515.c, letterSpacing:'0.08em' }}>{rule8515.type}</span>
-                <span style={{ fontFamily:JB, fontSize:12, fontWeight:700, color:rule8515.c }}>{rule8515.pct}</span>
+            <div style={{ padding:'6px 10px', borderRadius:4, background:`${rule8515.c}10`, border:`1px solid ${rule8515.c}30`, marginBottom:6 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:2 }}>
+                <span style={{ fontFamily:ORB, fontSize:11, fontWeight:900, color:rule8515.c, letterSpacing:'0.08em' }}>{rule8515.type}</span>
+                <span style={{ fontFamily:JB, fontSize:10, fontWeight:700, color:rule8515.c }}>{rule8515.pct}</span>
               </div>
-              <span style={{ fontFamily:JB, fontSize:10, color:'rgba(200,190,165,0.7)' }}>{rule8515.action}</span>
+              <span style={{ fontFamily:JB, fontSize:8, color:'rgba(200,190,165,0.7)' }}>{rule8515.action}</span>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
               {[
                 { label:'OVN HIGH vs RTH HIGH', ok: n(ovn.high)<=n(rth.high), a:fmt(n(ovn.high)), b:fmt(n(rth.high)) },
                 { label:'OVN LOW vs RTH LOW',   ok: n(ovn.low)>=n(rth.low),   a:fmt(n(ovn.low)),  b:fmt(n(rth.low)) },
               ].map(row => (
-                <div key={row.label} style={{ padding:'6px 8px', background:'rgba(0,0,0,0.25)', borderRadius:3, borderLeft:`2px solid ${row.ok?'#1eb3bc':'#ff4444'}` }}>
-                  <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', marginBottom:2 }}>{row.label}</div>
-                  <div style={{ fontFamily:JB, fontSize:9, color:row.ok?'#1eb3bc':'#ff4444', fontWeight:700 }}>
+                <div key={row.label} style={{ padding:'4px 6px', background:'rgba(0,0,0,0.25)', borderRadius:3, borderLeft:`2px solid ${row.ok?'#1eb3bc':'#ff4444'}` }}>
+                  <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', marginBottom:1 }}>{row.label}</div>
+                  <div style={{ fontFamily:JB, fontSize:8, color:row.ok?'#1eb3bc':'#ff4444', fontWeight:700 }}>
                     {row.a} {row.ok?'≤':'>'} {row.b} {row.ok?'✓':'✗'}
                   </div>
                 </div>
@@ -486,65 +480,64 @@ export default function Calculateur() {
           </Sec>
 
           <Sec title="§9 — NQ + ES ALIGNMENT" icon="⚖" accent={s9.sc}>
-            <G cols={3} gap={8}>
+            <G cols={3} gap={4}>
               <Field label="ES IB HIGH"  value={esIb.ibHigh}  onChange={v => upEs('ibHigh', v)} />
               <Field label="ES IB LOW"   value={esIb.ibLow}   onChange={v => upEs('ibLow', v)} />
               <Field label="ES IB CLOSE" value={esIb.ibClose} onChange={v => upEs('ibClose', v)} />
             </G>
-            <div style={{ display:'flex', gap:5, marginTop:6 }}>
+            <div style={{ display:'flex', gap:4, marginTop:5 }}>
               {([{label:'ES LOW FIRST',v:false,c:'#00ff88'},{label:'ES HIGH FIRST',v:true,c:'#ff4444'}] as const).map(opt => (
-                <button key={opt.label} onClick={() => setEsHF(opt.v)} style={{ flex:1, padding:'4px 4px', cursor:'pointer', borderRadius:3, fontFamily:JB, fontSize:8, fontWeight:700, background:esHF===opt.v?`${opt.c}18`:'rgba(0,0,0,0.3)', border:`1px solid ${esHF===opt.v?opt.c+'55':'rgba(255,255,255,0.07)'}`, color:esHF===opt.v?opt.c:'rgba(136,153,187,0.4)' }}>{opt.label}</button>
+                <button key={opt.label} onClick={() => setEsHF(opt.v)} style={{ flex:1, padding:'3px 4px', cursor:'pointer', borderRadius:3, fontFamily:JB, fontSize:8, fontWeight:700, background:esHF===opt.v?`${opt.c}18`:'rgba(0,0,0,0.3)', border:`1px solid ${esHF===opt.v?opt.c+'55':'rgba(255,255,255,0.07)'}`, color:esHF===opt.v?opt.c:'rgba(136,153,187,0.4)' }}>{opt.label}</button>
               ))}
             </div>
-            {/* Alignment result */}
-            <div style={{ marginTop:8, display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+            <div style={{ marginTop:5, display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
               {[
                 { label:'NQ IB', val:ibC.cls, c:ibC.cc },
                 { label:'ES IB', val:s9.cls,  c:s9.sc  },
               ].map(r => (
-                <div key={r.label} style={{ padding:'6px 8px', background:'rgba(0,0,0,0.25)', borderRadius:3, textAlign:'center' }}>
-                  <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', marginBottom:2 }}>{r.label}</div>
-                  <div style={{ fontFamily:ORB, fontSize:12, fontWeight:900, color:r.c }}>{r.val || '—'}</div>
+                <div key={r.label} style={{ padding:'4px 6px', background:'rgba(0,0,0,0.25)', borderRadius:3, textAlign:'center' }}>
+                  <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', marginBottom:1 }}>{r.label}</div>
+                  <div style={{ fontFamily:ORB, fontSize:10, fontWeight:900, color:r.c }}>{r.val || '—'}</div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop:8, padding:'8px 10px', borderRadius:4, background:`${s9.sc}12`, border:`1px solid ${s9.sc}35`, textAlign:'center' }}>
-              <span style={{ fontFamily:ORB, fontSize:13, fontWeight:900, color:s9.sc, letterSpacing:'0.08em' }}>{s9.status}</span>
-              {!esIb.ibHigh && <div style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.35)', marginTop:2 }}>Entrer les données ES</div>}
+            <div style={{ marginTop:5, padding:'5px 8px', borderRadius:4, background:`${s9.sc}12`, border:`1px solid ${s9.sc}35`, textAlign:'center' }}>
+              <span style={{ fontFamily:ORB, fontSize:10, fontWeight:900, color:s9.sc, letterSpacing:'0.08em' }}>{s9.status}</span>
+              {!esIb.ibHigh && <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.35)', marginTop:1 }}>Entrer les données ES</div>}
             </div>
           </Sec>
         </div>
       </div>
 
       {/* ── RÉSULTAT ─────────────────────────────────────────────────── */}
-      <div style={{ background:`${res.sc}08`, border:`1px solid ${res.sc}35`, borderTop:`3px solid ${res.sc}`, borderRadius:6, padding:'18px 20px' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:24 }}>
-            <div>
-              <div style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.5)', letterSpacing:'0.1em', marginBottom:2 }}>SIGNAL</div>
-              <div style={{ fontFamily:ORB, fontSize:30, fontWeight:900, color:res.sc, letterSpacing:'0.08em', lineHeight:1, textShadow:`0 0 20px ${res.sc}80` }}>{res.sig}</div>
-            </div>
-            <div>
-              <div style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.5)', letterSpacing:'0.1em', marginBottom:2 }}>FIABILITÉ</div>
-              <div style={{ fontFamily:ORB, fontSize:18, fontWeight:700, color:res.sc }}>{res.fid}</div>
-            </div>
-            <div style={{ width:1, height:40, background:'rgba(255,255,255,0.06)' }} />
-            <div style={{ fontFamily:JB, fontSize:9, color:'rgba(136,153,187,0.5)', lineHeight:1.9 }}>
-              <div>OVN <span style={{ color:ovnC.bc, fontWeight:700 }}>{ovnC.biais}</span></div>
-              <div>85/15 <span style={{ color:rule8515.c, fontWeight:700 }}>{rule8515.type}</span></div>
-              <div>ALN <span style={{ color:alnC.c, fontWeight:700 }}>{alnC.p} ({alnC.rel})</span></div>
-              <div>IB <span style={{ color:ibC.cc, fontWeight:700 }}>{ibC.cls}</span> <span style={{ color:'rgba(136,153,187,0.4)', fontWeight:400 }}>({ibC.zone})</span></div>
-              {esIb.ibHigh && <div>§9 <span style={{ color:s9.sc, fontWeight:700 }}>{s9.status}</span></div>}
-            </div>
+      <div style={{ background:`${res.sc}08`, border:`1px solid ${res.sc}35`, borderTop:`3px solid ${res.sc}`, borderRadius:5, padding:'10px 14px' }}>
+        {/* Result top row: signal + score + quick stats */}
+        <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:8 }}>
+          <div>
+            <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.5)', letterSpacing:'0.1em', marginBottom:1 }}>SIGNAL</div>
+            <div style={{ fontFamily:ORB, fontSize:22, fontWeight:900, color:res.sc, letterSpacing:'0.08em', lineHeight:1, textShadow:`0 0 15px ${res.sc}80` }}>{res.sig}</div>
           </div>
-          <div style={{ padding:'12px 20px', background:`${res.sc}15`, border:`1px solid ${res.sc}45`, borderRadius:4, textAlign:'center' }}>
-            <div style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.5)', letterSpacing:'0.1em', marginBottom:2 }}>SCORE</div>
-            <div style={{ fontFamily:ORB, fontSize:26, fontWeight:900, color:res.sc }}>{res.score>0?'+':''}{res.score}</div>
-            <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', marginTop:1 }}>/ ±{esIb.ibHigh?9:8} max</div>
+          <div>
+            <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.5)', letterSpacing:'0.1em', marginBottom:1 }}>FIABILITÉ</div>
+            <div style={{ fontFamily:ORB, fontSize:14, fontWeight:700, color:res.sc }}>{res.fid}</div>
+          </div>
+          <div style={{ padding:'6px 12px', background:`${res.sc}15`, border:`1px solid ${res.sc}45`, borderRadius:4, textAlign:'center' }}>
+            <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.5)', letterSpacing:'0.1em', marginBottom:1 }}>SCORE</div>
+            <div style={{ fontFamily:ORB, fontSize:20, fontWeight:900, color:res.sc }}>{res.score>0?'+':''}{res.score}</div>
+            <div style={{ fontFamily:JB, fontSize:6, color:'rgba(136,153,187,0.4)' }}>/ ±{esIb.ibHigh?9:8} max</div>
+          </div>
+          <div style={{ width:1, height:36, background:'rgba(255,255,255,0.06)' }} />
+          <div style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.5)', lineHeight:1.8 }}>
+            <div>OVN <span style={{ color:ovnC.bc, fontWeight:700 }}>{ovnC.biais}</span></div>
+            <div>85/15 <span style={{ color:rule8515.c, fontWeight:700 }}>{rule8515.type}</span></div>
+            <div>ALN <span style={{ color:alnC.c, fontWeight:700 }}>{alnC.p} ({alnC.rel})</span></div>
+            <div>IB <span style={{ color:ibC.cc, fontWeight:700 }}>{ibC.cls}</span> <span style={{ color:'rgba(136,153,187,0.4)', fontWeight:400 }}>({ibC.zone})</span></div>
+            {esIb.ibHigh && <div>§9 <span style={{ color:s9.sc, fontWeight:700 }}>{s9.status}</span></div>}
           </div>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:12 }}>
+        {/* Trades row */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6, marginBottom:8 }}>
           {[
             { k:'ENTRÉE',  v:res.entree, c:'#c9a84c' },
             { k:'STOP',    v:res.stop,   c:'#ff4444' },
@@ -552,21 +545,21 @@ export default function Calculateur() {
             { k:'CIBLE 2', v:res.c2,     c:'#1eb3bc' },
             { k:'R:R',     v:`${res.rr}:1`, c:res.sc },
           ].map(r => (
-            <div key={r.k} style={{ background:'rgba(0,0,0,0.3)', borderRadius:4, padding:'8px 10px' }}>
-              <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', letterSpacing:'0.1em', marginBottom:4 }}>{r.k}</div>
-              <div style={{ fontFamily:JB, fontSize:11, fontWeight:700, color:r.c, lineHeight:1.3 }}>{r.v}</div>
+            <div key={r.k} style={{ background:'rgba(0,0,0,0.3)', borderRadius:4, padding:'5px 8px' }}>
+              <div style={{ fontFamily:JB, fontSize:7, color:'rgba(136,153,187,0.4)', letterSpacing:'0.1em', marginBottom:3 }}>{r.k}</div>
+              <div style={{ fontFamily:JB, fontSize:10, fontWeight:700, color:r.c, lineHeight:1.3 }}>{r.v}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ padding:'8px 12px', background:'rgba(0,0,0,0.3)', borderRadius:4, borderLeft:`3px solid ${res.sc}60`, marginBottom:14 }}>
-          <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.14em', color:'rgba(136,153,187,0.5)', marginRight:10 }}>SCÉNARIO</span>
-          <span style={{ fontFamily:JB, fontSize:10, color:'rgba(200,190,165,0.85)' }}>{res.scenario}</span>
+        <div style={{ padding:'5px 10px', background:'rgba(0,0,0,0.3)', borderRadius:4, borderLeft:`3px solid ${res.sc}60`, marginBottom:8 }}>
+          <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.14em', color:'rgba(136,153,187,0.5)', marginRight:8 }}>SCÉNARIO</span>
+          <span style={{ fontFamily:JB, fontSize:9, color:'rgba(200,190,165,0.85)' }}>{res.scenario}</span>
         </div>
 
         {/* Recap table */}
         <div>
-          <div style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.18em', color:'rgba(201,168,76,0.45)', marginBottom:8 }}>TABLEAU RÉCAPITULATIF</div>
+          <div style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.18em', color:'rgba(201,168,76,0.45)', marginBottom:5 }}>TABLEAU RÉCAPITULATIF</div>
           <div style={{ border:'1px solid rgba(255,255,255,0.06)', borderRadius:4, overflow:'hidden' }}>
             {[
               { e:'RTH J-1',  c:`High/Low/Settle/HB`, v:`${rth.high} · ${rth.low} · ${rth.settle} · ${fmt(rthC.halfBack)}`, s:'—' },
@@ -578,11 +571,11 @@ export default function Calculateur() {
               { e:'§9',       c:`NQ ${ibC.cls} / ES ${s9.cls}`, v:s9.status, s:esIb.ibHigh?s9.status:'non renseigné' },
               { e:'RÉSULTAT', c:`${res.sig} · ${res.fid}`, v:`Entrée ${res.entree} · C1 ${res.c1} · C2 ${res.c2}`, s:`${res.score>0?'+':''}${res.score}` },
             ].map((row, i) => (
-              <div key={row.e} style={{ display:'grid', gridTemplateColumns:'68px 150px 1fr 80px', padding:'5px 12px', gap:8, alignItems:'center', background:i%2===0?'rgba(0,0,0,0.2)':'transparent', borderBottom:i<7?'1px solid rgba(255,255,255,0.03)':'none' }}>
+              <div key={row.e} style={{ display:'grid', gridTemplateColumns:'60px 130px 1fr 70px', padding:'4px 10px', gap:6, alignItems:'center', background:i%2===0?'rgba(0,0,0,0.2)':'transparent', borderBottom:i<7?'1px solid rgba(255,255,255,0.03)':'none' }}>
                 <span style={{ fontFamily:ORB, fontSize:7, letterSpacing:'0.1em', color:'rgba(201,168,76,0.7)' }}>{row.e}</span>
-                <span style={{ fontFamily:JB, fontSize:9, color:'rgba(136,153,187,0.6)' }}>{row.c}</span>
-                <span style={{ fontFamily:JB, fontSize:9, color:'rgba(200,190,165,0.8)' }}>{row.v}</span>
-                <span style={{ fontFamily:JB, fontSize:9, color:res.sc, textAlign:'right', fontWeight:700 }}>{row.s}</span>
+                <span style={{ fontFamily:JB, fontSize:8, color:'rgba(136,153,187,0.6)' }}>{row.c}</span>
+                <span style={{ fontFamily:JB, fontSize:8, color:'rgba(200,190,165,0.8)' }}>{row.v}</span>
+                <span style={{ fontFamily:JB, fontSize:8, color:res.sc, textAlign:'right', fontWeight:700 }}>{row.s}</span>
               </div>
             ))}
           </div>
