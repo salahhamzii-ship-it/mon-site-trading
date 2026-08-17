@@ -10,14 +10,13 @@ const GRAD = {
 
 const navItems = [
   { to: '/',        label: 'THE COCKPIT',      sub: 'Dashboard principal',  icon: '◉', end: true },
-  { to: '/session', label: 'MARKET ORBIT',     sub: 'Analyseur de marché',  icon: '◎' },
+  { to: '/session', label: 'SESSION CALC',      sub: 'Calculateur méthode',  icon: '⚙' },
   { to: '/gex',     label: 'FLOW · GEX',       sub: 'GEX Panel · Options',  icon: '⚡' },
   { to: '/journal', label: 'THE LOGBOOK',      sub: 'Journal de trading',   icon: '◈' },
   { to: '/setups',  label: 'NQ ROUTES',        sub: 'Setups NQ',            icon: '▶' },
   { to: '/bible',   label: 'THE CODEX',        sub: 'Bible Méthode Salah',  icon: '◆' },
   { to: '/plan',    label: 'WEEKLY ROUTE',     sub: 'Plan de la semaine',   icon: '◷' },
   { to: '/stats',   label: 'THE ARCHIVE',      sub: 'Statistiques',         icon: '▣' },
-  { to: '/calc',    label: 'SESSION CALC',     sub: 'Calculateur méthode',  icon: '⚙' },
 ]
 
 export function Sidebar() {

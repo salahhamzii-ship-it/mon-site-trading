@@ -23,6 +23,7 @@ export default function App() {
         <Route path="session" element={<SessionAnalyzer />} />
         <Route path="gex" element={<GEXPanel />} />
         <Route path="calc" element={<Calculateur />} />
+        {/* /session is handled by SessionAnalyzer which re-exports Calculateur */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
