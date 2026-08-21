@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 type Tab = 'NQ' | 'ES' | 'GC' | 'CL'
 type OTF = 'Higher' | 'Lower' | 'Neutral' | ''
 type Mig = 'Stable' | 'Ascendant' | 'Descendant' | ''
+type Pat = 'P1' | 'P2' | 'P3' | 'P4' | ''
 
 interface TD {
   mHigh: string; mLow: string; mPoc: string; mOtf: OTF; mVah: string; mVal: string
@@ -22,8 +22,9 @@ interface Instr {
   oHigh: string; oLow: string; oClose: string
   ibHigh: string; ibLow: string; ibClose: string; ibOrdre: string; ibClass: string
   orbHigh: string; orbLow: string; orbClose: string
-  alnBull: string; alnBear: string; alnVad: string; alnConf: string
-  p9Atr: string; p9Align: string; p9Dir: string
+  vwap18h: string; vwap00h: string; atr: string
+  asiaHigh: string; asiaLow: string; londonHigh: string; londonLow: string
+  alnPattern: Pat; alnFiab: string
   rSignal: string; rFiab: string; rEntry: string; rStop: string; rC1: string; rC2: string
 }
 interface Cfg {
@@ -40,8 +41,7 @@ interface Cfg {
   emphNth: string; showORLbl: boolean
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const TABS: Tab[]            = ['NQ', 'ES', 'GC', 'CL']
+const TABS: Tab[]              = ['NQ', 'ES', 'GC', 'CL']
 const IB_H: Record<Tab,string> = { NQ:'09:30–10:30 EST', ES:'09:30–10:30 EST', GC:'08:20–09:20 EST', CL:'09:00–10:00 EST' }
 const OR_H: Record<Tab,string> = { NQ:'09:30–09:50 EST', ES:'09:30–09:50 EST', GC:'08:20–08:40 EST', CL:'09:00–09:20 EST' }
 const TC: Record<Tab,string>   = { NQ:'#c9a84c', ES:'#1eb3bc', GC:'#d4af37', CL:'#ff8c42' }
@@ -51,17 +51,25 @@ const jb  = (sz:number, w=400, ex?:CSSProperties):CSSProperties => ({ fontFamily
 const pf  = (v:string) => parseFloat(v)||0
 const fmt2 = (v:number) => isNaN(v) ? '—' : v.toFixed(2)
 
-const mkI = (): Instr => ({ lastPx:'', rOpen:'', rHigh:'', rLow:'', rSettle:'', rVah:'', rVal:'', rPoc:'', oHigh:'', oLow:'', oClose:'', ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'', ibClass:'', orbHigh:'', orbLow:'', orbClose:'', alnBull:'', alnBear:'', alnVad:'', alnConf:'', p9Atr:'', p9Align:'', p9Dir:'', rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'' })
+const mkI = (): Instr => ({
+  lastPx:'', rOpen:'', rHigh:'', rLow:'', rSettle:'', rVah:'', rVal:'', rPoc:'',
+  oHigh:'', oLow:'', oClose:'',
+  ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'', ibClass:'',
+  orbHigh:'', orbLow:'', orbClose:'',
+  vwap18h:'', vwap00h:'', atr:'',
+  asiaHigh:'', asiaLow:'', londonHigh:'', londonLow:'',
+  alnPattern:'', alnFiab:'',
+  rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:''
+})
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'23:00', londonMode:'Auto', londonStart:'03:00', londonEnd:'04:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
 
-// ─── Presentational components ────────────────────────────────────────────────
 const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.05)' : 'rgba(255,255,255,0.04)', border:`1px solid ${ro ? 'rgba(201,168,76,0.22)' : 'rgba(201,168,76,0.15)'}`, borderRadius:2, padding:'2px 5px', height:22, fontSize:10, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box' })
 
 function F({ l, v='', s, t, opts, ro, dv }: { l:string; v?:string; s?:(x:string)=>void; t?:string; opts?:string[]; ro?:boolean; dv?:string }) {
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-      <span style={jb(7, 400, { color:C.muted, textTransform:'uppercase', letterSpacing:'0.09em' })}>{l}</span>
+    <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:0 }}>
+      <span style={jb(7, 400, { color:C.muted, textTransform:'uppercase', letterSpacing:'0.09em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' })}>{l}</span>
       {ro ? <div style={iS(true)}>{dv ?? v ?? '—'}</div>
        : opts ? <select value={v} onChange={e=>s!(e.target.value)} style={{...iS(false),cursor:'pointer'}}><option value="">—</option>{opts.map(o=><option key={o} value={o}>{o}</option>)}</select>
        : <input type={t||'number'} value={v} onChange={e=>s!(e.target.value)} style={iS(false)} />}
@@ -91,9 +99,9 @@ function Sec({ title, col=C.gold, mini, children }: { title:string; col?:string;
   )
 }
 
-function G2({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>{ch}</div> }
-function G3({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:5 }}>{ch}</div> }
-function G4({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:5 }}>{ch}</div> }
+function G2({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:5 }}>{ch}</div> }
+function G3({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:5 }}>{ch}</div> }
+function G4({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:5 }}>{ch}</div> }
 
 function Pill({ label, col }: { label:string; col:string }) {
   return <span style={{ display:'inline-block', padding:'1px 6px', borderRadius:2, fontSize:8, fontFamily:'Orbitron,monospace', background:`${col}18`, border:`1px solid ${col}40`, color:col, letterSpacing:'0.1em' }}>{label}</span>
@@ -109,7 +117,7 @@ function Btn({ label, active, col=C.muted, onClick }: { label:string; active:boo
 
 function TA({ v, s, ph }: { v:string; s:(x:string)=>void; ph:string }) {
   return (
-    <textarea value={v} onChange={e=>s(e.target.value)} placeholder={ph} style={{ width:'100%', height:44, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:2, padding:'4px 6px', fontSize:9, color:'#ccc', outline:'none', resize:'none', fontFamily:'"JetBrains Mono",monospace' }} />
+    <textarea value={v} onChange={e=>s(e.target.value)} placeholder={ph} style={{ width:'100%', height:44, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:2, padding:'4px 6px', fontSize:9, color:'#ccc', outline:'none', resize:'none', fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box' }} />
   )
 }
 
@@ -117,12 +125,12 @@ function Result({ signal, fiab, entry, stop, c1, c2, rr, col }: { signal:string;
   const sc = signal==='ACHAT' ? C.up : signal==='VENTE' ? C.down : C.muted
   return (
     <div style={{ padding:'10px 12px', borderRadius:3, marginTop:2, background:`${col}08`, border:`1px solid ${col}28` }}>
-      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
         {signal && <span style={{ width:8, height:8, borderRadius:'50%', background:sc, flexShrink:0, animation: signal==='ACHAT' ? 'pulseDot 1.8s infinite' : signal==='VENTE' ? 'pulseDotRed 1.8s infinite' : 'none' }} />}
         <span style={orb(22, 900, { color:sc, lineHeight:1, textShadow:`0 0 14px ${sc}` })}>{signal||'—'}</span>
         {fiab && <Pill label={`FIAB ${fiab}%`} col={sc} />}
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,minmax(0,1fr))', gap:6 }}>
         {([['ENTRY',entry,C.gold],['STOP',stop,C.down],['CIB 1',c1,C.up],['CIB 2',c2,C.up],['R:R',rr,C.teal]] as [string,string,string][]).map(([lbl,val,c])=>(
           <div key={lbl}>
             <div style={jb(7, 400, { color:C.muted, marginBottom:1 })}>{lbl}</div>
@@ -134,7 +142,22 @@ function Result({ signal, fiab, entry, stop, c1, c2, rr, col }: { signal:string;
   )
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+function Alert({ msg, col }: { msg:string; col:string }) {
+  return (
+    <div style={{ padding:'4px 8px', background:`${col}08`, border:`1px solid ${col}22`, borderRadius:2 }}>
+      <span style={jb(8.5, 600, { color:col })}>{msg}</span>
+    </div>
+  )
+}
+
+function VwapPosBadge({ px, vw }: { px:number; vw:number }) {
+  if (!px || !vw) return null
+  const d = Math.abs(px - vw)
+  const pos = d < 0.5 ? 'AT' : px > vw ? 'ABOVE' : 'BELOW'
+  const col = pos === 'AT' ? C.muted : pos === 'ABOVE' ? C.up : C.down
+  return <Pill label={pos} col={col} />
+}
+
 export default function Calculateur() {
   const [tab,    setTab]    = useState<Tab>('NQ')
   const [tdOpen, setTdOpen] = useState(true)
@@ -149,16 +172,20 @@ export default function Calculateur() {
   const upC  = <K extends keyof Cfg>(k:K, v:Cfg[K]) => setCfg(p=>({...p,[k]:v}))
 
   const I   = II[tab]
-  const nq  = II.NQ
   const col = TC[tab]
 
-  // ── Computed ──────────────────────────────────────────────────────────────
   const insideWeek = useMemo(() => {
     const wH=pf(td.wHigh), wL=pf(td.wLow), mH=pf(td.mHigh), mL=pf(td.mLow)
     return wH>0 && mH>0 && wH < mH && wL > mL
   }, [td.wHigh, td.wLow, td.mHigh, td.mLow])
 
-  const ibDir = useMemo(():OTF => nq.ibOrdre==='HL' ? 'Higher' : nq.ibOrdre==='LH' ? 'Lower' : '', [nq.ibOrdre])
+  const ibDir = useMemo(():OTF => II.NQ.ibOrdre==='HL' ? 'Higher' : II.NQ.ibOrdre==='LH' ? 'Lower' : '', [II.NQ.ibOrdre])
+
+  const p9Align = useMemo(() => {
+    const nqO = II.NQ.ibOrdre, esO = II.ES.ibOrdre
+    if (!nqO || !esO) return ''
+    return nqO === esO ? 'Aligné' : 'Divergent'
+  }, [II.NQ.ibOrdre, II.ES.ibOrdre])
 
   const score = useMemo(() => {
     let s = 0
@@ -168,28 +195,29 @@ export default function Calculateur() {
       if (td.gapDay) s += 1
       if (td.pocMig==='Ascendant'  && ibDir==='Higher') s += 1
       if (td.pocMig==='Descendant' && ibDir==='Lower')  s += 1
-      const pNQ = II.NQ.p9Align
-      if (pNQ==='Aligné') s += 1; else if (pNQ==='Contra') s -= 1
-      const pES = II.ES.p9Align
-      if (pES==='Aligné') s += 1; else if (pES==='Contra') s -= 1
     }
+    if (p9Align==='Aligné')   s += 1
+    else if (p9Align==='Divergent') s -= 1
     if (insideWeek) s -= 1
     return Math.max(-9, Math.min(9, s))
-  }, [td, II, ibDir, insideWeek])
+  }, [td, ibDir, insideWeek, p9Align])
 
   const halfBack = useMemo(() => { const h=pf(I.rHigh),l=pf(I.rLow); return h>0&&l>0 ? fmt2((h+l)/2) : '' }, [I.rHigh, I.rLow])
   const ibMid    = useMemo(() => { const h=pf(I.ibHigh),l=pf(I.ibLow); return h>0&&l>0 ? fmt2((h+l)/2) : '' }, [I.ibHigh, I.ibLow])
-  const ovnVsS   = useMemo(() => {
+
+  const ovnVsS = useMemo(() => {
     const oc=pf(I.oClose), se=pf(I.rSettle)
     if (!oc||!se) return ''
     const d=oc-se; if (Math.abs(d)<1) return 'BALANCE'
     return d>0 ? 'LONG' : 'SHORT'
   }, [I.oClose, I.rSettle])
-  const orbPos   = useMemo(() => {
+
+  const orbPos = useMemo(() => {
     const px=pf(I.lastPx), oh=pf(I.orbHigh), ol=pf(I.orbLow)
     if (!px||!oh||!ol) return ''
     return px>oh ? 'AU-DESSUS' : px<ol ? 'EN-DESSOUS' : 'DANS ORB'
   }, [I.lastPx, I.orbHigh, I.orbLow])
+
   const rr = useMemo(() => {
     const en=pf(I.rEntry), st=pf(I.rStop), c1=pf(I.rC1)
     if (!en||!st||!c1) return ''
@@ -197,14 +225,26 @@ export default function Calculateur() {
     return risk>0 ? `1 : ${(rew/risk).toFixed(1)}` : ''
   }, [I.rEntry, I.rStop, I.rC1])
 
+  const sdVals = useMemo(() => {
+    const vw=pf(I.vwap18h), at=pf(I.atr)
+    if (!vw||!at) return { sp1:'', sm1:'', sp2:'', sm2:'' }
+    return { sp1:fmt2(vw+at), sm1:fmt2(vw-at), sp2:fmt2(vw+2*at), sm2:fmt2(vw-2*at) }
+  }, [I.vwap18h, I.atr])
+
   const sc    = score
   const scCol = sc>0 ? C.up : sc<0 ? C.down : C.muted
   const scPct = Math.abs(sc)/9*100
+  const lp    = pf(I.lastPx)
+  const vw18  = pf(I.vwap18h)
+  const vw00  = pf(I.vwap00h)
+  const oMid  = td.tpoOvnH&&td.tpoOvnL ? fmt2((pf(td.tpoOvnH)+pf(td.tpoOvnL))/2) : '—'
 
-  // ── Render: Top-Down Dalton ───────────────────────────────────────────────
+  const hasALN = tab === 'NQ'
+  const hasP9  = tab === 'NQ' || tab === 'ES'
+
   const renderTD = () => (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title="MONTHLY" col={C.gold}>
           <G3 ch={<><F l="High" v={td.mHigh} s={v=>upTD('mHigh',v)} /><F l="Low" v={td.mLow} s={v=>upTD('mLow',v)} /><F l="POC" v={td.mPoc} s={v=>upTD('mPoc',v)} /></>}/>
           <G3 ch={<><F l="OTF" v={td.mOtf} s={v=>upTD('mOtf',v as OTF)} opts={['Higher','Lower','Neutral']} /><F l="VAH" v={td.mVah} s={v=>upTD('mVah',v)} /><F l="VAL" v={td.mVal} s={v=>upTD('mVal',v)} /></>}/>
@@ -219,7 +259,7 @@ export default function Calculateur() {
         </Sec>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8 }}>
         <Sec title="COMPOSITE SEMAINE" col={C.teal} mini>
           <G3 ch={<><F l="VAH" v={td.csVah} s={v=>upTD('csVah',v)} /><F l="VAL" v={td.csVal} s={v=>upTD('csVal',v)} /><F l="POC" v={td.csPoc} s={v=>upTD('csPoc',v)} /></>}/>
         </Sec>
@@ -231,7 +271,7 @@ export default function Calculateur() {
         </Sec>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:8 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:8 }}>
         <Sec title="DAILY BARS" col={C.down} mini>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
             <Ck l="Gap"       v={td.gapDay}   s={v=>upTD('gapDay',v)} />
@@ -253,13 +293,9 @@ export default function Calculateur() {
     </div>
   )
 
-  // ── Render: Instrument Panel ──────────────────────────────────────────────
-  const hasALN = tab === 'NQ'
-  const hasP9  = tab === 'NQ' || tab === 'ES'
-
   const renderInstr = () => (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title="RTH J-1" col={col}>
           <G4 ch={<><F l="Open" v={I.rOpen} s={v=>upI(tab,'rOpen',v)} /><F l="High" v={I.rHigh} s={v=>upI(tab,'rHigh',v)} /><F l="Low" v={I.rLow} s={v=>upI(tab,'rLow',v)} /><F l="Settle" v={I.rSettle} s={v=>upI(tab,'rSettle',v)} /></>}/>
           <G4 ch={<><F l="VAH" v={I.rVah} s={v=>upI(tab,'rVah',v)} /><F l="VAL" v={I.rVal} s={v=>upI(tab,'rVal',v)} /><F l="POC" v={I.rPoc} s={v=>upI(tab,'rPoc',v)} /><F l="Half Back" ro dv={halfBack} /></>}/>
@@ -274,14 +310,14 @@ export default function Calculateur() {
         </Sec>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title={`IB · ${IB_H[tab]}`} col={col}>
           <G4 ch={<><F l="IB High" v={I.ibHigh} s={v=>upI(tab,'ibHigh',v)} /><F l="IB Low" v={I.ibLow} s={v=>upI(tab,'ibLow',v)} /><F l="IB Close" v={I.ibClose} s={v=>upI(tab,'ibClose',v)} /><F l="IB Mid" ro dv={ibMid} /></>}/>
           <G2 ch={<><F l="Ordre HL" v={I.ibOrdre} s={v=>upI(tab,'ibOrdre',v)} opts={['HL','LH']} /><F l="Classification" v={I.ibClass} s={v=>upI(tab,'ibClass',v)} opts={['Normal','Wide IB','Narrow IB','Rotational']} /></>}/>
         </Sec>
-        <Sec title={`ORB 20 MIN · ${OR_H[tab]}`} col={col}>
-          <div style={{ display:'flex', gap:8, alignItems:'flex-end' }}>
-            <div style={{ flex:1 }}>
+        <Sec title={`ORB · ${OR_H[tab]}`} col={col}>
+          <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+            <div style={{ flex:1, minWidth:100 }}>
               <F l="Dernier prix" v={I.lastPx} s={v=>upI(tab,'lastPx',v)} />
             </div>
             {orbPos && <Pill label={orbPos} col={orbPos==='AU-DESSUS'?C.up:orbPos==='EN-DESSOUS'?C.down:C.muted} />}
@@ -290,15 +326,90 @@ export default function Calculateur() {
         </Sec>
       </div>
 
+      {/* VWAP / SD */}
+      <Sec title={`VWAP / SD · ${tab}`} col={col}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <G3 ch={<><F l="VWAP 18h" v={I.vwap18h} s={v=>upI(tab,'vwap18h',v)} /><F l="VWAP 00h" v={I.vwap00h} s={v=>upI(tab,'vwap00h',v)} /><F l="ATR (pts)" v={I.atr} s={v=>upI(tab,'atr',v)} /></>}/>
+            <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+              <span style={jb(8, 400, { color:C.muted })}>vs VWAP 18h :</span>
+              <VwapPosBadge px={lp} vw={vw18} />
+              <span style={jb(8, 400, { color:C.muted })}>vs VWAP 00h :</span>
+              <VwapPosBadge px={lp} vw={vw00} />
+            </div>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <G4 ch={<>
+              <F l="SD +1" ro dv={sdVals.sp1||'—'} />
+              <F l="SD -1" ro dv={sdVals.sm1||'—'} />
+              <F l="SD +2" ro dv={sdVals.sp2||'—'} />
+              <F l="SD -2" ro dv={sdVals.sm2||'—'} />
+            </>}/>
+            {!pf(I.vwap18h) && <span style={jb(7.5, 400, { color:'rgba(136,153,187,0.4)' })}>Entrez VWAP 18h + ATR pour calculer les SD.</span>}
+          </div>
+        </div>
+      </Sec>
+
+      {/* ALN — NQ uniquement */}
       {hasALN && (
-        <Sec title="ALN · NIVEAUX (NQ uniquement)" col={C.amber}>
-          <G4 ch={<><F l="Bull Level" v={I.alnBull} s={v=>upI(tab,'alnBull',v)} /><F l="Bear Level" v={I.alnBear} s={v=>upI(tab,'alnBear',v)} /><F l="VAD" v={I.alnVad} s={v=>upI(tab,'alnVad',v)} opts={['HAUSSE','BAISSE','NEUTRE']} /><F l="Conf %" v={I.alnConf} s={v=>upI(tab,'alnConf',v)} /></>}/>
+        <Sec title="ALN · ASIA / LONDON (NQ uniquement)" col={C.amber}>
+          <G4 ch={<>
+            <F l="Asia High"   v={I.asiaHigh}   s={v=>upI(tab,'asiaHigh',v)} />
+            <F l="Asia Low"    v={I.asiaLow}    s={v=>upI(tab,'asiaLow',v)} />
+            <F l="London High" v={I.londonHigh} s={v=>upI(tab,'londonHigh',v)} />
+            <F l="London Low"  v={I.londonLow}  s={v=>upI(tab,'londonLow',v)} />
+          </>}/>
+          <G2 ch={<>
+            <F l="Pattern" v={I.alnPattern} s={v=>upI(tab,'alnPattern',v as Pat)} opts={['P1','P2','P3','P4']} />
+            <F l="Fiabilité %" v={I.alnFiab} s={v=>upI(tab,'alnFiab',v)} />
+          </>}/>
         </Sec>
       )}
 
+      {/* §9 — NQ / ES */}
       {hasP9 && (
-        <Sec title="§9 · SETUP (NQ / ES uniquement)" col={C.teal}>
-          <G3 ch={<><F l="ATR (pts)" v={I.p9Atr} s={v=>upI(tab,'p9Atr',v)} /><F l="Alignement" v={I.p9Align} s={v=>upI(tab,'p9Align',v)} opts={['Aligné','Contra','Neutre']} /><F l="Direction" v={I.p9Dir} s={v=>upI(tab,'p9Dir',v)} opts={['LONG','SHORT','NEUTRE']} /></>}/>
+        <Sec title="§9 · ALIGNEMENT NQ / ES" col={C.teal}>
+          {tab === 'NQ' ? (
+            <>
+              <div style={jb(7.5, 400, { color:C.muted, marginBottom:2 })}>ES IB (lecture croisée)</div>
+              <G3 ch={<>
+                <F l="ES IB High"  ro dv={II.ES.ibHigh||'—'} />
+                <F l="ES IB Low"   ro dv={II.ES.ibLow||'—'} />
+                <F l="ES IB Close" ro dv={II.ES.ibClose||'—'} />
+              </>}/>
+              <G2 ch={<>
+                <F l="ES Ordre HL"     ro dv={II.ES.ibOrdre||'—'} />
+                <F l="ES Classification" ro dv={II.ES.ibClass||'—'} />
+              </>}/>
+            </>
+          ) : (
+            <>
+              <div style={jb(7.5, 400, { color:C.muted, marginBottom:2 })}>NQ IB (lecture croisée)</div>
+              <G3 ch={<>
+                <F l="NQ IB High"  ro dv={II.NQ.ibHigh||'—'} />
+                <F l="NQ IB Low"   ro dv={II.NQ.ibLow||'—'} />
+                <F l="NQ IB Close" ro dv={II.NQ.ibClose||'—'} />
+              </>}/>
+              <G2 ch={<>
+                <F l="NQ Ordre HL"       ro dv={II.NQ.ibOrdre||'—'} />
+                <F l="NQ Classification" ro dv={II.NQ.ibClass||'—'} />
+              </>}/>
+            </>
+          )}
+          <div style={{ display:'flex', gap:12, alignItems:'center', paddingTop:2, flexWrap:'wrap' }}>
+            <div>
+              <div style={jb(7, 400, { color:C.muted, marginBottom:2 })}>ALIGNEMENT NQ/ES</div>
+              {p9Align
+                ? <Pill label={p9Align} col={p9Align==='Aligné'?C.up:C.down} />
+                : <span style={jb(8, 400, { color:'rgba(136,153,187,0.35)' })}>Remplis IB Ordre NQ + ES</span>}
+            </div>
+            <div>
+              <div style={jb(7, 400, { color:C.muted, marginBottom:2 })}>IMPACT §9</div>
+              <span style={jb(12, 700, { color: p9Align==='Aligné'?C.up:p9Align==='Divergent'?C.down:C.muted })}>
+                {p9Align==='Aligné' ? '+1' : p9Align==='Divergent' ? '-1' : '—'}
+              </span>
+            </div>
+          </div>
         </Sec>
       )}
 
@@ -310,37 +421,67 @@ export default function Calculateur() {
     </div>
   )
 
-  // ── Render: Live Tracker ──────────────────────────────────────────────────
-  const atr  = pf(I.p9Atr)
-  const lp   = pf(I.lastPx)
-  const sdP  = lp>0&&atr>0 ? fmt2(lp+atr) : '—'
-  const sdM  = lp>0&&atr>0 ? fmt2(lp-atr) : '—'
-  const oMid = td.tpoOvnH&&td.tpoOvnL ? fmt2((pf(td.tpoOvnH)+pf(td.tpoOvnL))/2) : '—'
+  const renderTracker = () => {
+    const sdHit = (level:string) => {
+      const lv = pf(level); return lp>0 && lv>0 && Math.abs(lp-lv)<0.5
+    }
+    const items: [string,string,string,number][] = [
+      ['LAST',    I.lastPx||'—',      C.gold, 20],
+      ['OVN MID', oMid,               C.amber,14],
+      ['VWAP 18h',I.vwap18h||'—',    C.teal, 14],
+      ['VWAP 00h',I.vwap00h||'—',    C.teal, 14],
+      ['POC J-1', I.rPoc||'—',       C.gold, 14],
+    ]
+    const sdItems: [string,string][] = [
+      ['SD +2', sdVals.sp2],
+      ['SD +1', sdVals.sp1],
+      ['SD -1', sdVals.sm1],
+      ['SD -2', sdVals.sm2],
+    ]
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:8 }}>
+          {items.map(([l,v,c,sz])=>(
+            <div key={l}>
+              <div style={jb(7, 400, { color:C.muted, marginBottom:3 })}>{l}</div>
+              <div style={jb(sz, 700, { color:c })}>{v}</div>
+            </div>
+          ))}
+        </div>
 
-  const renderTracker = () => (
-    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8 }}>
-        {([['LAST',I.lastPx||'—',C.gold,20],['OVN MID',oMid,C.amber,14],['POC J-1',I.rPoc||'—',C.teal,14],['SD +1',sdP,C.up,14],['SD -1',sdM,C.down,14]] as [string,string,string,number][]).map(([l,v,c,sz])=>(
-          <div key={l}>
-            <div style={jb(7, 400, { color:C.muted, marginBottom:3 })}>{l}</div>
-            <div style={jb(sz, 700, { color:c })}>{v}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-        {lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh) && <Alert msg={`▲ Prix au-dessus de l'IB High (${I.ibHigh})`} col={C.up} />}
-        {lp>0&&pf(I.ibLow)>0 &&lp<pf(I.ibLow)  && <Alert msg={`▼ Prix en-dessous de l'IB Low (${I.ibLow})`}  col={C.down} />}
-        {lp>0&&pf(I.rPoc)>0  &&Math.abs(lp-pf(I.rPoc))<2 && <Alert msg={`◈ Prix proche du POC J-1 (${I.rPoc})`} col={C.gold} />}
-        {lp>0&&pf(I.orbHigh)>0&&lp>pf(I.orbHigh) && <Alert msg={`▲ Extension au-dessus de l'ORB High (${I.orbHigh})`} col={C.up} />}
-        {lp>0&&pf(I.orbLow)>0 &&lp<pf(I.orbLow)  && <Alert msg={`▼ Cassure sous l'ORB Low (${I.orbLow})`} col={C.down} />}
-        {(!lp || (!pf(I.ibHigh)&&!pf(I.ibLow))) && <span style={jb(8, 400, { color:'rgba(136,153,187,0.4)' })}>Saisir un dernier prix + IB pour activer les alertes.</span>}
-      </div>
-    </div>
-  )
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:6, padding:'8px', background:'rgba(30,179,188,0.04)', border:'1px solid rgba(30,179,188,0.15)', borderRadius:3 }}>
+          {sdItems.map(([l,v])=>(
+            <div key={l} style={{ textAlign:'center' }}>
+              <div style={jb(7, 400, { color:C.muted, marginBottom:3 })}>{l}</div>
+              <div style={jb(13, 700, { color: sdHit(v) ? C.amber : C.teal, textShadow: sdHit(v) ? `0 0 8px ${C.amber}` : 'none' })}>{v||'—'}</div>
+              {sdHit(v) && <div style={{ marginTop:2 }}><Pill label="TOUCHÉ" col={C.amber} /></div>}
+            </div>
+          ))}
+        </div>
 
-  // ── Render: Settings ─────────────────────────────────────────────────────
+        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          {lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh)     && <Alert msg={`▲ Prix au-dessus de l'IB High (${I.ibHigh})`}    col={C.up} />}
+          {lp>0&&pf(I.ibLow)>0&&lp<pf(I.ibLow)        && <Alert msg={`▼ Prix en-dessous de l'IB Low (${I.ibLow})`}     col={C.down} />}
+          {lp>0&&pf(I.rPoc)>0&&Math.abs(lp-pf(I.rPoc))<2 && <Alert msg={`◈ Prix proche du POC J-1 (${I.rPoc})`}       col={C.gold} />}
+          {lp>0&&pf(I.orbHigh)>0&&lp>pf(I.orbHigh)    && <Alert msg={`▲ Extension au-dessus de l'ORB High (${I.orbHigh})`} col={C.up} />}
+          {lp>0&&pf(I.orbLow)>0&&lp<pf(I.orbLow)      && <Alert msg={`▼ Cassure sous l'ORB Low (${I.orbLow})`}        col={C.down} />}
+          {lp>0&&vw18>0&&lp>vw18                       && <Alert msg={`▲ Prix au-dessus du VWAP 18h (${I.vwap18h})`}   col={C.teal} />}
+          {lp>0&&vw18>0&&lp<vw18                       && <Alert msg={`▼ Prix en-dessous du VWAP 18h (${I.vwap18h})`} col={C.down} />}
+          {lp>0&&vw00>0&&Math.abs(lp-vw00)<0.5         && <Alert msg={`◈ Prix sur le VWAP 00h (${I.vwap00h})`}        col={C.amber} />}
+          {sdVals.sp1&&sdHit(sdVals.sp1)               && <Alert msg={`⚡ SD +1 touché (${sdVals.sp1})`}              col={C.amber} />}
+          {sdVals.sm1&&sdHit(sdVals.sm1)               && <Alert msg={`⚡ SD -1 touché (${sdVals.sm1})`}              col={C.amber} />}
+          {sdVals.sp2&&sdHit(sdVals.sp2)               && <Alert msg={`⚡ SD +2 touché (${sdVals.sp2})`}              col={C.down} />}
+          {sdVals.sm2&&sdHit(sdVals.sm2)               && <Alert msg={`⚡ SD -2 touché (${sdVals.sm2})`}              col={C.down} />}
+          {(!lp || (!pf(I.ibHigh)&&!pf(I.ibLow)&&!vw18)) && (
+            <span style={jb(8, 400, { color:'rgba(136,153,187,0.4)' })}>Saisir un dernier prix + IB / VWAP pour activer les alertes.</span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   const renderSettings = () => (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:10 }}>
       <Sec title="IB · INITIAL BALANCE">
         <G2 ch={<><F l="IB Line Offset" v={cfg.ibOffset} s={v=>upC('ibOffset',v)} /><F l="Table Text Size" v={cfg.ibTextSize} s={v=>upC('ibTextSize',v)} /></>}/>
         <Ck l="Show NY IB Background" v={cfg.showNYIBBg} s={v=>upC('showNYIBBg',v)} />
@@ -378,32 +519,32 @@ export default function Calculateur() {
     </div>
   )
 
-  // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <div style={{ width:'100%', height:'100%', overflowY:'auto', overflowX:'hidden', padding:'10px 14px', display:'flex', flexDirection:'column', gap:10, fontFamily:'"JetBrains Mono",monospace' }}>
+    <div style={{ width:'100%', height:'100%', overflowY:'auto', overflowX:'hidden', padding:'10px 14px', display:'flex', flexDirection:'column', gap:10, fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box' }}>
 
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', paddingBottom:2 }}>
-        <span style={orb(9, 900, { color:C.gold, letterSpacing:'0.2em' })}>◈ ÉTUDE MULTI-INSTRUMENTS · MÉTHODE SALAH v2</span>
+        <span style={orb(9, 900, { color:C.gold, letterSpacing:'0.2em' })}>◈ ÉTUDE MULTI-INSTRUMENTS · MÉTHODE SALAH v3</span>
         <span style={{ flex:1 }} />
-        <Btn label="▲ TOP-DOWN DALTON"   active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
-        <Btn label="⊕ LIVE TRACKER"      active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
-        <Btn label="⚙ RÉGLAGES IB/OR"   active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
+        <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
+        <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
+        <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
       </div>
 
       {/* Score bar */}
       <div style={{ padding:'8px 14px', border:`1px solid ${C.brd}`, borderRadius:3, background:C.sur, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
         <span style={orb(8, 700, { color:C.muted, letterSpacing:'0.16em' })}>SCORE TOP-DOWN</span>
         <span style={orb(24, 900, { color:scCol, lineHeight:1, textShadow:`0 0 12px ${scCol}` })}>{sc>0?'+':''}{sc}<span style={orb(9, 700, { color:`${scCol}80` })}>/9</span></span>
-        <div style={{ flex:1, minWidth:100, height:5, background:'rgba(255,255,255,0.06)', borderRadius:3, overflow:'hidden', position:'relative' }}>
+        <div style={{ flex:1, minWidth:80, height:5, background:'rgba(255,255,255,0.06)', borderRadius:3, overflow:'hidden', position:'relative' }}>
           <div style={{ position:'absolute', top:0, bottom:0, borderRadius:3, left: sc>=0 ? '50%' : `${50-scPct/2}%`, width:`${scPct/2}%`, background:scCol }} />
           <div style={{ position:'absolute', top:0, bottom:0, left:'50%', width:1, background:'rgba(255,255,255,0.2)' }} />
         </div>
         <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
-          <Pill label={`IB DIR: ${ibDir||'—'}`}                  col={ibDir==='Higher'?C.up:ibDir==='Lower'?C.down:C.muted} />
-          <Pill label={`INSIDE WK: ${insideWeek?'OUI':'NON'}`}   col={insideWeek?C.down:C.muted} />
-          {td.pocMig && <Pill label={`POC: ${td.pocMig}`}        col={td.pocMig==='Ascendant'?C.up:td.pocMig==='Descendant'?C.down:C.muted} />}
-          {td.mOtf   && <Pill label={`MONTHLY: ${td.mOtf}`}      col={td.mOtf==='Higher'?C.up:td.mOtf==='Lower'?C.down:C.muted} />}
+          <Pill label={`IB DIR: ${ibDir||'—'}`}                 col={ibDir==='Higher'?C.up:ibDir==='Lower'?C.down:C.muted} />
+          <Pill label={`INSIDE WK: ${insideWeek?'OUI':'NON'}`}  col={insideWeek?C.down:C.muted} />
+          {p9Align && <Pill label={`§9: ${p9Align}`}            col={p9Align==='Aligné'?C.up:C.down} />}
+          {td.pocMig && <Pill label={`POC: ${td.pocMig}`}       col={td.pocMig==='Ascendant'?C.up:td.pocMig==='Descendant'?C.down:C.muted} />}
+          {td.mOtf   && <Pill label={`MONTHLY: ${td.mOtf}`}    col={td.mOtf==='Higher'?C.up:td.mOtf==='Lower'?C.down:C.muted} />}
         </div>
       </div>
 
@@ -421,9 +562,9 @@ export default function Calculateur() {
 
       {/* Instrument tabs */}
       <div style={{ border:`1px solid ${C.brd}`, borderRadius:4, overflow:'hidden' }}>
-        <div style={{ display:'flex', borderBottom:`1px solid ${C.brd}`, background:'rgba(7,10,18,0.6)' }}>
+        <div style={{ display:'flex', borderBottom:`1px solid ${C.brd}`, background:'rgba(7,10,18,0.6)', overflowX:'auto' }}>
           {TABS.map(t=>(
-            <button key={t} onClick={()=>setTab(t)} style={{ flex:1, padding:'8px 4px', border:'none', cursor:'pointer', background: tab===t ? `${TC[t]}12` : 'transparent', borderBottom: tab===t ? `2px solid ${TC[t]}` : '2px solid transparent', transition:'all 0.14s' }}>
+            <button key={t} onClick={()=>setTab(t)} style={{ flex:1, minWidth:52, padding:'8px 4px', border:'none', cursor:'pointer', background: tab===t ? `${TC[t]}12` : 'transparent', borderBottom: tab===t ? `2px solid ${TC[t]}` : '2px solid transparent', transition:'all 0.14s' }}>
               <span style={orb(10, 900, { color: tab===t ? TC[t] : C.muted, letterSpacing:'0.18em' })}>{t}</span>
             </button>
           ))}
@@ -457,14 +598,6 @@ export default function Calculateur() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function Alert({ msg, col }: { msg:string; col:string }) {
-  return (
-    <div style={{ padding:'4px 8px', background:`${col}08`, border:`1px solid ${col}22`, borderRadius:2 }}>
-      <span style={jb(8.5, 600, { color:col })}>{msg}</span>
     </div>
   )
 }
