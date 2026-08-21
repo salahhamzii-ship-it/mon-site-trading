@@ -64,7 +64,7 @@ const mkI = (): Instr => ({
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'23:00', londonMode:'Auto', londonStart:'03:00', londonEnd:'04:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
 
-const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.05)' : 'rgba(255,255,255,0.04)', border:`1px solid ${ro ? 'rgba(201,168,76,0.22)' : 'rgba(201,168,76,0.15)'}`, borderRadius:2, padding:'2px 5px', height:22, fontSize:10, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box' })
+const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.05)' : 'rgba(255,255,255,0.075)', border:`1px solid ${ro ? 'rgba(201,168,76,0.35)' : 'rgba(201,168,76,0.35)'}`, borderRadius:3, padding:'9px 12px', minHeight:36, fontSize:14, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' })
 
 function F({ l, v='', s, t, opts, ro, dv }: { l:string; v?:string; s?:(x:string)=>void; t?:string; opts?:string[]; ro?:boolean; dv?:string }) {
   return (
@@ -80,7 +80,7 @@ function F({ l, v='', s, t, opts, ro, dv }: { l:string; v?:string; s?:(x:string)
 function Ck({ l, v, s }: { l:string; v:boolean; s:(x:boolean)=>void }) {
   return (
     <label style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer' }}>
-      <input type="checkbox" checked={v} onChange={e=>s(e.target.checked)} style={{ accentColor:C.gold, width:11, height:11 }} />
+      <input type="checkbox" checked={v} onChange={e=>s(e.target.checked)} style={{ accentColor:C.gold, width:17, height:17, minHeight:17, flexShrink:0 }} />
       <span style={jb(9, 400, { color:'#ccc' })}>{l}</span>
     </label>
   )
@@ -117,7 +117,7 @@ function Btn({ label, active, col=C.muted, onClick }: { label:string; active:boo
 
 function TA({ v, s, ph }: { v:string; s:(x:string)=>void; ph:string }) {
   return (
-    <textarea value={v} onChange={e=>s(e.target.value)} placeholder={ph} style={{ width:'100%', height:44, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:2, padding:'4px 6px', fontSize:9, color:'#ccc', outline:'none', resize:'none', fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box' }} />
+    <textarea value={v} onChange={e=>s(e.target.value)} placeholder={ph} style={{ width:'100%', height:60, background:'rgba(255,255,255,0.075)', border:'1px solid rgba(201,168,76,0.35)', borderRadius:3, padding:'9px 12px', fontSize:12, color:'#fff', outline:'none', resize:'none', fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' }} />
   )
 }
 
