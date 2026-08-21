@@ -224,3 +224,204 @@ body::after {
 }
 .setup-card:hover { transform: translateY(-4px); }
 .setup-card:hover::after { opacity: 1; }
+
+/* ══════════════════════════════════════════════════════════
+   CAMEL MARKET COCKPIT — PATCH SESSION CALC v2
+   ══════════════════════════════════════════════════════════ */
+
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  background: rgba(255, 255, 255, 0.075) !important;
+  border: 1px solid rgba(201, 168, 76, 0.35) !important;
+  border-radius: 3px !important;
+  color: #ffffff !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  padding: 9px 12px !important;
+  min-height: 36px !important;
+  outline: none !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(160, 175, 205, 0.6) !important;
+  opacity: 1 !important;
+  font-size: 12px !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #c9a84c !important;
+  background: rgba(201, 168, 76, 0.1) !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.3),
+              0 0 0 1px rgba(201, 168, 76, 0.4),
+              0 0 18px rgba(201, 168, 76, 0.28) !important;
+}
+
+input:hover:not(:focus),
+textarea:hover:not(:focus),
+select:hover:not(:focus) {
+  border-color: rgba(201, 168, 76, 0.6) !important;
+  background: rgba(255, 255, 255, 0.095) !important;
+}
+
+label,
+.field-label,
+[class*="label"] {
+  color: #b8c6e0 !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.13em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 5px !important;
+  display: block !important;
+}
+
+select {
+  cursor: pointer !important;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #c9a84c 50%),
+    linear-gradient(135deg, #c9a84c 50%, transparent 50%) !important;
+  background-position: calc(100% - 17px) center, calc(100% - 12px) center !important;
+  background-size: 5px 5px, 5px 5px !important;
+  background-repeat: no-repeat !important;
+  padding-right: 32px !important;
+}
+select option {
+  background: #101828 !important;
+  color: #ffffff !important;
+  padding: 8px !important;
+}
+
+fieldset,
+.section,
+.block,
+.card,
+.panel,
+[class*="section"],
+[class*="block"],
+[class*="card"],
+[class*="panel"] {
+  background: rgba(255, 255, 255, 0.028) !important;
+  border: 1px solid rgba(201, 168, 76, 0.16) !important;
+  border-radius: 4px !important;
+}
+
+legend,
+.section-title,
+.block-title,
+[class*="section-title"],
+[class*="block-title"],
+[class*="sec-hd"],
+[class*="section-header"] {
+  background: rgba(201, 168, 76, 0.09) !important;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.22) !important;
+  color: #f0d070 !important;
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2em !important;
+  padding: 10px 14px !important;
+}
+
+[class*="result"],
+[class*="resultat"],
+[class*="summary"] {
+  background: rgba(201, 168, 76, 0.07) !important;
+  border: 1px solid rgba(201, 168, 76, 0.28) !important;
+  border-radius: 4px !important;
+  padding: 16px 20px !important;
+}
+[class*="result"] [class*="value"],
+[class*="result"] [class*="val"],
+[class*="resultat"] [class*="value"] {
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #f0d070 !important;
+  text-shadow: 0 0 14px rgba(240, 208, 112, 0.45) !important;
+}
+
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 17px !important;
+  height: 17px !important;
+  min-height: 17px !important;
+  padding: 0 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(201, 168, 76, 0.45) !important;
+  border-radius: 3px !important;
+  cursor: pointer !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+}
+input[type="checkbox"]:checked {
+  background: rgba(201, 168, 76, 0.28) !important;
+  border-color: #f0d070 !important;
+  box-shadow: 0 0 10px rgba(240, 208, 112, 0.35) !important;
+}
+input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f0d070;
+  font-size: 12px;
+  font-weight: bold;
+  text-shadow: 0 0 6px rgba(240, 208, 112, 0.8);
+}
+
+[role="tab"],
+.tab,
+[class*="tab"]:not([class*="table"]) {
+  color: #9aabc9 !important;
+  font-family: 'Orbitron', sans-serif !important;
+  font-size: 13px !important;
+  letter-spacing: 0.25em !important;
+  border-bottom: 2px solid transparent !important;
+  transition: color .15s, border-color .15s;
+}
+[role="tab"][aria-selected="true"],
+.tab.active,
+[class*="tab"].active {
+  color: #f0d070 !important;
+  border-bottom-color: #c9a84c !important;
+  background: rgba(201, 168, 76, 0.08) !important;
+  text-shadow: 0 0 14px rgba(240, 208, 112, 0.4) !important;
+}
+
+body,
+#root,
+#__next,
+main {
+  background: #0a0e18 !important;
+}
+
+.text-muted,
+.text-secondary,
+.sub,
+.subtitle,
+small {
+  color: #9aabc9 !important;
+}
+
+.form-row,
+.field-group,
+[class*="form-row"],
+[class*="field"] {
+  margin-bottom: 14px !important;
+}
