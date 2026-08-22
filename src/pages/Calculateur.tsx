@@ -45,7 +45,7 @@ const TABS: Tab[]              = ['NQ', 'ES', 'GC', 'CL']
 const IB_H: Record<Tab,string> = { NQ:'09:30–10:30 EST', ES:'09:30–10:30 EST', GC:'08:20–09:20 EST', CL:'09:00–10:00 EST' }
 const OR_H: Record<Tab,string> = { NQ:'09:30–09:50 EST', ES:'09:30–09:50 EST', GC:'08:20–08:40 EST', CL:'09:00–09:20 EST' }
 const TC: Record<Tab,string>   = { NQ:'#c9a84c', ES:'#1eb3bc', GC:'#d4af37', CL:'#ff8c42' }
-const C = { gold:'#c9a84c', goldL:'#f0d070', up:'#00ff88', down:'#ff4444', teal:'#1eb3bc', amber:'#d4af37', muted:'#8899bb', sur:'#151d30', brd:'rgba(201,168,76,0.16)', pg:'#0d1322' }
+const C = { gold:'#c9a84c', goldL:'#f0d070', up:'#00ff88', down:'#ff4444', teal:'#1eb3bc', amber:'#d4af37', muted:'#8899bb', sur:'#141b2d', brd:'rgba(201,168,76,0.14)', pg:'#0b1120' }
 const orb = (sz:number, w=700, ex?:CSSProperties):CSSProperties => ({ fontFamily:'Orbitron,monospace', fontSize:sz, fontWeight:w, ...ex })
 const jb  = (sz:number, w=400, ex?:CSSProperties):CSSProperties => ({ fontFamily:'"JetBrains Mono",monospace', fontSize:sz, fontWeight:w, ...ex })
 const pf  = (v:string) => parseFloat(v)||0
@@ -64,12 +64,12 @@ const mkI = (): Instr => ({
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'23:00', londonMode:'Auto', londonStart:'03:00', londonEnd:'04:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
 
-const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.07)' : '#212b42', border:`1px solid ${ro ? 'rgba(201,168,76,0.35)' : 'rgba(201,168,76,0.4)'}`, borderRadius:3, padding:'9px 12px', minHeight:36, fontSize:14, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 4px rgba(0,0,0,0.4)' })
+const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.07)' : '#1a2236', border:`1px solid ${ro ? 'rgba(201,168,76,0.30)' : 'rgba(201,168,76,0.30)'}`, borderRadius:3, padding:'9px 12px', minHeight:38, fontSize:14, fontWeight:500, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' })
 
 function F({ l, v='', s, t, opts, ro, dv }: { l:string; v?:string; s?:(x:string)=>void; t?:string; opts?:string[]; ro?:boolean; dv?:string }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:0 }}>
-      <span style={jb(10, 500, { color:'#c2cfe6', textTransform:'uppercase', letterSpacing:'0.13em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:3 })}>{l}</span>
+      <span style={jb(12, 500, { color:'#b4c2d9', letterSpacing:'0.02em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:5 })}>{l}</span>
       {ro ? <div style={iS(true)}>{dv ?? v ?? '—'}</div>
        : opts ? <select value={v} onChange={e=>s!(e.target.value)} style={{...iS(false),cursor:'pointer'}}><option value="">—</option>{opts.map(o=><option key={o} value={o}>{o}</option>)}</select>
        : <input type={t||'number'} value={v} onChange={e=>s!(e.target.value)} style={iS(false)} />}
@@ -80,19 +80,19 @@ function F({ l, v='', s, t, opts, ro, dv }: { l:string; v?:string; s?:(x:string)
 function Ck({ l, v, s }: { l:string; v:boolean; s:(x:boolean)=>void }) {
   return (
     <label style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer' }}>
-      <input type="checkbox" checked={v} onChange={e=>s(e.target.checked)} style={{ accentColor:C.gold, width:17, height:17, minHeight:17, flexShrink:0 }} />
-      <span style={jb(9, 400, { color:'#ccc' })}>{l}</span>
+      <input type="checkbox" checked={v} onChange={e=>s(e.target.checked)} style={{ accentColor:C.goldL, width:17, height:17, minHeight:17, flexShrink:0 }} />
+      <span style={jb(13, 400, { color:'#d4dced' })}>{l}</span>
     </label>
   )
 }
 
 function Sec({ title, col=C.gold, mini, children }: { title:string; col?:string; mini?:boolean; children:ReactNode }) {
   return (
-    <div style={{ border:`1px solid ${C.brd}`, borderRadius:3, overflow:'hidden' }}>
-      <div style={{ padding: mini ? '3px 8px' : '4px 8px', borderLeft:`2px solid ${col}`, background:'rgba(201,168,76,0.04)', borderBottom:`1px solid ${C.brd}` }}>
-        <span style={orb(mini?6.5:7.5, 700, { color:col, letterSpacing:'0.18em' })}>{title}</span>
+    <div style={{ border:`1px solid ${C.brd}`, borderRadius:4, overflow:'hidden' }}>
+      <div style={{ padding: mini ? '6px 10px' : '10px 14px', borderLeft:`2px solid ${col}`, background:'rgba(201,168,76,0.08)', borderBottom:`1px solid rgba(201,168,76,0.20)` }}>
+        <span style={orb(mini?9:12, 700, { color:'#f0d070', letterSpacing:'0.12em' })}>{title}</span>
       </div>
-      <div style={{ padding: mini ? '6px 8px' : '8px 8px', display:'flex', flexDirection:'column', gap: mini ? 4 : 6, background:C.sur }}>
+      <div style={{ padding: mini ? '6px 8px' : '10px 10px', display:'flex', flexDirection:'column', gap: mini ? 4 : 8, background:C.sur }}>
         {children}
       </div>
     </div>
@@ -117,7 +117,7 @@ function Btn({ label, active, col=C.muted, onClick }: { label:string; active:boo
 
 function TA({ v, s, ph }: { v:string; s:(x:string)=>void; ph:string }) {
   return (
-    <textarea value={v} onChange={e=>s(e.target.value)} placeholder={ph} style={{ width:'100%', height:60, background:'rgba(255,255,255,0.075)', border:'1px solid rgba(201,168,76,0.35)', borderRadius:3, padding:'9px 12px', fontSize:12, color:'#fff', outline:'none', resize:'none', fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' }} />
+    <textarea value={v} onChange={e=>s(e.target.value)} placeholder={ph} style={{ width:'100%', height:60, background:'#1a2236', border:'1px solid rgba(201,168,76,0.30)', borderRadius:3, padding:'9px 12px', fontSize:13, fontWeight:400, color:'#fff', outline:'none', resize:'none', fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' }} />
   )
 }
 
@@ -565,7 +565,7 @@ export default function Calculateur() {
         <div style={{ display:'flex', borderBottom:`1px solid ${C.brd}`, background:'rgba(7,10,18,0.6)', overflowX:'auto' }}>
           {TABS.map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{ flex:1, minWidth:52, padding:'8px 4px', border:'none', cursor:'pointer', background: tab===t ? `${TC[t]}12` : 'transparent', borderBottom: tab===t ? `2px solid ${TC[t]}` : '2px solid transparent', transition:'all 0.14s' }}>
-              <span style={orb(10, 900, { color: tab===t ? TC[t] : C.muted, letterSpacing:'0.18em' })}>{t}</span>
+              <span style={orb(14, 900, { color: tab===t ? '#f0d070' : '#8f9fbd', letterSpacing:'0.18em' })}>{t}</span>
             </button>
           ))}
         </div>
