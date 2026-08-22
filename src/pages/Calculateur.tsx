@@ -64,12 +64,12 @@ const mkI = (): Instr => ({
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'23:00', londonMode:'Auto', londonStart:'03:00', londonEnd:'04:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
 
-const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.07)' : '#1a2236', border:`1px solid ${ro ? 'rgba(201,168,76,0.30)' : 'rgba(201,168,76,0.30)'}`, borderRadius:3, padding:'9px 12px', minHeight:38, fontSize:14, fontWeight:500, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' })
+const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.07)' : '#1a2236', border:`1px solid ${ro ? 'rgba(201,168,76,0.30)' : 'rgba(201,168,76,0.30)'}`, borderRadius:3, padding:'6px 10px', minHeight:32, fontSize:14, fontWeight:500, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' })
 
 function F({ l, v='', s, t, opts, ro, dv }: { l:string; v?:string; s?:(x:string)=>void; t?:string; opts?:string[]; ro?:boolean; dv?:string }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:0 }}>
-      <span style={jb(12, 500, { color:'#b4c2d9', letterSpacing:'0.02em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:5 })}>{l}</span>
+      <span style={jb(12, 500, { color:'#b4c2d9', letterSpacing:'0.02em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:3, lineHeight:1.1 })}>{l}</span>
       {ro ? <div style={iS(true)}>{dv ?? v ?? '—'}</div>
        : opts ? <select value={v} onChange={e=>s!(e.target.value)} style={{...iS(false),cursor:'pointer'}}><option value="">—</option>{opts.map(o=><option key={o} value={o}>{o}</option>)}</select>
        : <input type={t||'number'} value={v} onChange={e=>s!(e.target.value)} style={iS(false)} />}
@@ -89,19 +89,19 @@ function Ck({ l, v, s }: { l:string; v:boolean; s:(x:boolean)=>void }) {
 function Sec({ title, col=C.gold, mini, children }: { title:string; col?:string; mini?:boolean; children:ReactNode }) {
   return (
     <div style={{ border:`1px solid ${C.brd}`, borderRadius:4, overflow:'hidden' }}>
-      <div style={{ padding: mini ? '6px 10px' : '10px 14px', borderLeft:`2px solid ${col}`, background:'rgba(201,168,76,0.08)', borderBottom:`1px solid rgba(201,168,76,0.20)` }}>
-        <span style={orb(mini?9:12, 700, { color:'#f0d070', letterSpacing:'0.12em' })}>{title}</span>
+      <div style={{ padding: mini ? '4px 10px' : '6px 12px', borderLeft:`2px solid ${col}`, background:'rgba(201,168,76,0.08)', borderBottom:`1px solid rgba(201,168,76,0.20)` }}>
+        <span style={orb(mini?9:12, 700, { color:'#f0d070', letterSpacing:'0.12em', lineHeight:1.2 })}>{title}</span>
       </div>
-      <div style={{ padding: mini ? '6px 8px' : '10px 10px', display:'flex', flexDirection:'column', gap: mini ? 4 : 8, background:C.sur }}>
+      <div style={{ padding: mini ? '6px 8px' : '10px 12px', display:'flex', flexDirection:'column', gap: mini ? 4 : 8, background:C.sur }}>
         {children}
       </div>
     </div>
   )
 }
 
-function G2({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:5 }}>{ch}</div> }
-function G3({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:5 }}>{ch}</div> }
-function G4({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:5 }}>{ch}</div> }
+function G2({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', rowGap:8, columnGap:12 }}>{ch}</div> }
+function G3({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', rowGap:8, columnGap:12 }}>{ch}</div> }
+function G4({ ch }:{ ch:ReactNode }) { return <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', rowGap:8, columnGap:12 }}>{ch}</div> }
 
 function Pill({ label, col }: { label:string; col:string }) {
   return <span style={{ display:'inline-block', padding:'1px 6px', borderRadius:2, fontSize:8, fontFamily:'Orbitron,monospace', background:`${col}18`, border:`1px solid ${col}40`, color:col, letterSpacing:'0.1em' }}>{label}</span>
@@ -117,7 +117,7 @@ function Btn({ label, active, col=C.muted, onClick }: { label:string; active:boo
 
 function TA({ v, s, ph }: { v:string; s:(x:string)=>void; ph:string }) {
   return (
-    <textarea value={v} onChange={e=>s(e.target.value)} placeholder={ph} style={{ width:'100%', height:60, background:'#1a2236', border:'1px solid rgba(201,168,76,0.30)', borderRadius:3, padding:'9px 12px', fontSize:13, fontWeight:400, color:'#fff', outline:'none', resize:'none', fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' }} />
+    <textarea value={v} onChange={e=>s(e.target.value)} placeholder={ph} rows={2} style={{ width:'100%', minHeight:48, background:'#1a2236', border:'1px solid rgba(201,168,76,0.30)', borderRadius:3, padding:'6px 10px', fontSize:13, fontWeight:400, color:'#fff', outline:'none', resize:'none', fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' }} />
   )
 }
 
@@ -303,7 +303,7 @@ export default function Calculateur() {
         <Sec title="OVN / RTH" col={col}>
           <G3 ch={<><F l="OVN High" v={I.oHigh} s={v=>upI(tab,'oHigh',v)} /><F l="OVN Low" v={I.oLow} s={v=>upI(tab,'oLow',v)} /><F l="OVN Close" v={I.oClose} s={v=>upI(tab,'oClose',v)} /></>}/>
           <div style={{ display:'flex', alignItems:'center', gap:8, paddingTop:2 }}>
-            <span style={jb(8, 400, { color:C.muted })}>OVN vs Settle :</span>
+            <span style={jb(11, 400, { color:C.muted, lineHeight:1.2, marginTop:4 })}>OVN vs Settle :</span>
             {ovnVsS ? <Pill label={ovnVsS} col={ovnVsS==='LONG'?C.up:ovnVsS==='SHORT'?C.down:C.muted} />
                     : <span style={jb(8, 400, { color:'rgba(136,153,187,0.35)' })}>—</span>}
           </div>
@@ -332,9 +332,9 @@ export default function Calculateur() {
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
             <G3 ch={<><F l="VWAP 18h" v={I.vwap18h} s={v=>upI(tab,'vwap18h',v)} /><F l="VWAP 00h" v={I.vwap00h} s={v=>upI(tab,'vwap00h',v)} /><F l="ATR (pts)" v={I.atr} s={v=>upI(tab,'atr',v)} /></>}/>
             <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-              <span style={jb(8, 400, { color:C.muted })}>vs VWAP 18h :</span>
+              <span style={jb(11, 400, { color:C.muted, lineHeight:1.2 })}>vs VWAP 18h :</span>
               <VwapPosBadge px={lp} vw={vw18} />
-              <span style={jb(8, 400, { color:C.muted })}>vs VWAP 00h :</span>
+              <span style={jb(11, 400, { color:C.muted, lineHeight:1.2 })}>vs VWAP 00h :</span>
               <VwapPosBadge px={lp} vw={vw00} />
             </div>
           </div>
@@ -345,7 +345,7 @@ export default function Calculateur() {
               <F l="SD +2" ro dv={sdVals.sp2||'—'} />
               <F l="SD -2" ro dv={sdVals.sm2||'—'} />
             </>}/>
-            {!pf(I.vwap18h) && <span style={jb(7.5, 400, { color:'rgba(136,153,187,0.4)' })}>Entrez VWAP 18h + ATR pour calculer les SD.</span>}
+            {!pf(I.vwap18h) && <span style={jb(11, 400, { color:'rgba(136,153,187,0.4)', marginTop:4, lineHeight:1.2 })}>Entrez VWAP 18h + ATR pour calculer les SD.</span>}
           </div>
         </div>
       </Sec>
