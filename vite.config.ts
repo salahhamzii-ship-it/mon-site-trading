@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: process.env.GITHUB_PAGES ? '/mon-site-trading/' : '/',
   server: {
     host: '0.0.0.0',
     port: 5174,
