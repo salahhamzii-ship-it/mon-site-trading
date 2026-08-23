@@ -10,7 +10,6 @@ import SessionAnalyzer from './pages/SessionAnalyzer'
 import GEXPanel from './pages/GEXPanel'
 import Calculateur from './pages/Calculateur'
 import CockpitApp from './pages/CockpitApp'
-import PasswordGate from './components/layout/PasswordGate'
 
 export default function App() {
   return (
@@ -27,7 +26,7 @@ export default function App() {
         <Route path="stats" element={<Stats />} />
         <Route path="session" element={<SessionAnalyzer />} />
         <Route path="gex" element={<GEXPanel />} />
-        <Route path="calc" element={<PasswordGate><Calculateur /></PasswordGate>} />
+        <Route path="calc" element={<Calculateur />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
