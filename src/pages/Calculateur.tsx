@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 type Tab = 'NQ' | 'ES' | 'GC' | 'CL'
@@ -63,6 +63,9 @@ const mkI = (): Instr => ({
 })
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'23:00', londonMode:'Auto', londonStart:'03:00', londonEnd:'04:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
+
+const LS_KEY = 'cmc-calc-v1'
+const loadLS = () => { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null } catch { return null } }
 
 const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.07)' : '#1a2236', border:`1px solid ${ro ? 'rgba(201,168,76,0.30)' : 'rgba(201,168,76,0.30)'}`, borderRadius:3, padding:'6px 10px', minHeight:32, fontSize:14, fontWeight:500, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' })
 
@@ -159,13 +162,36 @@ function VwapPosBadge({ px, vw }: { px:number; vw:number }) {
 }
 
 export default function Calculateur() {
-  const [tab,    setTab]    = useState<Tab>('NQ')
-  const [tdOpen, setTdOpen] = useState(true)
-  const [trOpen, setTrOpen] = useState(false)
-  const [stOpen, setStOpen] = useState(false)
-  const [td,     setTd]     = useState<TD>(mkTD)
-  const [II,     setII]     = useState<Record<Tab,Instr>>({ NQ:mkI(), ES:mkI(), GC:mkI(), CL:mkI() })
-  const [cfg,    setCfg]    = useState<Cfg>(mkC)
+  const [tab,      setTab]       = useState<Tab>(()=>{ const s=loadLS(); return (s?.tab as Tab)??'NQ' })
+  const [tdOpen,   setTdOpen]    = useState<boolean>(()=>{ const s=loadLS(); return s?.tdOpen??true })
+  const [trOpen,   setTrOpen]    = useState<boolean>(()=>{ const s=loadLS(); return s?.trOpen??false })
+  const [stOpen,   setStOpen]    = useState<boolean>(()=>{ const s=loadLS(); return s?.stOpen??false })
+  const [td,       setTd]        = useState<TD>(()=>{ const s=loadLS(); return s?.td?{...mkTD(),...s.td}:mkTD() })
+  const [II,       setII]        = useState<Record<Tab,Instr>>(()=>{ const s=loadLS(); if(!s?.II) return {NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}; return {NQ:{...mkI(),...s.II.NQ},ES:{...mkI(),...s.II.ES},GC:{...mkI(),...s.II.GC},CL:{...mkI(),...s.II.CL}} })
+  const [cfg,      setCfg]       = useState<Cfg>(()=>{ const s=loadLS(); return s?.cfg?{...mkC(),...s.cfg}:mkC() })
+  const [showSaved,setShowSaved] = useState(false)
+
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const mounted   = useRef(false)
+
+  const triggerSaved = useCallback(() => {
+    setShowSaved(true)
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => setShowSaved(false), 1500)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return }
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg })) } catch {}
+    triggerSaved()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg])
+
+  const handleReset = () => {
+    localStorage.removeItem(LS_KEY)
+    setTab('NQ'); setTdOpen(true); setTrOpen(false); setStOpen(false)
+    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC())
+  }
 
   const upTD = <K extends keyof TD>(k:K, v:TD[K]) => setTd(p=>({...p,[k]:v}))
   const upI  = (t:Tab, k:keyof Instr, v:string)   => setII(p=>({...p,[t]:{...p[t],[k]:v}}))
@@ -526,9 +552,15 @@ export default function Calculateur() {
       <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', paddingBottom:2 }}>
         <span style={orb(9, 900, { color:C.gold, letterSpacing:'0.2em' })}>◈ ÉTUDE MULTI-INSTRUMENTS · MÉTHODE SALAH v3</span>
         <span style={{ flex:1 }} />
+        {showSaved && (
+          <span style={jb(9, 600, { color:C.up, letterSpacing:'0.12em', opacity:0.9, animation:'fadeIn 0.15s ease-out' })}>✓ SAUVEGARDÉ</span>
+        )}
         <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
         <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
         <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
+        <button onClick={handleReset} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(255,68,68,0.08)', outline:'1px solid rgba(255,68,68,0.25)', color:'rgba(255,100,100,0.75)', transition:'all 0.14s' }}>
+          ↺ RESET
+        </button>
       </div>
 
       {/* Score bar */}
