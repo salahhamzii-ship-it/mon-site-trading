@@ -295,36 +295,60 @@ export default function Calculateur() {
   }, [I, tab, p9Align])
 
   const cLevels = useMemo(() => {
-    const lp2 = pf(I.lastPx)
+    const lp2  = pf(I.lastPx)
     const ibH2 = pf(I.ibHigh), ibL2 = pf(I.ibLow)
     const mid2 = ibH2>0&&ibL2>0 ? (ibH2+ibL2)/2 : 0
     const orbH2 = pf(I.orbHigh), orbL2 = pf(I.orbLow)
 
-    const pickEntry = (a: number, b: number): number => {
+    const pickEntry = (a:number, b:number): number => {
       if (!a && !b) return 0
-      if (!a) return b
-      if (!b) return a
+      if (!a) return b; if (!b) return a
       if (!lp2) return a
       const chosen = Math.abs(lp2-a) <= Math.abs(lp2-b) ? a : b
       return Math.abs(lp2-chosen) < 2 ? lp2 : chosen
     }
+    const ok  = (e:string,s:string,c1:string,c2:string,rr:string) => ({ entry:e, stop:s, c1, c2, rr, invalid:false, invalidReason:'', effectiveSignal:cSig.signal, effectiveFiab:cSig.fiab })
+    const bad = (reason:string,e='',s='',c1='',c2='',rr='') => ({ entry:e, stop:s, c1, c2, rr, invalid:true, invalidReason:reason, effectiveSignal:'NEUTRE', effectiveFiab:0 })
+    const none = () => ok('','','','','')
 
     if (cSig.signal === 'LONG') {
       const entry = pickEntry(mid2, orbH2)
       const stop  = ibL2 > 0 ? ibL2 : 0
       const c1n   = pf(sdVals.sp1)
-      const rrN   = entry>0&&stop>0&&c1n>0&&Math.abs(entry-stop)>0 ? Math.abs(c1n-entry)/Math.abs(entry-stop) : 0
-      return { entry: entry>0?fmt2(entry):'', stop: stop>0?fmt2(stop):'', c1: sdVals.sp1||'', c2: sdVals.sp2||'', rr: rrN>0?`1 : ${rrN.toFixed(1)}`:'' }
+      if (!entry || !stop || !c1n) return none()
+      if (entry <= stop) return bad('Entrée sous le stop')
+      if (c1n <= entry)  return bad('C1 sous l\'entrée · SD+1 trop bas')
+      const rrN = (c1n - entry) / (entry - stop)
+      const [e,s,c1s,c2s,rrS] = [fmt2(entry), fmt2(stop), sdVals.sp1, sdVals.sp2, `1 : ${rrN.toFixed(1)}`]
+      if (rrN < 1) return bad('R:R < 1 · Setup invalide', e, s, c1s, c2s, rrS)
+      return ok(e, s, c1s, c2s, rrS)
     }
+
     if (cSig.signal === 'SHORT') {
       const entry = pickEntry(mid2, orbL2)
       const stop  = ibH2 > 0 ? ibH2 : 0
       const c1n   = pf(sdVals.sm1)
-      const rrN   = entry>0&&stop>0&&c1n>0&&Math.abs(stop-entry)>0 ? Math.abs(c1n-entry)/Math.abs(stop-entry) : 0
-      return { entry: entry>0?fmt2(entry):'', stop: stop>0?fmt2(stop):'', c1: sdVals.sm1||'', c2: sdVals.sm2||'', rr: rrN>0?`1 : ${rrN.toFixed(1)}`:'' }
+      if (!entry || !stop || !c1n) return none()
+      if (stop <= entry) return bad('Stop sous l\'entrée · IB High trop bas')
+      if (c1n >= entry)  return bad('C1 au-dessus de l\'entrée · SD-1 trop haut')
+      if (lp2 > 0 && lp2 < entry) return bad('Prix déjà sous l\'entrée · Setup manqué')
+      const rrN = (entry - c1n) / (stop - entry)
+      const [e,s,c1s,c2s,rrS] = [fmt2(entry), fmt2(stop), sdVals.sm1, sdVals.sm2, `1 : ${rrN.toFixed(1)}`]
+      if (rrN < 1) return bad('R:R < 1 · Setup invalide', e, s, c1s, c2s, rrS)
+      return ok(e, s, c1s, c2s, rrS)
     }
-    return { entry:'', stop:'', c1:'', c2:'', rr:'' }
-  }, [cSig.signal, I.lastPx, I.ibHigh, I.ibLow, I.orbHigh, I.orbLow, sdVals])
+
+    return none()
+  }, [cSig.signal, cSig.fiab, I.lastPx, I.ibHigh, I.ibLow, I.orbHigh, I.orbLow, sdVals])
+
+  const dayType = useMemo(() => {
+    const ibH2=pf(I.ibHigh), ibL2=pf(I.ibLow), lp2=pf(I.lastPx), orbC2=pf(I.orbClose)
+    if (!ibH2 || !ibL2 || !lp2) return ''
+    if (lp2 > ibH2 && orbC2 > ibH2) return 'TREND DAY ▲'
+    if (lp2 < ibL2 && orbC2 < ibL2) return 'TREND DAY ▼'
+    if (lp2 > ibH2 || lp2 < ibL2)   return 'IB CASSÉ'
+    return 'ROTATIONNEL'
+  }, [I.lastPx, I.ibHigh, I.ibLow, I.orbClose])
 
   const zoneAlerts = useMemo(() => {
     const lp   = pf(I.lastPx)
@@ -607,15 +631,19 @@ export default function Calculateur() {
           {(cSig.orb!==0) && <><span style={jb(8,400,{color:C.muted})}>ORB</span><Pill label={cSig.orb>0?'Bull':'Bear'} col={cSig.orb>0?C.up:C.down}/></>}
           {(cSig.aln!==0) && <><span style={jb(8,400,{color:C.muted})}>ALN</span><Pill label={cSig.aln>0?'Bull':'Bear'} col={cSig.aln>0?C.up:C.down}/></>}
           {(cSig.s9!==0) && <><span style={jb(8,400,{color:C.muted})}>§9</span><Pill label={cSig.s9>0?'+1':'-1'} col={cSig.s9>0?C.up:C.down}/></>}
+          {dayType && <Pill label={dayType} col={dayType.startsWith('TREND')?C.up:dayType==='ROTATIONNEL'?C.teal:C.amber} />}
         </div>
+        {cLevels.invalid && cLevels.invalidReason && (
+          <Alert msg={`⚠ ${cLevels.invalidReason}`} col={C.amber} />
+        )}
         <G4 ch={<>
-          <F l="Signal AUTO" ro dv={cSig.signal} />
-          <F l="Fiabilité AUTO" ro dv={cSig.fiab>0?`${cSig.fiab}%`:'—'} />
+          <F l="Signal AUTO" ro dv={cLevels.effectiveSignal} />
+          <F l="Fiabilité AUTO" ro dv={cLevels.effectiveFiab>0?`${cLevels.effectiveFiab}%`:'—'} />
           <F l="Entrée AUTO" ro dv={cLevels.entry||'—'} />
           <F l="Stop AUTO" ro dv={cLevels.stop||'—'} />
         </>}/>
         <G3 ch={<><F l="Cible 1 AUTO" ro dv={cLevels.c1||'—'} /><F l="Cible 2 AUTO" ro dv={cLevels.c2||'—'} /><F l="R:R AUTO" ro dv={cLevels.rr||'—'} /></>}/>
-        <Result signal={cSig.signal} fiab={cSig.fiab>0?`${cSig.fiab}`:''} entry={cLevels.entry} stop={cLevels.stop} c1={cLevels.c1} c2={cLevels.c2} rr={cLevels.rr} col={col} />
+        <Result signal={cLevels.effectiveSignal} fiab={cLevels.effectiveFiab>0?`${cLevels.effectiveFiab}`:''} entry={cLevels.entry} stop={cLevels.stop} c1={cLevels.c1} c2={cLevels.c2} rr={cLevels.rr} col={col} />
       </Sec>
 
       {renderRth()}
