@@ -342,13 +342,36 @@ export default function Calculateur() {
   }, [cSig.signal, cSig.fiab, I.lastPx, I.ibHigh, I.ibLow, I.orbHigh, I.orbLow, sdVals])
 
   const dayType = useMemo(() => {
-    const ibH2=pf(I.ibHigh), ibL2=pf(I.ibLow), lp2=pf(I.lastPx), orbC2=pf(I.orbClose)
-    if (!ibH2 || !ibL2 || !lp2) return ''
-    if (lp2 > ibH2 && orbC2 > ibH2) return 'TREND DAY ▲'
-    if (lp2 < ibL2 && orbC2 < ibL2) return 'TREND DAY ▼'
-    if (lp2 > ibH2 || lp2 < ibL2)   return 'IB CASSÉ'
-    return 'ROTATIONNEL'
-  }, [I.lastPx, I.ibHigh, I.ibLow, I.orbClose])
+    if (!pf(I.ibClose)) return '' // IB non terminé → pas d'affichage avant 10h30
+    const ibH = pf(I.ibHigh), ibL = pf(I.ibLow), lp = pf(I.lastPx)
+    if (!ibH || !ibL || !lp) return ''
+    const orbC = pf(I.orbClose), orbH = pf(I.orbHigh), orbL = pf(I.orbLow)
+    const rVah = pf(I.rVah),     rVal = pf(I.rVal)
+
+    const up = lp > ibH, dn = lp < ibL
+
+    // Prix dans l'IB → ROTATIONNEL
+    if (!up && !dn) return 'ROTATIONNEL'
+
+    // Acceptation : ORB close confirme le break du même côté
+    const accepted = (up && orbC > 0 && orbC > ibH) || (dn && orbC > 0 && orbC < ibL)
+    if (!accepted) return up ? 'IB CASSÉ ▲' : 'IB CASSÉ ▼'
+
+    // OTF continu : ibOrdre aligne avec la direction (LH = haussier, HL = baissier)
+    const otf = (up && I.ibOrdre === 'LH') || (dn && I.ibOrdre === 'HL')
+
+    // Clôture vers l'extrême : prix au-delà du range ORB
+    const toExt = (up && orbH > 0 && lp >= orbH) || (dn && orbL > 0 && lp <= orbL)
+
+    // Hors Value area J-1
+    const outVal = rVah > 0 && rVal > 0 && (lp > rVah || lp < rVal)
+
+    // TREND DAY : cassé + accepté + OTF + (clôture vers extrême ou hors value)
+    if (otf && (toExt || outVal)) return up ? 'TREND DAY ▲' : 'TREND DAY ▼'
+
+    // Accepté mais OTF ou extrême manquant
+    return up ? 'IB ACC. ▲' : 'IB ACC. ▼'
+  }, [I.lastPx, I.ibHigh, I.ibLow, I.ibClose, I.ibOrdre, I.orbHigh, I.orbLow, I.orbClose, I.rVah, I.rVal])
 
   const zoneAlerts = useMemo(() => {
     const lp   = pf(I.lastPx)
@@ -631,7 +654,7 @@ export default function Calculateur() {
           {(cSig.orb!==0) && <><span style={jb(8,400,{color:C.muted})}>ORB</span><Pill label={cSig.orb>0?'Bull':'Bear'} col={cSig.orb>0?C.up:C.down}/></>}
           {(cSig.aln!==0) && <><span style={jb(8,400,{color:C.muted})}>ALN</span><Pill label={cSig.aln>0?'Bull':'Bear'} col={cSig.aln>0?C.up:C.down}/></>}
           {(cSig.s9!==0) && <><span style={jb(8,400,{color:C.muted})}>§9</span><Pill label={cSig.s9>0?'+1':'-1'} col={cSig.s9>0?C.up:C.down}/></>}
-          {dayType && <Pill label={dayType} col={dayType.startsWith('TREND')?C.up:dayType==='ROTATIONNEL'?C.teal:C.amber} />}
+          {dayType && <Pill label={dayType} col={dayType.startsWith('TREND DAY')?(dayType.includes('▲')?C.up:C.down):dayType==='ROTATIONNEL'?C.teal:C.amber} />}
         </div>
         {cLevels.invalid && cLevels.invalidReason && (
           <Alert msg={`⚠ ${cLevels.invalidReason}`} col={C.amber} />
