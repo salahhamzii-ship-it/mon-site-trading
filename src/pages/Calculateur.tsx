@@ -125,11 +125,11 @@ function TA({ v, s, ph }: { v:string; s:(x:string)=>void; ph:string }) {
 }
 
 function Result({ signal, fiab, entry, stop, c1, c2, rr, col }: { signal:string; fiab:string; entry:string; stop:string; c1:string; c2:string; rr:string; col:string }) {
-  const sc = signal==='ACHAT' ? C.up : signal==='VENTE' ? C.down : C.muted
+  const sc = (signal==='ACHAT'||signal==='LONG') ? C.up : (signal==='VENTE'||signal==='SHORT') ? C.down : C.muted
   return (
     <div style={{ padding:'10px 12px', borderRadius:3, marginTop:2, background:`${col}08`, border:`1px solid ${col}28` }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
-        {signal && <span style={{ width:8, height:8, borderRadius:'50%', background:sc, flexShrink:0, animation: signal==='ACHAT' ? 'pulseDot 1.8s infinite' : signal==='VENTE' ? 'pulseDotRed 1.8s infinite' : 'none' }} />}
+        {signal && <span style={{ width:8, height:8, borderRadius:'50%', background:sc, flexShrink:0, animation: (signal==='ACHAT'||signal==='LONG') ? 'pulseDot 1.8s infinite' : (signal==='VENTE'||signal==='SHORT') ? 'pulseDotRed 1.8s infinite' : 'none' }} />}
         <span style={orb(22, 900, { color:sc, lineHeight:1, textShadow:`0 0 14px ${sc}` })}>{signal||'—'}</span>
         {fiab && <Pill label={`FIAB ${fiab}%`} col={sc} />}
       </div>
@@ -256,6 +256,42 @@ export default function Calculateur() {
     if (!vw||!at) return { sp1:'', sm1:'', sp2:'', sm2:'' }
     return { sp1:fmt2(vw+at), sm1:fmt2(vw-at), sp2:fmt2(vw+2*at), sm2:fmt2(vw-2*at) }
   }, [I.vwap18h, I.atr])
+
+  const cSig = useMemo(() => {
+    const lp2 = pf(I.lastPx)
+    const ibH2 = pf(I.ibHigh), ibL2 = pf(I.ibLow), ibC2 = pf(I.ibClose)
+    const mid2 = ibH2>0&&ibL2>0 ? (ibH2+ibL2)/2 : 0
+    const vw18_2 = pf(I.vwap18h), vw00_2 = pf(I.vwap00h)
+    const orbH2 = pf(I.orbHigh), orbL2 = pf(I.orbLow)
+
+    let ib = 0, ibCls = ''
+    if (mid2>0 && ibC2>0) {
+      if      (ibC2>mid2 && I.ibOrdre==='LH') { ibCls='Bull A'; ib= 1 }
+      else if (ibC2>mid2 && I.ibOrdre==='HL') { ibCls='Bull B'; ib= 1 }
+      else if (ibC2<mid2 && I.ibOrdre==='HL') { ibCls='Bear A'; ib=-1 }
+      else if (ibC2<mid2 && I.ibOrdre==='LH') { ibCls='Bear B'; ib=-1 }
+    }
+
+    let vwap = 0
+    if (lp2>0 && vw18_2>0 && vw00_2>0)
+      vwap = lp2>vw18_2&&lp2>vw00_2 ? 1 : lp2<vw18_2&&lp2<vw00_2 ? -1 : 0
+
+    let orb2 = 0
+    if (lp2>0 && orbH2>0 && orbL2>0)
+      orb2 = lp2>orbH2 ? 1 : lp2<orbL2 ? -1 : 0
+
+    let aln2 = 0
+    if (tab==='NQ' && I.alnPattern)
+      aln2 = I.alnPattern==='P3' ? 1 : I.alnPattern==='P4' ? -1 : 0
+
+    const s9 = p9Align==='Aligné' ? 1 : p9Align==='Divergent' ? -1 : 0
+
+    const active = [mid2>0&&ibC2>0?1:0, lp2>0&&vw18_2>0&&vw00_2>0?1:0, lp2>0&&orbH2>0&&orbL2>0?1:0, tab==='NQ'&&!!I.alnPattern?1:0, !!p9Align?1:0].reduce((a:number,b:number)=>a+b,0)
+    const total  = ib+vwap+orb2+aln2+s9
+    const signal = total>0?'LONG':total<0?'SHORT':'NEUTRE'
+    const fiab   = active>0 ? Math.round(Math.abs(total)/active*100) : 0
+    return { signal, fiab, ib, ibCls, vwap, orb:orb2, aln:aln2, s9 }
+  }, [I, tab, p9Align])
 
   const sc    = score
   const scCol = sc>0 ? C.up : sc<0 ? C.down : C.muted
@@ -440,9 +476,21 @@ export default function Calculateur() {
       )}
 
       <Sec title={`RÉSULTAT · ${tab}`} col={col}>
-        <G4 ch={<><F l="Signal" v={I.rSignal} s={v=>upI(tab,'rSignal',v)} opts={['ACHAT','VENTE','NEUTRE']} /><F l="Fiabilité %" v={I.rFiab} s={v=>upI(tab,'rFiab',v)} /><F l="Entrée" v={I.rEntry} s={v=>upI(tab,'rEntry',v)} /><F l="Stop" v={I.rStop} s={v=>upI(tab,'rStop',v)} /></>}/>
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+          {cSig.ibCls && <><span style={jb(8,400,{color:C.muted})}>IB</span><Pill label={cSig.ibCls} col={cSig.ib>0?C.up:C.down}/></>}
+          {(cSig.vwap!==0) && <><span style={jb(8,400,{color:C.muted})}>VWAP</span><Pill label={cSig.vwap>0?'Bull':'Bear'} col={cSig.vwap>0?C.up:C.down}/></>}
+          {(cSig.orb!==0) && <><span style={jb(8,400,{color:C.muted})}>ORB</span><Pill label={cSig.orb>0?'Bull':'Bear'} col={cSig.orb>0?C.up:C.down}/></>}
+          {(cSig.aln!==0) && <><span style={jb(8,400,{color:C.muted})}>ALN</span><Pill label={cSig.aln>0?'Bull':'Bear'} col={cSig.aln>0?C.up:C.down}/></>}
+          {(cSig.s9!==0) && <><span style={jb(8,400,{color:C.muted})}>§9</span><Pill label={cSig.s9>0?'+1':'-1'} col={cSig.s9>0?C.up:C.down}/></>}
+        </div>
+        <G4 ch={<>
+          <F l="Signal AUTO" ro dv={cSig.signal} />
+          <F l="Fiabilité AUTO" ro dv={cSig.fiab>0?`${cSig.fiab}%`:'—'} />
+          <F l="Entrée" v={I.rEntry} s={v=>upI(tab,'rEntry',v)} />
+          <F l="Stop" v={I.rStop} s={v=>upI(tab,'rStop',v)} />
+        </>}/>
         <G3 ch={<><F l="Cible 1" v={I.rC1} s={v=>upI(tab,'rC1',v)} /><F l="Cible 2" v={I.rC2} s={v=>upI(tab,'rC2',v)} /><F l="R:R" ro dv={rr} /></>}/>
-        <Result signal={I.rSignal} fiab={I.rFiab} entry={I.rEntry} stop={I.rStop} c1={I.rC1} c2={I.rC2} rr={rr} col={col} />
+        <Result signal={cSig.signal} fiab={cSig.fiab>0?`${cSig.fiab}`:''} entry={I.rEntry} stop={I.rStop} c1={I.rC1} c2={I.rC2} rr={rr} col={col} />
       </Sec>
     </div>
   )
