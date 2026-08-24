@@ -64,6 +64,9 @@ const mkI = (): Instr => ({
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'23:00', londonMode:'Auto', londonStart:'03:00', londonEnd:'04:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
 
+interface RthRow { id:string; heure:string; open:string; high:string; low:string; close:string; vwap:string; sp1:string; sm1:string; sp2:string; sm2:string }
+const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
+
 const LS_KEY = 'cmc-calc-v1'
 const loadLS = () => { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null } catch { return null } }
 
@@ -169,6 +172,7 @@ export default function Calculateur() {
   const [td,       setTd]        = useState<TD>(()=>{ const s=loadLS(); return s?.td?{...mkTD(),...s.td}:mkTD() })
   const [II,       setII]        = useState<Record<Tab,Instr>>(()=>{ const s=loadLS(); if(!s?.II) return {NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}; return {NQ:{...mkI(),...s.II.NQ},ES:{...mkI(),...s.II.ES},GC:{...mkI(),...s.II.GC},CL:{...mkI(),...s.II.CL}} })
   const [cfg,      setCfg]       = useState<Cfg>(()=>{ const s=loadLS(); return s?.cfg?{...mkC(),...s.cfg}:mkC() })
+  const [rthRows,  setRthRows]   = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRows??mkRthRows() })
   const [showSaved,setShowSaved] = useState(false)
 
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -182,20 +186,24 @@ export default function Calculateur() {
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg })) } catch {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows })) } catch {}
     triggerSaved()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg])
+  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows])
 
   const handleReset = () => {
     localStorage.removeItem(LS_KEY)
     setTab('NQ'); setTdOpen(true); setTrOpen(false); setStOpen(false)
-    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC())
+    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC()); setRthRows(mkRthRows())
   }
 
   const upTD = <K extends keyof TD>(k:K, v:TD[K]) => setTd(p=>({...p,[k]:v}))
   const upI  = (t:Tab, k:keyof Instr, v:string)   => setII(p=>({...p,[t]:{...p[t],[k]:v}}))
   const upC  = <K extends keyof Cfg>(k:K, v:Cfg[K]) => setCfg(p=>({...p,[k]:v}))
+
+  const addRthRow = (t:Tab) => setRthRows(p=>({...p,[t]:[...p[t],{id:Date.now().toString(),heure:'',open:'',high:'',low:'',close:'',vwap:'',sp1:'',sm1:'',sp2:'',sm2:''}]}))
+  const upRthRow  = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRows(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
+  const delRthRow = (t:Tab, id:string) => setRthRows(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
 
   const I   = II[tab]
   const col = TC[tab]
@@ -380,6 +388,34 @@ export default function Calculateur() {
     </div>
   )
 
+  const RTH_COLS: [keyof RthRow, string][] = [['heure','Heure'],['open','Open'],['high','High'],['low','Low'],['close','Close'],['vwap','VWAP'],['sp1','SD+1'],['sm1','SD-1'],['sp2','SD+2'],['sm2','SD-2']]
+  const rthInStyle: CSSProperties = { width:'100%', background:'#1a2236', border:'1px solid rgba(201,168,76,0.22)', borderRadius:2, padding:'3px 6px', height:26, fontSize:11, color:'#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box' }
+
+  const renderRth = () => {
+    const freq = (tab==='NQ'||tab==='ES') ? '30 MIN' : '60 MIN'
+    const rows = rthRows[tab]
+    return (
+      <Sec title={`SUIVI RTH · ${tab} · ${freq}`} col={col}>
+        <div style={{ overflowX:'auto' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'90px repeat(9,minmax(72px,1fr)) 26px', gap:3, minWidth:760, marginBottom:4 }}>
+            {RTH_COLS.map(([,lbl])=><div key={lbl} style={jb(7,600,{color:C.muted,letterSpacing:'0.05em'})}>{lbl}</div>)}
+            <div />
+          </div>
+          {rows.map(row=>(
+            <div key={row.id} style={{ display:'grid', gridTemplateColumns:'90px repeat(9,minmax(72px,1fr)) 26px', gap:3, minWidth:760, marginBottom:3 }}>
+              {RTH_COLS.map(([k])=>(
+                <input key={k} type={k==='heure'?'text':'number'} value={row[k]} onChange={e=>upRthRow(tab,row.id,k,e.target.value)} placeholder={k==='heure'?'09:30':''} style={rthInStyle} />
+              ))}
+              <button onClick={()=>delRthRow(tab,row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
+            </div>
+          ))}
+          {rows.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune ligne — cliquez sur &quot;+ AJOUTER&quot; pour commencer.</span>}
+        </div>
+        <button onClick={()=>addRthRow(tab)} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${col}50`, borderRadius:2, background:`${col}0d`, color:col, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>+ AJOUTER UNE LIGNE</button>
+      </Sec>
+    )
+  }
+
   const renderInstr = () => (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
@@ -517,6 +553,8 @@ export default function Calculateur() {
         <G3 ch={<><F l="Cible 1 AUTO" ro dv={cLevels.c1||'—'} /><F l="Cible 2 AUTO" ro dv={cLevels.c2||'—'} /><F l="R:R AUTO" ro dv={cLevels.rr||'—'} /></>}/>
         <Result signal={cSig.signal} fiab={cSig.fiab>0?`${cSig.fiab}`:''} entry={cLevels.entry} stop={cLevels.stop} c1={cLevels.c1} c2={cLevels.c2} rr={cLevels.rr} col={col} />
       </Sec>
+
+      {renderRth()}
     </div>
   )
 
