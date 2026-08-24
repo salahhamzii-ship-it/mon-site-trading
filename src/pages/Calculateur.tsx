@@ -244,13 +244,6 @@ export default function Calculateur() {
     return px>oh ? 'AU-DESSUS' : px<ol ? 'EN-DESSOUS' : 'DANS ORB'
   }, [I.lastPx, I.orbHigh, I.orbLow])
 
-  const rr = useMemo(() => {
-    const en=pf(I.rEntry), st=pf(I.rStop), c1=pf(I.rC1)
-    if (!en||!st||!c1) return ''
-    const risk=Math.abs(en-st), rew=Math.abs(c1-en)
-    return risk>0 ? `1 : ${(rew/risk).toFixed(1)}` : ''
-  }, [I.rEntry, I.rStop, I.rC1])
-
   const sdVals = useMemo(() => {
     const vw=pf(I.vwap18h), at=pf(I.atr)
     if (!vw||!at) return { sp1:'', sm1:'', sp2:'', sm2:'' }
@@ -292,6 +285,38 @@ export default function Calculateur() {
     const fiab   = active>0 ? Math.round(Math.abs(total)/active*100) : 0
     return { signal, fiab, ib, ibCls, vwap, orb:orb2, aln:aln2, s9 }
   }, [I, tab, p9Align])
+
+  const cLevels = useMemo(() => {
+    const lp2 = pf(I.lastPx)
+    const ibH2 = pf(I.ibHigh), ibL2 = pf(I.ibLow)
+    const mid2 = ibH2>0&&ibL2>0 ? (ibH2+ibL2)/2 : 0
+    const orbH2 = pf(I.orbHigh), orbL2 = pf(I.orbLow)
+
+    const pickEntry = (a: number, b: number): number => {
+      if (!a && !b) return 0
+      if (!a) return b
+      if (!b) return a
+      if (!lp2) return a
+      const chosen = Math.abs(lp2-a) <= Math.abs(lp2-b) ? a : b
+      return Math.abs(lp2-chosen) < 2 ? lp2 : chosen
+    }
+
+    if (cSig.signal === 'LONG') {
+      const entry = pickEntry(mid2, orbH2)
+      const stop  = ibL2 > 0 ? ibL2 : 0
+      const c1n   = pf(sdVals.sp1)
+      const rrN   = entry>0&&stop>0&&c1n>0&&Math.abs(entry-stop)>0 ? Math.abs(c1n-entry)/Math.abs(entry-stop) : 0
+      return { entry: entry>0?fmt2(entry):'', stop: stop>0?fmt2(stop):'', c1: sdVals.sp1||'', c2: sdVals.sp2||'', rr: rrN>0?`1 : ${rrN.toFixed(1)}`:'' }
+    }
+    if (cSig.signal === 'SHORT') {
+      const entry = pickEntry(mid2, orbL2)
+      const stop  = ibH2 > 0 ? ibH2 : 0
+      const c1n   = pf(sdVals.sm1)
+      const rrN   = entry>0&&stop>0&&c1n>0&&Math.abs(stop-entry)>0 ? Math.abs(c1n-entry)/Math.abs(stop-entry) : 0
+      return { entry: entry>0?fmt2(entry):'', stop: stop>0?fmt2(stop):'', c1: sdVals.sm1||'', c2: sdVals.sm2||'', rr: rrN>0?`1 : ${rrN.toFixed(1)}`:'' }
+    }
+    return { entry:'', stop:'', c1:'', c2:'', rr:'' }
+  }, [cSig.signal, I.lastPx, I.ibHigh, I.ibLow, I.orbHigh, I.orbLow, sdVals])
 
   const sc    = score
   const scCol = sc>0 ? C.up : sc<0 ? C.down : C.muted
@@ -486,11 +511,11 @@ export default function Calculateur() {
         <G4 ch={<>
           <F l="Signal AUTO" ro dv={cSig.signal} />
           <F l="Fiabilité AUTO" ro dv={cSig.fiab>0?`${cSig.fiab}%`:'—'} />
-          <F l="Entrée" v={I.rEntry} s={v=>upI(tab,'rEntry',v)} />
-          <F l="Stop" v={I.rStop} s={v=>upI(tab,'rStop',v)} />
+          <F l="Entrée AUTO" ro dv={cLevels.entry||'—'} />
+          <F l="Stop AUTO" ro dv={cLevels.stop||'—'} />
         </>}/>
-        <G3 ch={<><F l="Cible 1" v={I.rC1} s={v=>upI(tab,'rC1',v)} /><F l="Cible 2" v={I.rC2} s={v=>upI(tab,'rC2',v)} /><F l="R:R" ro dv={rr} /></>}/>
-        <Result signal={cSig.signal} fiab={cSig.fiab>0?`${cSig.fiab}`:''} entry={I.rEntry} stop={I.rStop} c1={I.rC1} c2={I.rC2} rr={rr} col={col} />
+        <G3 ch={<><F l="Cible 1 AUTO" ro dv={cLevels.c1||'—'} /><F l="Cible 2 AUTO" ro dv={cLevels.c2||'—'} /><F l="R:R AUTO" ro dv={cLevels.rr||'—'} /></>}/>
+        <Result signal={cSig.signal} fiab={cSig.fiab>0?`${cSig.fiab}`:''} entry={cLevels.entry} stop={cLevels.stop} c1={cLevels.c1} c2={cLevels.c2} rr={cLevels.rr} col={col} />
       </Sec>
     </div>
   )
