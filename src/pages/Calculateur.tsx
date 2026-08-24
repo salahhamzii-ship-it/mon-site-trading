@@ -326,6 +326,59 @@ export default function Calculateur() {
     return { entry:'', stop:'', c1:'', c2:'', rr:'' }
   }, [cSig.signal, I.lastPx, I.ibHigh, I.ibLow, I.orbHigh, I.orbLow, sdVals])
 
+  const zoneAlerts = useMemo(() => {
+    const lp   = pf(I.lastPx)
+    if (!lp) return []
+    const atr  = pf(I.atr)
+    const thresh = atr > 0 ? atr / 3 : tab === 'NQ' ? 5 : tab === 'ES' ? 1 : 0.5
+    const settle = pf(I.rSettle) || pf(I.oClose)
+    const ibH  = pf(I.ibHigh), ibL = pf(I.ibLow)
+    const rH   = pf(I.rHigh),  rL  = pf(I.rLow)
+    const rO   = pf(I.rOpen)
+
+    const lvs: { label:string; price:number }[] = []
+
+    if (td.lignes) {
+      ;(td.lignes.match(/\d+\.?\d*/g) ?? []).forEach(n => {
+        const v = parseFloat(n)
+        if (v > 0 && lp > 0 && Math.abs(v - lp) / lp < 0.03)
+          lvs.push({ label:`Ligne WE · ${fmt2(v)}`, price:v })
+      })
+    }
+    if (td.poorHigh && rH > 0) lvs.push({ label:`Poor High J-1 · ${I.rHigh}`, price:rH })
+    if (td.poorLow  && rL > 0) lvs.push({ label:`Poor Low J-1 · ${I.rLow}`,   price:rL })
+    if (td.gapDay && rO > 0 && settle > 0) {
+      const gH = Math.max(rO, settle), gL = Math.min(rO, settle)
+      lvs.push({ label:`Gap Zone Haut · ${fmt2(gH)}`, price:gH })
+      lvs.push({ label:`Gap Zone Bas · ${fmt2(gL)}`,  price:gL })
+    }
+    if (td.excess) {
+      if (rH > 0) lvs.push({ label:`Excess High · ${I.rHigh}`, price:rH })
+      if (rL > 0) lvs.push({ label:`Excess Low · ${I.rLow}`,   price:rL })
+    }
+
+    const out: { msg:string; col:string }[] = []
+    const seen = new Set<string>()
+    lvs.forEach(({ label, price }) => {
+      if (!price || seen.has(label)) return
+      seen.add(label)
+      const diff   = Math.abs(lp - price)
+      const isRes  = settle > 0 ? price > settle : price > lp
+      if (diff <= thresh) {
+        out.push({ msg:`◈ ZONE CLÉ ATTEINTE · ${label} · Rejet ou acceptation ?`, col:C.amber })
+      } else if (isRes && lp > price + thresh) {
+        out.push({ msg:`▲ ZONE CASSÉE HAUT · ${label}`, col:C.down })
+      } else if (!isRes && lp < price - thresh) {
+        out.push({ msg:`▼ ZONE CASSÉE BAS · ${label}`, col:C.down })
+      } else if (isRes && ibH >= price - thresh && lp < price - thresh) {
+        out.push({ msg:`✓ REJET CONFIRMÉ · ${label} · Résistance tenue`, col:C.up })
+      } else if (!isRes && ibL <= price + thresh && lp > price + thresh) {
+        out.push({ msg:`✓ REJET CONFIRMÉ · ${label} · Support tenu`, col:C.up })
+      }
+    })
+    return out
+  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rOpen, I.rSettle, I.oClose, I.atr, I.ibHigh, I.ibLow])
+
   const sc    = score
   const scCol = sc>0 ? C.up : sc<0 ? C.down : C.muted
   const scPct = Math.abs(sc)/9*100
@@ -536,6 +589,17 @@ export default function Calculateur() {
         </Sec>
       )}
 
+      {zoneAlerts.length > 0 && (
+        <div style={{ border:`1px solid rgba(212,175,55,0.35)`, borderRadius:4, overflow:'hidden' }}>
+          <div style={{ padding:'5px 12px', borderLeft:`2px solid ${C.amber}`, background:'rgba(212,175,55,0.07)', borderBottom:`1px solid rgba(212,175,55,0.2)` }}>
+            <span style={orb(9, 700, { color:C.amber, letterSpacing:'0.14em' })}>⚠ ZONES CLÉS · {tab}</span>
+          </div>
+          <div style={{ padding:'8px 12px', display:'flex', flexDirection:'column', gap:4, background:C.sur }}>
+            {zoneAlerts.map((a,i) => <Alert key={i} msg={a.msg} col={a.col} />)}
+          </div>
+        </div>
+      )}
+
       <Sec title={`RÉSULTAT · ${tab}`} col={col}>
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
           {cSig.ibCls && <><span style={jb(8,400,{color:C.muted})}>IB</span><Pill label={cSig.ibCls} col={cSig.ib>0?C.up:C.down}/></>}
@@ -611,6 +675,12 @@ export default function Calculateur() {
           {sdVals.sm2&&sdHit(sdVals.sm2)               && <Alert msg={`⚡ SD -2 touché (${sdVals.sm2})`}              col={C.down} />}
           {(!lp || (!pf(I.ibHigh)&&!pf(I.ibLow)&&!vw18)) && (
             <span style={jb(8, 400, { color:'rgba(136,153,187,0.4)' })}>Saisir un dernier prix + IB / VWAP pour activer les alertes.</span>
+          )}
+          {zoneAlerts.length > 0 && (
+            <>
+              <div style={jb(7.5, 600, { color:C.amber, letterSpacing:'0.10em', marginTop:4 })}>ZONES CLÉS</div>
+              {zoneAlerts.map((a,i) => <Alert key={i} msg={a.msg} col={a.col} />)}
+            </>
           )}
         </div>
       </div>
