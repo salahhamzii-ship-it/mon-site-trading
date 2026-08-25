@@ -91,8 +91,11 @@ function calcStats(letters: TpoLetter[], tick: number): TpoStats | null {
   const dist = buildDist(letters, tick)
   if (dist.size === 0) return null
   const prices = Array.from(dist.keys()).sort((a, b) => a - b)
+  const center = (prices[0] + prices[prices.length - 1]) / 2
   let maxC = 0, poc = prices[0]
-  for (const [p, c] of dist) { if (c > maxC) { maxC = c; poc = p } }
+  for (const [p, c] of dist) {
+    if (c > maxC || (c === maxC && Math.abs(p - center) < Math.abs(poc - center))) { maxC = c; poc = p }
+  }
   const total = Array.from(dist.values()).reduce((a, b) => a + b, 0)
   const target = Math.ceil(total * 0.7)
   const pocIdx = prices.indexOf(poc)
@@ -556,9 +559,15 @@ export default function Calculateur() {
       if (rej && parseFloat(rej.high)>0) excessLong = { entry:fmt2(parseFloat(rej.high)), stop:fmt2(dayLow) }
     }
 
-    const bullPts = (buyingTail?1:0)+(excessLow?1:0)+(acceptance&&poc>val?1:0)
-    const bearPts = (sellingTail?1:0)+(excessHigh?1:0)+(acceptance&&poc<vah?1:0)
-    const bias    = bullPts>bearPts ? 'HAUSSIER' : bearPts>bullPts ? 'BAISSIER' : 'NEUTRE'
+    // Biais basé sur la migration du POC (Dalton) : 2+ mouvements consécutifs dans le même sens
+    const deltas = steps.filter(s => s.delta !== null).map(s => s.delta as number)
+    let maxUp = 0, maxDn = 0, curUp = 0, curDn = 0
+    for (const d of deltas) {
+      if (d > 0) { curUp++; curDn = 0 } else if (d < 0) { curDn++; curUp = 0 } else { curUp = 0; curDn = 0 }
+      if (curUp > maxUp) maxUp = curUp
+      if (curDn > maxDn) maxDn = curDn
+    }
+    const bias    = maxUp >= 2 && maxUp >= maxDn ? 'HAUSSIER' : maxDn >= 2 && maxDn > maxUp ? 'BAISSIER' : 'NEUTRE'
     const biasCol = bias==='HAUSSIER' ? C.up : bias==='BAISSIER' ? C.down : C.muted
 
     return { steps, mgi:{ buyingTail, sellingTail, excessHigh, excessLow, poorHigh:!!poorHigh, poorLow:!!poorLow, acceptance, trendDay, rotationnel, bimodal, excessShort, excessLong, bias, biasCol, poc, vah, val, dayHigh, dayLow } }
