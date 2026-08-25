@@ -67,6 +67,47 @@ const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMod
 interface RthRow { id:string; heure:string; open:string; high:string; low:string; close:string; vwap:string; sp1:string; sm1:string; sp2:string; sm2:string }
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
 
+const TICK_SZ: Record<Tab, number> = { NQ:0.25, ES:0.25, GC:0.10, CL:0.01 }
+interface TpoLetter { id:string; letter:string; high:string; low:string }
+const mkTpoLetters = (): Record<Tab, TpoLetter[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
+
+function buildDist(letters: TpoLetter[], tick: number): Map<number, number> {
+  const dist = new Map<number, number>()
+  for (const l of letters) {
+    const h = parseFloat(l.high) || 0, lo = parseFloat(l.low) || 0
+    if (!h || !lo || h < lo) continue
+    const steps = Math.round((h - lo) / tick)
+    for (let i = 0; i <= steps; i++) {
+      const price = Math.round((lo + i * tick) * 1e6) / 1e6
+      dist.set(price, (dist.get(price) ?? 0) + 1)
+    }
+  }
+  return dist
+}
+
+interface TpoStats { poc:number; vah:number; val:number; dayHigh:number; dayLow:number; maxC:number; dist:Map<number,number>; prices:number[] }
+
+function calcStats(letters: TpoLetter[], tick: number): TpoStats | null {
+  const dist = buildDist(letters, tick)
+  if (dist.size === 0) return null
+  const prices = Array.from(dist.keys()).sort((a, b) => a - b)
+  let maxC = 0, poc = prices[0]
+  for (const [p, c] of dist) { if (c > maxC) { maxC = c; poc = p } }
+  const total = Array.from(dist.values()).reduce((a, b) => a + b, 0)
+  const target = Math.ceil(total * 0.7)
+  const pocIdx = prices.indexOf(poc)
+  let lo = pocIdx, hi = pocIdx, sum = dist.get(poc) ?? 0
+  while (sum < target) {
+    const canUp = hi + 1 < prices.length, canDn = lo - 1 >= 0
+    if (!canUp && !canDn) break
+    const upC = canUp ? (dist.get(prices[hi + 1]) ?? 0) : -1
+    const dnC = canDn ? (dist.get(prices[lo - 1]) ?? 0) : -1
+    if (upC >= dnC) { hi++; sum += dist.get(prices[hi]) ?? 0 }
+    else            { lo--; sum += dist.get(prices[lo]) ?? 0 }
+  }
+  return { poc, vah:prices[hi], val:prices[lo], dayHigh:prices[prices.length-1], dayLow:prices[0], maxC, dist, prices }
+}
+
 const LS_KEY = 'cmc-calc-v1'
 const loadLS = () => { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null } catch { return null } }
 
@@ -172,8 +213,9 @@ export default function Calculateur() {
   const [td,       setTd]        = useState<TD>(()=>{ const s=loadLS(); return s?.td?{...mkTD(),...s.td}:mkTD() })
   const [II,       setII]        = useState<Record<Tab,Instr>>(()=>{ const s=loadLS(); if(!s?.II) return {NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}; return {NQ:{...mkI(),...s.II.NQ},ES:{...mkI(),...s.II.ES},GC:{...mkI(),...s.II.GC},CL:{...mkI(),...s.II.CL}} })
   const [cfg,      setCfg]       = useState<Cfg>(()=>{ const s=loadLS(); return s?.cfg?{...mkC(),...s.cfg}:mkC() })
-  const [rthRows,  setRthRows]   = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRows??mkRthRows() })
-  const [showSaved,setShowSaved] = useState(false)
+  const [rthRows,    setRthRows]    = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRows??mkRthRows() })
+  const [tpoLetters, setTpoLetters] = useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLetters??mkTpoLetters() })
+  const [showSaved,  setShowSaved]  = useState(false)
 
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const mounted   = useRef(false)
@@ -186,15 +228,15 @@ export default function Calculateur() {
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows })) } catch {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, tpoLetters })) } catch {}
     triggerSaved()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows])
+  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, tpoLetters])
 
   const handleReset = () => {
     localStorage.removeItem(LS_KEY)
     setTab('NQ'); setTdOpen(true); setTrOpen(false); setStOpen(false)
-    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC()); setRthRows(mkRthRows())
+    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC()); setRthRows(mkRthRows()); setTpoLetters(mkTpoLetters())
   }
 
   const upTD = <K extends keyof TD>(k:K, v:TD[K]) => setTd(p=>({...p,[k]:v}))
@@ -204,6 +246,15 @@ export default function Calculateur() {
   const addRthRow = (t:Tab) => setRthRows(p=>({...p,[t]:[...p[t],{id:Date.now().toString(),heure:'',open:'',high:'',low:'',close:'',vwap:'',sp1:'',sm1:'',sp2:'',sm2:''}]}))
   const upRthRow  = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRows(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
   const delRthRow = (t:Tab, id:string) => setRthRows(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
+
+  const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const addTpoLetter = (t:Tab) => {
+    const used = tpoLetters[t].map(l => l.letter.toUpperCase())
+    const next = ALPHA.split('').find(c => !used.includes(c)) || '?'
+    setTpoLetters(p=>({...p,[t]:[...p[t],{id:Date.now().toString(),letter:next,high:'',low:''}]}))
+  }
+  const upTpoLetter  = (t:Tab, id:string, k:keyof TpoLetter, v:string) => setTpoLetters(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
+  const delTpoLetter = (t:Tab, id:string) => setTpoLetters(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
 
   const I   = II[tab]
   const col = TC[tab]
@@ -426,6 +477,93 @@ export default function Calculateur() {
     return out
   }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rOpen, I.rSettle, I.oClose, I.atr, I.ibHigh, I.ibLow])
 
+  const tpoAnalysis = useMemo(() => {
+    const letters = tpoLetters[tab]
+    const tick = TICK_SZ[tab]
+    if (letters.length === 0) return null
+
+    interface Step { label:string; poc:number; vah:number; val:number; dayH:number; dayL:number; delta:number|null; verdict:string }
+    const steps: Step[] = []
+    let prevPoc: number | null = null
+
+    for (let i = 0; i < letters.length; i++) {
+      const subset = letters.slice(0, i + 1)
+      const stats = calcStats(subset, tick)
+      if (!stats) continue
+      const label = subset.map(l => l.letter || '?').join('')
+      const delta = prevPoc !== null ? Math.round((stats.poc - prevPoc) * 100) / 100 : null
+      const verdict = delta === null ? '' : delta > 0 ? '▲ Ascendant' : delta < 0 ? '▼ Descendant' : '= Stable'
+      steps.push({ label, poc:stats.poc, vah:stats.vah, val:stats.val, dayH:stats.dayHigh, dayL:stats.dayLow, delta, verdict })
+      prevPoc = stats.poc
+    }
+
+    const full = calcStats(letters, tick)
+    if (!full) return { steps, mgi:null }
+    const { dist, prices, poc, vah, val, dayHigh, dayLow } = full
+
+    let buyTailN = 0
+    for (const p of prices) { if ((dist.get(p)??0)===1) buyTailN++; else break }
+    const buyingTail = buyTailN >= 2
+
+    let sellTailN = 0
+    for (let i = prices.length-1; i >= 0; i--) { if ((dist.get(prices[i])??0)===1) sellTailN++; else break }
+    const sellingTail = sellTailN >= 2
+
+    const excessHigh = (dist.get(dayHigh)??0) === 1
+    const excessLow  = (dist.get(dayLow)??0)  === 1
+
+    const lastL = letters[letters.length-1]
+    const poorHigh = lastL && parseFloat(lastL.high) > 0 && Math.abs(parseFloat(lastL.high) - dayHigh) < tick * 0.5
+    const poorLow  = lastL && parseFloat(lastL.low)  > 0 && Math.abs(parseFloat(lastL.low)  - dayLow)  < tick * 0.5
+
+    const vaRange = vah - val, dayRange = dayHigh - dayLow
+    const acceptance = letters.length >= 3 && dayRange > 0 && vaRange / dayRange < 0.4
+
+    let trendDay = false
+    if (letters.length >= 4) {
+      const allHUp = letters.every((l,i) => i===0 || parseFloat(l.high) >= parseFloat(letters[i-1].high))
+      const allLDn = letters.every((l,i) => i===0 || parseFloat(l.low)  <= parseFloat(letters[i-1].low))
+      trendDay = allHUp || allLDn
+    }
+
+    let rotationnel = false
+    if (letters.length >= 4) {
+      let mH = 0, mL = 0
+      for (let i=1; i<letters.length; i++) {
+        if (parseFloat(letters[i].high) > parseFloat(letters[i-1].high)) mH++
+        if (parseFloat(letters[i].low)  < parseFloat(letters[i-1].low))  mL++
+      }
+      rotationnel = mH > 1 && mL > 1
+    }
+
+    let bimodal = false
+    if (prices.length >= 6) {
+      const mid = Math.floor(prices.length/2)
+      const midAvg = [prices[mid-1],prices[mid],prices[mid+1]].reduce((a,p)=>a+(dist.get(p)??0),0)/3
+      const topAvg = prices.slice(-3).reduce((a,p)=>a+(dist.get(p)??0),0)/3
+      const botAvg = prices.slice(0,3).reduce((a,p)=>a+(dist.get(p)??0),0)/3
+      bimodal = midAvg < (topAvg+botAvg)/2*0.5
+    }
+
+    let excessShort: {entry:string;stop:string}|null = null
+    let excessLong:  {entry:string;stop:string}|null = null
+    if (excessHigh) {
+      const rej = letters.slice().reverse().find(l => Math.abs(parseFloat(l.high)-dayHigh) < tick*0.5)
+      if (rej && parseFloat(rej.low)>0) excessShort = { entry:fmt2(parseFloat(rej.low)), stop:fmt2(dayHigh) }
+    }
+    if (excessLow) {
+      const rej = letters.slice().reverse().find(l => Math.abs(parseFloat(l.low)-dayLow) < tick*0.5)
+      if (rej && parseFloat(rej.high)>0) excessLong = { entry:fmt2(parseFloat(rej.high)), stop:fmt2(dayLow) }
+    }
+
+    const bullPts = (buyingTail?1:0)+(excessLow?1:0)+(acceptance&&poc>val?1:0)
+    const bearPts = (sellingTail?1:0)+(excessHigh?1:0)+(acceptance&&poc<vah?1:0)
+    const bias    = bullPts>bearPts ? 'HAUSSIER' : bearPts>bullPts ? 'BAISSIER' : 'NEUTRE'
+    const biasCol = bias==='HAUSSIER' ? C.up : bias==='BAISSIER' ? C.down : C.muted
+
+    return { steps, mgi:{ buyingTail, sellingTail, excessHigh, excessLow, poorHigh:!!poorHigh, poorLow:!!poorLow, acceptance, trendDay, rotationnel, bimodal, excessShort, excessLong, bias, biasCol, poc, vah, val, dayHigh, dayLow } }
+  }, [tab, tpoLetters])
+
   const sc    = score
   const scCol = sc>0 ? C.up : sc<0 ? C.down : C.muted
   const scPct = Math.abs(sc)/9*100
@@ -512,6 +650,129 @@ export default function Calculateur() {
           {rows.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune ligne — cliquez sur &quot;+ AJOUTER&quot; pour commencer.</span>}
         </div>
         <button onClick={()=>addRthRow(tab)} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${col}50`, borderRadius:2, background:`${col}0d`, color:col, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>+ AJOUTER UNE LIGNE</button>
+      </Sec>
+    )
+  }
+
+  const renderTPO = () => {
+    const letters = tpoLetters[tab]
+    const analysis = tpoAnalysis
+    const mgiItems: [string,boolean,string][] = analysis?.mgi ? [
+      ['Buying Tail',  analysis.mgi.buyingTail,  C.up],
+      ['Selling Tail', analysis.mgi.sellingTail, C.down],
+      ['Trend Day',    analysis.mgi.trendDay,    C.amber],
+      ['Rotationnel',  analysis.mgi.rotationnel, C.teal],
+      ['Bimodal',      analysis.mgi.bimodal,     C.muted],
+      ['Poor High',    analysis.mgi.poorHigh,    C.down],
+      ['Poor Low',     analysis.mgi.poorLow,     C.up],
+      ['Acceptance',   analysis.mgi.acceptance,  C.teal],
+      ['Excess High',  analysis.mgi.excessHigh,  C.down],
+      ['Excess Low',   analysis.mgi.excessLow,   C.up],
+    ] : []
+    return (
+      <Sec title={`TPO / MGI · ${tab}`} col={col}>
+        {/* Saisie des lettres */}
+        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          {letters.length > 0 && (
+            <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 1fr 26px', gap:4, marginBottom:2 }}>
+              {['Lettre','High','Low',''].map(h=><div key={h} style={jb(7,600,{color:C.muted})}>{h}</div>)}
+            </div>
+          )}
+          {letters.map(row=>(
+            <div key={row.id} style={{ display:'grid', gridTemplateColumns:'40px 1fr 1fr 26px', gap:4 }}>
+              <input value={row.letter} onChange={e=>upTpoLetter(tab,row.id,'letter',e.target.value.toUpperCase().slice(0,2))} style={{...rthInStyle,textAlign:'center',fontWeight:700,color:col}} />
+              <input type="number" value={row.high} onChange={e=>upTpoLetter(tab,row.id,'high',e.target.value)} style={rthInStyle} />
+              <input type="number" value={row.low}  onChange={e=>upTpoLetter(tab,row.id,'low',e.target.value)}  style={rthInStyle} />
+              <button onClick={()=>delTpoLetter(tab,row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
+            </div>
+          ))}
+          {letters.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune lettre TPO — cliquez sur &quot;+ AJOUTER&quot; pour commencer (A, B, C...).</span>}
+          <button onClick={()=>addTpoLetter(tab)} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${col}50`, borderRadius:2, background:`${col}0d`, color:col, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', marginTop:4 }}>+ AJOUTER LETTRE</button>
+        </div>
+
+        {/* Module 1 : POC Migration */}
+        {analysis && analysis.steps.length > 0 && (
+          <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
+            <div style={orb(8,700,{color:C.amber,letterSpacing:'0.12em',marginBottom:4})}>MODULE 1 · POC MIGRATION</div>
+            <div style={{ overflowX:'auto' }}>
+              <div style={{ minWidth:460 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'80px repeat(5,minmax(68px,1fr))', gap:3, marginBottom:4 }}>
+                  {['Lettres','POC','VAH','VAL','ΔPOC','Verdict'].map(h=><div key={h} style={jb(7,600,{color:C.muted})}>{h}</div>)}
+                </div>
+                {analysis.steps.map((step,i)=>(
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'80px repeat(5,minmax(68px,1fr))', gap:3, marginBottom:3, padding:'2px 0', borderBottom:'1px solid rgba(201,168,76,0.06)' }}>
+                    <div style={jb(9,700,{color:col})}>{step.label}</div>
+                    <div style={jb(9,500,{color:C.gold})}>{fmt2(step.poc)}</div>
+                    <div style={jb(9,500,{color:C.up})}>{fmt2(step.vah)}</div>
+                    <div style={jb(9,500,{color:C.down})}>{fmt2(step.val)}</div>
+                    <div style={jb(9,500,{color:step.delta!==null&&step.delta>0?C.up:step.delta!==null&&step.delta<0?C.down:C.muted})}>
+                      {step.delta!==null ? (step.delta>0?'+':'')+fmt2(step.delta) : '—'}
+                    </div>
+                    <div style={jb(8,500,{color:step.verdict.includes('▲')?C.up:step.verdict.includes('▼')?C.down:C.muted})}>
+                      {step.verdict||'—'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Module 2 : MGI Dalton */}
+        {analysis?.mgi && (
+          <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:6 }}>
+            <div style={orb(8,700,{color:C.teal,letterSpacing:'0.12em'})}>MODULE 2 · MGI DALTON</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:5 }}>
+              {mgiItems.map(([label,active,activeCol])=>(
+                <div key={label} style={{ padding:'5px 8px', borderRadius:2, background:active?`${activeCol}10`:'rgba(136,153,187,0.03)', border:`1px solid ${active?activeCol+'30':'rgba(136,153,187,0.10)'}` }}>
+                  <div style={jb(7,400,{color:C.muted,marginBottom:3})}>{label}</div>
+                  <Pill label={active?'OUI':'NON'} col={active?activeCol:'rgba(136,153,187,0.45)'} />
+                </div>
+              ))}
+            </div>
+
+            {/* Règle 13 — Excess Setup */}
+            {(analysis.mgi.excessShort||analysis.mgi.excessLong) && (
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <div style={orb(7,700,{color:C.amber,letterSpacing:'0.10em'})}>RÈGLE 13 · SETUP EXCESS</div>
+                {analysis.mgi.excessShort && (
+                  <div style={{ padding:'6px 10px', background:'rgba(255,68,68,0.07)', border:'1px solid rgba(255,68,68,0.25)', borderRadius:3, display:'flex', gap:10, alignItems:'center' }}>
+                    <span style={jb(9,700,{color:C.down})}>SHORT</span>
+                    <span style={jb(8,400,{color:C.muted})}>Entrée</span>
+                    <span style={jb(9,700,{color:C.gold})}>{analysis.mgi.excessShort.entry}</span>
+                    <span style={jb(8,400,{color:C.muted})}>Stop</span>
+                    <span style={jb(9,700,{color:C.down})}>{analysis.mgi.excessShort.stop}</span>
+                  </div>
+                )}
+                {analysis.mgi.excessLong && (
+                  <div style={{ padding:'6px 10px', background:'rgba(0,255,136,0.06)', border:'1px solid rgba(0,255,136,0.22)', borderRadius:3, display:'flex', gap:10, alignItems:'center' }}>
+                    <span style={jb(9,700,{color:C.up})}>LONG</span>
+                    <span style={jb(8,400,{color:C.muted})}>Entrée</span>
+                    <span style={jb(9,700,{color:C.gold})}>{analysis.mgi.excessLong.entry}</span>
+                    <span style={jb(8,400,{color:C.muted})}>Stop</span>
+                    <span style={jb(9,700,{color:C.up})}>{analysis.mgi.excessLong.stop}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Biais */}
+            <div style={{ padding:'8px 12px', background:`${analysis.mgi.biasCol}08`, border:`1px solid ${analysis.mgi.biasCol}28`, borderRadius:3, display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+              <div>
+                <div style={jb(7,400,{color:C.muted,marginBottom:2})}>BIAIS MGI</div>
+                <span style={orb(16,900,{color:analysis.mgi.biasCol})}>{analysis.mgi.bias}</span>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(5,minmax(60px,1fr))', gap:10, flex:1 }}>
+                {([['POC',fmt2(analysis.mgi.poc),C.gold],['VAH',fmt2(analysis.mgi.vah),C.up],['VAL',fmt2(analysis.mgi.val),C.down],['Haut',fmt2(analysis.mgi.dayHigh),C.muted],['Bas',fmt2(analysis.mgi.dayLow),C.muted]] as [string,string,string][]).map(([l,v,c])=>(
+                  <div key={l}>
+                    <div style={jb(7,400,{color:C.muted,marginBottom:2})}>{l}</div>
+                    <span style={jb(11,700,{color:c})}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </Sec>
     )
   }
@@ -670,6 +931,7 @@ export default function Calculateur() {
       </Sec>
 
       {renderRth()}
+      {renderTPO()}
     </div>
   )
 
