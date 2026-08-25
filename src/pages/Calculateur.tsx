@@ -91,12 +91,22 @@ function calcStats(letters: TpoLetter[], tick: number): TpoStats | null {
   const dist = buildDist(letters, tick)
   if (dist.size === 0) return null
   const prices = Array.from(dist.keys()).sort((a, b) => a - b)
-  const center = (prices[0] + prices[prices.length - 1]) / 2
-  let maxC = 0, poc = prices[0]
-  for (const [p, c] of dist) {
-    if (c > maxC || (c === maxC && Math.abs(p - center) < Math.abs(poc - center))) { maxC = c; poc = p }
-  }
-  const total = Array.from(dist.values()).reduce((a, b) => a + b, 0)
+
+  // Étape 1 : trouver le count maximum
+  let maxC = 0
+  for (const c of dist.values()) { if (c > maxC) maxC = c }
+
+  // Étape 2 : collecter les prix au count maximum
+  const maxPs = prices.filter(p => (dist.get(p) ?? 0) === maxC)
+
+  // Étape 3 : POC = prix du groupe max le plus proche du centre de ce groupe
+  // (règle Dalton : égalité → milieu de la zone la plus échangée)
+  const zCenter = (maxPs[0] + maxPs[maxPs.length - 1]) / 2
+  let poc = maxPs[0], minD = Math.abs(maxPs[0] - zCenter)
+  for (const p of maxPs) { const d = Math.abs(p - zCenter); if (d < minD) { minD = d; poc = p } }
+
+  // Étape 4 : Value Area 70 % — expansion depuis le POC
+  const total  = Array.from(dist.values()).reduce((a, b) => a + b, 0)
   const target = Math.ceil(total * 0.7)
   const pocIdx = prices.indexOf(poc)
   let lo = pocIdx, hi = pocIdx, sum = dist.get(poc) ?? 0
