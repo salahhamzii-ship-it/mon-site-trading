@@ -22,7 +22,7 @@ interface Instr {
   oHigh: string; oLow: string; oClose: string
   ibHigh: string; ibLow: string; ibClose: string; ibOrdre: string; ibClass: string
   orbHigh: string; orbLow: string; orbClose: string
-  vwap18h: string; vwap00h: string; atr: string
+  vwap18h: string; atr: string
   asiaHigh: string; asiaLow: string; londonHigh: string; londonLow: string
   alnPattern: Pat; alnFiab: string
   rSignal: string; rFiab: string; rEntry: string; rStop: string; rC1: string; rC2: string
@@ -56,7 +56,7 @@ const mkI = (): Instr => ({
   oHigh:'', oLow:'', oClose:'',
   ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'', ibClass:'',
   orbHigh:'', orbLow:'', orbClose:'',
-  vwap18h:'', vwap00h:'', atr:'',
+  vwap18h:'', atr:'',
   asiaHigh:'', asiaLow:'', londonHigh:'', londonLow:'',
   alnPattern:'', alnFiab:'',
   rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:''
@@ -68,9 +68,10 @@ interface RthRow { id:string; heure:string; open:string; high:string; low:string
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
 
 const TICK_SZ: Record<Tab, number> = { NQ:0.25, ES:0.25, GC:0.10, CL:0.01 }
-interface TpoLetter { id:string; letter:string; high:string; low:string }
+interface TpoLetter { id:string; letter:string; high:string; low:string; poc:string; vah:string; val:string }
 const mkTpoLetters = (): Record<Tab, TpoLetter[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
 
+// Distribution utilisée uniquement pour MGI Module 2 (buying/selling tail, excess, bimodal)
 function buildDist(letters: TpoLetter[], tick: number): Map<number, number> {
   const dist = new Map<number, number>()
   for (const l of letters) {
@@ -83,42 +84,6 @@ function buildDist(letters: TpoLetter[], tick: number): Map<number, number> {
     }
   }
   return dist
-}
-
-interface TpoStats { poc:number; vah:number; val:number; dayHigh:number; dayLow:number; maxC:number; dist:Map<number,number>; prices:number[] }
-
-function calcStats(letters: TpoLetter[], tick: number): TpoStats | null {
-  const dist = buildDist(letters, tick)
-  if (dist.size === 0) return null
-  const prices = Array.from(dist.keys()).sort((a, b) => a - b)
-
-  // Étape 1 : trouver le count maximum
-  let maxC = 0
-  for (const c of dist.values()) { if (c > maxC) maxC = c }
-
-  // Étape 2 : collecter les prix au count maximum
-  const maxPs = prices.filter(p => (dist.get(p) ?? 0) === maxC)
-
-  // Étape 3 : POC = prix du groupe max le plus proche du centre de ce groupe
-  // (règle Dalton : égalité → milieu de la zone la plus échangée)
-  const zCenter = (maxPs[0] + maxPs[maxPs.length - 1]) / 2
-  let poc = maxPs[0], minD = Math.abs(maxPs[0] - zCenter)
-  for (const p of maxPs) { const d = Math.abs(p - zCenter); if (d < minD) { minD = d; poc = p } }
-
-  // Étape 4 : Value Area 70 % — expansion depuis le POC
-  const total  = Array.from(dist.values()).reduce((a, b) => a + b, 0)
-  const target = Math.ceil(total * 0.7)
-  const pocIdx = prices.indexOf(poc)
-  let lo = pocIdx, hi = pocIdx, sum = dist.get(poc) ?? 0
-  while (sum < target) {
-    const canUp = hi + 1 < prices.length, canDn = lo - 1 >= 0
-    if (!canUp && !canDn) break
-    const upC = canUp ? (dist.get(prices[hi + 1]) ?? 0) : -1
-    const dnC = canDn ? (dist.get(prices[lo - 1]) ?? 0) : -1
-    if (upC >= dnC) { hi++; sum += dist.get(prices[hi]) ?? 0 }
-    else            { lo--; sum += dist.get(prices[lo]) ?? 0 }
-  }
-  return { poc, vah:prices[hi], val:prices[lo], dayHigh:prices[prices.length-1], dayLow:prices[0], maxC, dist, prices }
 }
 
 const LS_KEY = 'cmc-calc-v1'
@@ -264,7 +229,7 @@ export default function Calculateur() {
   const addTpoLetter = (t:Tab) => {
     const used = tpoLetters[t].map(l => l.letter.toUpperCase())
     const next = ALPHA.split('').find(c => !used.includes(c)) || '?'
-    setTpoLetters(p=>({...p,[t]:[...p[t],{id:Date.now().toString(),letter:next,high:'',low:''}]}))
+    setTpoLetters(p=>({...p,[t]:[...p[t],{id:Date.now().toString(),letter:next,high:'',low:'',poc:'',vah:'',val:''}]}))
   }
   const upTpoLetter  = (t:Tab, id:string, k:keyof TpoLetter, v:string) => setTpoLetters(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
   const delTpoLetter = (t:Tab, id:string) => setTpoLetters(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
@@ -326,7 +291,7 @@ export default function Calculateur() {
     const lp2 = pf(I.lastPx)
     const ibH2 = pf(I.ibHigh), ibL2 = pf(I.ibLow), ibC2 = pf(I.ibClose)
     const mid2 = ibH2>0&&ibL2>0 ? (ibH2+ibL2)/2 : 0
-    const vw18_2 = pf(I.vwap18h), vw00_2 = pf(I.vwap00h)
+    const vw18_2 = pf(I.vwap18h)
     const orbH2 = pf(I.orbHigh), orbL2 = pf(I.orbLow)
 
     let ib = 0, ibCls = ''
@@ -338,8 +303,8 @@ export default function Calculateur() {
     }
 
     let vwap = 0
-    if (lp2>0 && vw18_2>0 && vw00_2>0)
-      vwap = lp2>vw18_2&&lp2>vw00_2 ? 1 : lp2<vw18_2&&lp2<vw00_2 ? -1 : 0
+    if (lp2>0 && vw18_2>0)
+      vwap = lp2>vw18_2 ? 1 : lp2<vw18_2 ? -1 : 0
 
     let orb2 = 0
     if (lp2>0 && orbH2>0 && orbL2>0)
@@ -351,7 +316,7 @@ export default function Calculateur() {
 
     const s9 = p9Align==='Aligné' ? 1 : p9Align==='Divergent' ? -1 : 0
 
-    const active = [mid2>0&&ibC2>0?1:0, lp2>0&&vw18_2>0&&vw00_2>0?1:0, lp2>0&&orbH2>0&&orbL2>0?1:0, tab==='NQ'&&!!I.alnPattern?1:0, !!p9Align?1:0].reduce((a:number,b:number)=>a+b,0)
+    const active = [mid2>0&&ibC2>0?1:0, lp2>0&&vw18_2>0?1:0, lp2>0&&orbH2>0&&orbL2>0?1:0, tab==='NQ'&&!!I.alnPattern?1:0, !!p9Align?1:0].reduce((a:number,b:number)=>a+b,0)
     const total  = ib+vwap+orb2+aln2+s9
     const signal = total>0?'LONG':total<0?'SHORT':'NEUTRE'
     const fiab   = active>0 ? Math.round(Math.abs(total)/active*100) : 0
@@ -495,24 +460,37 @@ export default function Calculateur() {
     const tick = TICK_SZ[tab]
     if (letters.length === 0) return null
 
-    interface Step { label:string; poc:number; vah:number; val:number; dayH:number; dayL:number; delta:number|null; verdict:string }
+    // MODULE 1 — saisie manuelle : ΔPOC et verdict calculés automatiquement
+    interface Step { label:string; high:number; low:number; poc:number; vah:number; val:number; delta:number|null; verdict:string }
     const steps: Step[] = []
     let prevPoc: number | null = null
 
     for (let i = 0; i < letters.length; i++) {
       const subset = letters.slice(0, i + 1)
-      const stats = calcStats(subset, tick)
-      if (!stats) continue
-      const label = subset.map(l => l.letter || '?').join('')
-      const delta = prevPoc !== null ? Math.round((stats.poc - prevPoc) * 100) / 100 : null
+      const label  = subset.map(l => l.letter || '?').join('')
+      const poc    = pf(letters[i].poc)
+      const vah    = pf(letters[i].vah)
+      const val    = pf(letters[i].val)
+      const high   = pf(letters[i].high)
+      const low    = pf(letters[i].low)
+      const delta  = prevPoc !== null && poc > 0 ? Math.round((poc - prevPoc) * 100) / 100 : null
       const verdict = delta === null ? '' : delta > 0 ? '▲ Ascendant' : delta < 0 ? '▼ Descendant' : '= Stable'
-      steps.push({ label, poc:stats.poc, vah:stats.vah, val:stats.val, dayH:stats.dayHigh, dayL:stats.dayLow, delta, verdict })
-      prevPoc = stats.poc
+      steps.push({ label, high, low, poc, vah, val, delta, verdict })
+      if (poc > 0) prevPoc = poc
     }
 
-    const full = calcStats(letters, tick)
-    if (!full) return { steps, mgi:null }
-    const { dist, prices, poc, vah, val, dayHigh, dayLow } = full
+    // MODULE 2 — MGI : distribution H/L par lettre (inchangé)
+    const dist = buildDist(letters, tick)
+    const prices = Array.from(dist.keys()).sort((a, b) => a - b)
+    if (prices.length === 0) return { steps, mgi:null }
+    const dayHigh = prices[prices.length - 1]
+    const dayLow  = prices[0]
+
+    // POC/VAH/VAL pour affichage biais = dernière étape avec valeurs saisies
+    const lastStep = steps[steps.length - 1]
+    const poc = lastStep?.poc || 0
+    const vah = lastStep?.vah || 0
+    const val = lastStep?.val || 0
 
     let buyTailN = 0
     for (const p of prices) { if ((dist.get(p)??0)===1) buyTailN++; else break }
@@ -588,7 +566,6 @@ export default function Calculateur() {
   const scPct = Math.abs(sc)/9*100
   const lp    = pf(I.lastPx)
   const vw18  = pf(I.vwap18h)
-  const vw00  = pf(I.vwap00h)
   const oMid  = td.tpoOvnH&&td.tpoOvnL ? fmt2((pf(td.tpoOvnH)+pf(td.tpoOvnL))/2) : '—'
 
   const hasALN = tab === 'NQ'
@@ -690,40 +667,45 @@ export default function Calculateur() {
     ] : []
     return (
       <Sec title={`TPO / MGI · ${tab}`} col={col}>
-        {/* Saisie des lettres */}
+        {/* Saisie des lettres — 6 colonnes manuelles */}
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
           {letters.length > 0 && (
-            <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 1fr 26px', gap:4, marginBottom:2 }}>
-              {['Lettre','High','Low',''].map(h=><div key={h} style={jb(7,600,{color:C.muted})}>{h}</div>)}
+            <div style={{ display:'grid', gridTemplateColumns:'36px 1fr 1fr 1fr 1fr 1fr 26px', gap:3, marginBottom:2 }}>
+              {['','High','Low','POC','VAH','VAL',''].map((h,i)=><div key={i} style={jb(7,600,{color:C.muted})}>{h}</div>)}
             </div>
           )}
           {letters.map(row=>(
-            <div key={row.id} style={{ display:'grid', gridTemplateColumns:'40px 1fr 1fr 26px', gap:4 }}>
-              <input value={row.letter} onChange={e=>upTpoLetter(tab,row.id,'letter',e.target.value.toUpperCase().slice(0,2))} style={{...rthInStyle,textAlign:'center',fontWeight:700,color:col}} />
+            <div key={row.id} style={{ display:'grid', gridTemplateColumns:'36px 1fr 1fr 1fr 1fr 1fr 26px', gap:3 }}>
+              <div style={{...rthInStyle,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,color:col,fontSize:11}}>{row.letter}</div>
               <input type="number" value={row.high} onChange={e=>upTpoLetter(tab,row.id,'high',e.target.value)} style={rthInStyle} />
               <input type="number" value={row.low}  onChange={e=>upTpoLetter(tab,row.id,'low',e.target.value)}  style={rthInStyle} />
+              <input type="number" value={row.poc}  onChange={e=>upTpoLetter(tab,row.id,'poc',e.target.value)}  style={{...rthInStyle,color:C.gold}} />
+              <input type="number" value={row.vah}  onChange={e=>upTpoLetter(tab,row.id,'vah',e.target.value)}  style={{...rthInStyle,color:C.up}} />
+              <input type="number" value={row.val}  onChange={e=>upTpoLetter(tab,row.id,'val',e.target.value)}  style={{...rthInStyle,color:C.down}} />
               <button onClick={()=>delTpoLetter(tab,row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
             </div>
           ))}
-          {letters.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune lettre TPO — cliquez sur &quot;+ AJOUTER&quot; pour commencer (A, B, C...).</span>}
+          {letters.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune lettre TPO — cliquez sur &quot;+ AJOUTER&quot; (A, B, C...) puis saisissez High/Low/POC/VAH/VAL.</span>}
           <button onClick={()=>addTpoLetter(tab)} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${col}50`, borderRadius:2, background:`${col}0d`, color:col, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', marginTop:4 }}>+ AJOUTER LETTRE</button>
         </div>
 
-        {/* Module 1 : POC Migration */}
+        {/* Module 1 : POC Migration — tableau cumulatif */}
         {analysis && analysis.steps.length > 0 && (
           <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
             <div style={orb(8,700,{color:C.amber,letterSpacing:'0.12em',marginBottom:4})}>MODULE 1 · POC MIGRATION</div>
             <div style={{ overflowX:'auto' }}>
-              <div style={{ minWidth:460 }}>
-                <div style={{ display:'grid', gridTemplateColumns:'80px repeat(5,minmax(68px,1fr))', gap:3, marginBottom:4 }}>
-                  {['Lettres','POC','VAH','VAL','ΔPOC','Verdict'].map(h=><div key={h} style={jb(7,600,{color:C.muted})}>{h}</div>)}
+              <div style={{ minWidth:600 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'70px repeat(7,minmax(62px,1fr))', gap:3, marginBottom:4 }}>
+                  {['Lettres','High','Low','POC','VAH','VAL','ΔPOC','Verdict'].map(h=><div key={h} style={jb(7,600,{color:C.muted})}>{h}</div>)}
                 </div>
                 {analysis.steps.map((step,i)=>(
-                  <div key={i} style={{ display:'grid', gridTemplateColumns:'80px repeat(5,minmax(68px,1fr))', gap:3, marginBottom:3, padding:'2px 0', borderBottom:'1px solid rgba(201,168,76,0.06)' }}>
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'70px repeat(7,minmax(62px,1fr))', gap:3, marginBottom:3, padding:'2px 0', borderBottom:'1px solid rgba(201,168,76,0.06)' }}>
                     <div style={jb(9,700,{color:col})}>{step.label}</div>
-                    <div style={jb(9,500,{color:C.gold})}>{fmt2(step.poc)}</div>
-                    <div style={jb(9,500,{color:C.up})}>{fmt2(step.vah)}</div>
-                    <div style={jb(9,500,{color:C.down})}>{fmt2(step.val)}</div>
+                    <div style={jb(9,400,{color:C.muted})}>{step.high>0?fmt2(step.high):'—'}</div>
+                    <div style={jb(9,400,{color:C.muted})}>{step.low>0?fmt2(step.low):'—'}</div>
+                    <div style={jb(9,600,{color:C.gold})}>{step.poc>0?fmt2(step.poc):'—'}</div>
+                    <div style={jb(9,500,{color:C.up})}>{step.vah>0?fmt2(step.vah):'—'}</div>
+                    <div style={jb(9,500,{color:C.down})}>{step.val>0?fmt2(step.val):'—'}</div>
                     <div style={jb(9,500,{color:step.delta!==null&&step.delta>0?C.up:step.delta!==null&&step.delta<0?C.down:C.muted})}>
                       {step.delta!==null ? (step.delta>0?'+':'')+fmt2(step.delta) : '—'}
                     </div>
@@ -833,12 +815,10 @@ export default function Calculateur() {
       <Sec title={`VWAP / SD · ${tab}`} col={col}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8 }}>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <G3 ch={<><F l="VWAP 18h" v={I.vwap18h} s={v=>upI(tab,'vwap18h',v)} /><F l="VWAP 00h" v={I.vwap00h} s={v=>upI(tab,'vwap00h',v)} /><F l="ATR (pts)" v={I.atr} s={v=>upI(tab,'atr',v)} /></>}/>
+            <G2 ch={<><F l="VWAP 18h" v={I.vwap18h} s={v=>upI(tab,'vwap18h',v)} /><F l="ATR (pts)" v={I.atr} s={v=>upI(tab,'atr',v)} /></>}/>
             <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
               <span style={jb(11, 400, { color:C.muted, lineHeight:1.2 })}>vs VWAP 18h :</span>
               <VwapPosBadge px={lp} vw={vw18} />
-              <span style={jb(11, 400, { color:C.muted, lineHeight:1.2 })}>vs VWAP 00h :</span>
-              <VwapPosBadge px={lp} vw={vw00} />
             </div>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
@@ -962,7 +942,6 @@ export default function Calculateur() {
       ['LAST',    I.lastPx||'—',      C.gold, 20],
       ['OVN MID', oMid,               C.amber,14],
       ['VWAP 18h',I.vwap18h||'—',    C.teal, 14],
-      ['VWAP 00h',I.vwap00h||'—',    C.teal, 14],
       ['POC J-1', I.rPoc||'—',       C.gold, 14],
     ]
     const sdItems: [string,string][] = [
@@ -1000,7 +979,6 @@ export default function Calculateur() {
           {lp>0&&pf(I.orbLow)>0&&lp<pf(I.orbLow)      && <Alert msg={`▼ Cassure sous l'ORB Low (${I.orbLow})`}        col={C.down} />}
           {lp>0&&vw18>0&&lp>vw18                       && <Alert msg={`▲ Prix au-dessus du VWAP 18h (${I.vwap18h})`}   col={C.teal} />}
           {lp>0&&vw18>0&&lp<vw18                       && <Alert msg={`▼ Prix en-dessous du VWAP 18h (${I.vwap18h})`} col={C.down} />}
-          {lp>0&&vw00>0&&Math.abs(lp-vw00)<0.5         && <Alert msg={`◈ Prix sur le VWAP 00h (${I.vwap00h})`}        col={C.amber} />}
           {sdVals.sp1&&sdHit(sdVals.sp1)               && <Alert msg={`⚡ SD +1 touché (${sdVals.sp1})`}              col={C.amber} />}
           {sdVals.sm1&&sdHit(sdVals.sm1)               && <Alert msg={`⚡ SD -1 touché (${sdVals.sm1})`}              col={C.amber} />}
           {sdVals.sp2&&sdHit(sdVals.sp2)               && <Alert msg={`⚡ SD +2 touché (${sdVals.sp2})`}              col={C.down} />}
