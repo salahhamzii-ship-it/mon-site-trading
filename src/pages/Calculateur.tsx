@@ -191,9 +191,11 @@ export default function Calculateur() {
   const [td,       setTd]        = useState<TD>(()=>{ const s=loadLS(); return s?.td?{...mkTD(),...s.td}:mkTD() })
   const [II,       setII]        = useState<Record<Tab,Instr>>(()=>{ const s=loadLS(); if(!s?.II) return {NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}; return {NQ:{...mkI(),...s.II.NQ},ES:{...mkI(),...s.II.ES},GC:{...mkI(),...s.II.GC},CL:{...mkI(),...s.II.CL}} })
   const [cfg,      setCfg]       = useState<Cfg>(()=>{ const s=loadLS(); return s?.cfg?{...mkC(),...s.cfg}:mkC() })
-  const [rthRows,    setRthRows]    = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRows??mkRthRows() })
-  const [tpoLetters, setTpoLetters] = useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLetters??mkTpoLetters() })
-  const [showSaved,  setShowSaved]  = useState(false)
+  const [rthRows,      setRthRows]      = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRows??mkRthRows() })
+  const [rthRowsJ1,   setRthRowsJ1]   = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRowsJ1??mkRthRows() })
+  const [tpoLetters,  setTpoLetters]  = useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLetters??mkTpoLetters() })
+  const [tpoLettersJ1,setTpoLettersJ1]= useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLettersJ1??mkTpoLetters() })
+  const [showSaved,   setShowSaved]   = useState(false)
 
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const mounted   = useRef(false)
@@ -206,33 +208,47 @@ export default function Calculateur() {
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, tpoLetters })) } catch {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1 })) } catch {}
     triggerSaved()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, tpoLetters])
+  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
   const handleReset = () => {
     localStorage.removeItem(LS_KEY)
     setTab('NQ'); setTdOpen(true); setTrOpen(false); setStOpen(false)
-    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC()); setRthRows(mkRthRows()); setTpoLetters(mkTpoLetters())
+    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC()); setRthRows(mkRthRows()); setRthRowsJ1(mkRthRows()); setTpoLetters(mkTpoLetters()); setTpoLettersJ1(mkTpoLetters())
   }
 
   const upTD = <K extends keyof TD>(k:K, v:TD[K]) => setTd(p=>({...p,[k]:v}))
   const upI  = (t:Tab, k:keyof Instr, v:string)   => setII(p=>({...p,[t]:{...p[t],[k]:v}}))
   const upC  = <K extends keyof Cfg>(k:K, v:Cfg[K]) => setCfg(p=>({...p,[k]:v}))
 
-  const addRthRow = (t:Tab) => setRthRows(p=>({...p,[t]:[...p[t],{id:Date.now().toString(),heure:'',open:'',high:'',low:'',close:'',vwap:'',sp1:'',sm1:'',sp2:'',sm2:''}]}))
-  const upRthRow  = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRows(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
-  const delRthRow = (t:Tab, id:string) => setRthRows(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
+  const mkRthRowEntry = () => ({ id:Date.now().toString(), heure:'', open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' })
+  const addRthRow    = (t:Tab) => setRthRows(p=>({...p,[t]:[...p[t],mkRthRowEntry()]}))
+  const upRthRow     = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRows(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
+  const delRthRow    = (t:Tab, id:string) => setRthRows(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
+  const addRthRowJ1  = (t:Tab) => setRthRowsJ1(p=>({...p,[t]:[...p[t],{...mkRthRowEntry(),id:(Date.now()+1).toString()}]}))
+  const upRthRowJ1   = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRowsJ1(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
+  const delRthRowJ1  = (t:Tab, id:string) => setRthRowsJ1(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
 
-  const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const TPO_RTH_LETTERS = 'ABCDEFGHIJKLM'
   const addTpoLetter = (t:Tab) => {
+    if (tpoLetters[t].length >= 13) return
     const used = tpoLetters[t].map(l => l.letter.toUpperCase())
-    const next = ALPHA.split('').find(c => !used.includes(c)) || '?'
+    const next = TPO_RTH_LETTERS.split('').find(c => !used.includes(c)) || '?'
     setTpoLetters(p=>({...p,[t]:[...p[t],{id:Date.now().toString(),letter:next,high:'',low:'',poc:'',vah:'',val:''}]}))
   }
   const upTpoLetter  = (t:Tab, id:string, k:keyof TpoLetter, v:string) => setTpoLetters(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
   const delTpoLetter = (t:Tab, id:string) => setTpoLetters(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
+
+  const addTpoLetterJ1 = (t:Tab) => {
+    if (tpoLettersJ1[t].length >= 13) return
+    const used = tpoLettersJ1[t].map(l => l.letter.toUpperCase())
+    const next = TPO_RTH_LETTERS.split('').find(c => !used.includes(c)) || '?'
+    setTpoLettersJ1(p=>({...p,[t]:[...p[t],{id:(Date.now()+1).toString(),letter:next,high:'',low:'',poc:'',vah:'',val:''}]}))
+  }
+  const upTpoLetterJ1  = (t:Tab, id:string, k:keyof TpoLetter, v:string) => setTpoLettersJ1(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
+  const delTpoLetterJ1 = (t:Tab, id:string) => setTpoLettersJ1(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
 
   const I   = II[tab]
   const col = TC[tab]
@@ -561,6 +577,57 @@ export default function Calculateur() {
     return { steps, mgi:{ buyingTail, sellingTail, excessHigh, excessLow, poorHigh:!!poorHigh, poorLow:!!poorLow, acceptance, trendDay, rotationnel, bimodal, excessShort, excessLong, bias, biasCol, poc, vah, val, dayHigh, dayLow } }
   }, [tab, tpoLetters])
 
+  // TPO J-1 : Module 1 uniquement (pas de MGI)
+  const tpoStepsJ1 = useMemo(() => {
+    const letters = tpoLettersJ1[tab]
+    if (letters.length === 0) return []
+    interface Step { label:string; high:number; low:number; poc:number; vah:number; val:number; delta:number|null; verdict:string }
+    const steps: Step[] = []
+    let prevPoc: number | null = null
+    for (let i = 0; i < letters.length; i++) {
+      const subset = letters.slice(0, i + 1)
+      const label  = subset.map(l => l.letter || '?').join('')
+      const poc    = pf(letters[i].poc)
+      const vah    = pf(letters[i].vah)
+      const val    = pf(letters[i].val)
+      const high   = pf(letters[i].high)
+      const low    = pf(letters[i].low)
+      const delta  = prevPoc !== null && poc > 0 ? Math.round((poc - prevPoc) * 100) / 100 : null
+      const verdict = delta === null ? '' : delta > 0 ? '▲ Ascendant' : delta < 0 ? '▼ Descendant' : '= Stable'
+      steps.push({ label, high, low, poc, vah, val, delta, verdict })
+      if (poc > 0) prevPoc = poc
+    }
+    return steps
+  }, [tab, tpoLettersJ1])
+
+  // VALUE AREA J vs J-1
+  const vaAnalysis = useMemo(() => {
+    const vahJ1 = pf(I.rVah), valJ1 = pf(I.rVal), pocJ1 = pf(I.rPoc)
+    const rH = pf(I.rHigh), rL = pf(I.rLow)
+    const hbJ1 = rH > 0 && rL > 0 ? (rH + rL) / 2 : 0
+    const jourLetters = tpoLetters[tab]
+    let vahJ = 0, valJ = 0, pocJ = 0
+    for (let i = jourLetters.length - 1; i >= 0; i--) {
+      if (pf(jourLetters[i].vah) > 0) {
+        vahJ = pf(jourLetters[i].vah); valJ = pf(jourLetters[i].val); pocJ = pf(jourLetters[i].poc); break
+      }
+    }
+    if (!vahJ1 || !valJ1 || !vahJ || !valJ) return null
+    let position = '', posCol = C.muted
+    if (valJ > vahJ1)                          { position = 'HIGHER';              posCol = C.up }
+    else if (vahJ > vahJ1 && valJ > valJ1)     { position = 'OVERLAPPING HIGHER';  posCol = '#66ff99' }
+    else if (vahJ <= vahJ1 && valJ >= valJ1)   { position = 'INSIDE (Acceptance)'; posCol = C.teal }
+    else if (vahJ < vahJ1 && valJ < valJ1)     { position = 'OVERLAPPING LOWER';   posCol = '#ff9966' }
+    else                                        { position = 'LOWER';               posCol = C.down }
+    const pocDelta = pocJ > 0 && pocJ1 > 0 ? Math.round((pocJ - pocJ1) * 100) / 100 : null
+    const pocDir   = pocDelta === null ? '—' : pocDelta > 0 ? `▲ +${fmt2(pocDelta)} pts` : pocDelta < 0 ? `▼ ${fmt2(Math.abs(pocDelta))} pts` : '= Ancrage'
+    const pocDirCol= pocDelta === null ? C.muted : pocDelta > 0 ? C.up : pocDelta < 0 ? C.down : C.muted
+    const lpNum = pf(I.lastPx)
+    const excessHaut = lpNum > 0 && vahJ1 > 0 && lpNum > vahJ1
+    const excessBas  = lpNum > 0 && valJ1 > 0 && lpNum < valJ1
+    return { position, posCol, pocDir, pocDirCol, excessHaut, excessBas, hbJ1, vahJ1, valJ1, pocJ1, vahJ, valJ, pocJ }
+  }, [tab, tpoLetters, I.rVah, I.rVal, I.rPoc, I.rHigh, I.rLow, I.lastPx])
+
   const sc    = score
   const scCol = sc>0 ? C.up : sc<0 ? C.down : C.muted
   const scPct = Math.abs(sc)/9*100
@@ -625,33 +692,169 @@ export default function Calculateur() {
   const RTH_COLS: [keyof RthRow, string][] = [['heure','Heure'],['open','Open'],['high','High'],['low','Low'],['close','Close'],['vwap','VWAP'],['sp1','SD+1'],['sm1','SD-1'],['sp2','SD+2'],['sm2','SD-2']]
   const rthInStyle: CSSProperties = { width:'100%', background:'#1a2236', border:'1px solid rgba(201,168,76,0.22)', borderRadius:2, padding:'3px 6px', height:26, fontSize:11, color:'#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box' }
 
+  const rthTableBlock = (
+    rows: RthRow[],
+    addRow: ()=>void,
+    upRow: (id:string, k:keyof RthRow, v:string)=>void,
+    delRow: (id:string)=>void,
+    colAcc: string
+  ) => (
+    <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+      <div style={{ overflowX:'auto' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'90px repeat(9,minmax(72px,1fr)) 26px', gap:3, minWidth:760, marginBottom:4 }}>
+          {RTH_COLS.map(([,lbl])=><div key={lbl} style={jb(7,600,{color:C.muted,letterSpacing:'0.05em'})}>{lbl}</div>)}
+          <div />
+        </div>
+        {rows.map(row=>(
+          <div key={row.id} style={{ display:'grid', gridTemplateColumns:'90px repeat(9,minmax(72px,1fr)) 26px', gap:3, minWidth:760, marginBottom:3 }}>
+            {RTH_COLS.map(([k])=>(
+              <input key={k} type={k==='heure'?'text':'number'} value={row[k]} onChange={e=>upRow(row.id,k,e.target.value)} placeholder={k==='heure'?'09:30':''} style={rthInStyle} />
+            ))}
+            <button onClick={()=>delRow(row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
+          </div>
+        ))}
+        {rows.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune ligne — cliquez sur &quot;+ AJOUTER&quot; pour commencer.</span>}
+      </div>
+      <button onClick={addRow} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${colAcc}50`, borderRadius:2, background:`${colAcc}0d`, color:colAcc, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>+ AJOUTER UNE LIGNE</button>
+    </div>
+  )
+
   const renderRth = () => {
     const freq = (tab==='NQ'||tab==='ES') ? '30 MIN' : '60 MIN'
-    const rows = rthRows[tab]
     return (
-      <Sec title={`SUIVI RTH · ${tab} · ${freq}`} col={col}>
-        <div style={{ overflowX:'auto' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'90px repeat(9,minmax(72px,1fr)) 26px', gap:3, minWidth:760, marginBottom:4 }}>
-            {RTH_COLS.map(([,lbl])=><div key={lbl} style={jb(7,600,{color:C.muted,letterSpacing:'0.05em'})}>{lbl}</div>)}
-            <div />
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <Sec title={`SUIVI RTH J-1 · ${tab} · ${freq}`} col={col}>
+          {rthTableBlock(rthRowsJ1[tab], ()=>addRthRowJ1(tab), (id,k,v)=>upRthRowJ1(tab,id,k,v), id=>delRthRowJ1(tab,id), col)}
+        </Sec>
+        <Sec title={`SUIVI RTH DU JOUR · ${tab} · ${freq}`} col={col}>
+          {rthTableBlock(rthRows[tab], ()=>addRthRow(tab), (id,k,v)=>upRthRow(tab,id,k,v), id=>delRthRow(tab,id), col)}
+        </Sec>
+      </div>
+    )
+  }
+
+  const tpoInputBlock = (
+    letters: TpoLetter[],
+    addLetter: ()=>void,
+    upLetter: (id:string, k:keyof TpoLetter, v:string)=>void,
+    delLetter: (id:string)=>void,
+    colAcc: string
+  ) => {
+    const atLimit = letters.length >= 13
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+        {letters.length > 0 && (
+          <div style={{ display:'grid', gridTemplateColumns:'36px 1fr 1fr 1fr 1fr 1fr 26px', gap:3, marginBottom:2 }}>
+            {['','High','Low','POC','VAH','VAL',''].map((h,i)=><div key={i} style={jb(7,600,{color:C.muted})}>{h}</div>)}
           </div>
-          {rows.map(row=>(
-            <div key={row.id} style={{ display:'grid', gridTemplateColumns:'90px repeat(9,minmax(72px,1fr)) 26px', gap:3, minWidth:760, marginBottom:3 }}>
-              {RTH_COLS.map(([k])=>(
-                <input key={k} type={k==='heure'?'text':'number'} value={row[k]} onChange={e=>upRthRow(tab,row.id,k,e.target.value)} placeholder={k==='heure'?'09:30':''} style={rthInStyle} />
-              ))}
-              <button onClick={()=>delRthRow(tab,row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
+        )}
+        {letters.map(row=>(
+          <div key={row.id} style={{ display:'grid', gridTemplateColumns:'36px 1fr 1fr 1fr 1fr 1fr 26px', gap:3 }}>
+            <div style={{...rthInStyle,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,color:colAcc,fontSize:11}}>{row.letter}</div>
+            <input type="number" value={row.high} onChange={e=>upLetter(row.id,'high',e.target.value)} style={rthInStyle} />
+            <input type="number" value={row.low}  onChange={e=>upLetter(row.id,'low',e.target.value)}  style={rthInStyle} />
+            <input type="number" value={row.poc}  onChange={e=>upLetter(row.id,'poc',e.target.value)}  style={{...rthInStyle,color:C.gold}} />
+            <input type="number" value={row.vah}  onChange={e=>upLetter(row.id,'vah',e.target.value)}  style={{...rthInStyle,color:C.up}} />
+            <input type="number" value={row.val}  onChange={e=>upLetter(row.id,'val',e.target.value)}  style={{...rthInStyle,color:C.down}} />
+            <button onClick={()=>delLetter(row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
+          </div>
+        ))}
+        {letters.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune lettre — cliquez &quot;+ AJOUTER&quot; (A→M, 13 lettres max = session RTH complète).</span>}
+        {atLimit
+          ? <span style={jb(8,600,{color:C.amber,marginTop:4})}>Fin de session RTH · 13 lettres (A–M) atteintes</span>
+          : <button onClick={addLetter} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${colAcc}50`, borderRadius:2, background:`${colAcc}0d`, color:colAcc, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', marginTop:4 }}>+ AJOUTER LETTRE</button>
+        }
+      </div>
+    )
+  }
+
+  const tpoMod1Block = (steps: {label:string;high:number;low:number;poc:number;vah:number;val:number;delta:number|null;verdict:string}[], colAcc: string) => {
+    if (steps.length === 0) return null
+    return (
+      <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
+        <div style={orb(8,700,{color:C.amber,letterSpacing:'0.12em',marginBottom:4})}>MODULE 1 · POC MIGRATION</div>
+        <div style={{ overflowX:'auto' }}>
+          <div style={{ minWidth:600 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'70px repeat(7,minmax(62px,1fr))', gap:3, marginBottom:4 }}>
+              {['Lettres','High','Low','POC','VAH','VAL','ΔPOC','Verdict'].map(h=><div key={h} style={jb(7,600,{color:C.muted})}>{h}</div>)}
             </div>
-          ))}
-          {rows.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune ligne — cliquez sur &quot;+ AJOUTER&quot; pour commencer.</span>}
+            {steps.map((step,i)=>(
+              <div key={i} style={{ display:'grid', gridTemplateColumns:'70px repeat(7,minmax(62px,1fr))', gap:3, marginBottom:3, padding:'2px 0', borderBottom:'1px solid rgba(201,168,76,0.06)' }}>
+                <div style={jb(9,700,{color:colAcc})}>{step.label}</div>
+                <div style={jb(9,400,{color:C.muted})}>{step.high>0?fmt2(step.high):'—'}</div>
+                <div style={jb(9,400,{color:C.muted})}>{step.low>0?fmt2(step.low):'—'}</div>
+                <div style={jb(9,600,{color:C.gold})}>{step.poc>0?fmt2(step.poc):'—'}</div>
+                <div style={jb(9,500,{color:C.up})}>{step.vah>0?fmt2(step.vah):'—'}</div>
+                <div style={jb(9,500,{color:C.down})}>{step.val>0?fmt2(step.val):'—'}</div>
+                <div style={jb(9,500,{color:step.delta!==null&&step.delta>0?C.up:step.delta!==null&&step.delta<0?C.down:C.muted})}>
+                  {step.delta!==null ? (step.delta>0?'+':'')+fmt2(step.delta) : '—'}
+                </div>
+                <div style={jb(8,500,{color:step.verdict.includes('▲')?C.up:step.verdict.includes('▼')?C.down:C.muted})}>
+                  {step.verdict||'—'}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <button onClick={()=>addRthRow(tab)} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${col}50`, borderRadius:2, background:`${col}0d`, color:col, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>+ AJOUTER UNE LIGNE</button>
-      </Sec>
+      </div>
+    )
+  }
+
+  const renderVaBlock = () => {
+    const va = vaAnalysis
+    if (!va) return (
+      <div style={{ padding:'8px 12px', background:'rgba(136,153,187,0.04)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:3 }}>
+        <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>VALUE AREA J vs J-1 — saisissez VAH/VAL/POC J-1 (section RTH J-1) et les lettres TPO DU JOUR pour activer l&apos;analyse.</span>
+      </div>
+    )
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+        {/* Position */}
+        <div style={{ padding:'10px 14px', background:`${va.posCol}0a`, border:`1px solid ${va.posCol}30`, borderRadius:3, display:'flex', gap:20, alignItems:'center', flexWrap:'wrap' }}>
+          <div>
+            <div style={jb(7,400,{color:C.muted,marginBottom:3})}>POSITION VALUE AREA J / J-1</div>
+            <span style={orb(13,900,{color:va.posCol})}>{va.position}</span>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(70px,1fr))', gap:12 }}>
+            {([['VAH J',fmt2(va.vahJ),C.up],['VAL J',fmt2(va.valJ),C.down],['POC J',fmt2(va.pocJ),C.gold]] as [string,string,string][]).map(([l,v,c])=>(
+              <div key={l}><div style={jb(7,400,{color:C.muted,marginBottom:2})}>{l}</div><span style={jb(11,700,{color:c})}>{v}</span></div>
+            ))}
+            {([['VAH J-1',fmt2(va.vahJ1),C.up],['VAL J-1',fmt2(va.valJ1),C.down],['POC J-1',fmt2(va.pocJ1),C.gold]] as [string,string,string][]).map(([l,v,c])=>(
+              <div key={l}><div style={jb(7,400,{color:C.muted,marginBottom:2})}>{l}</div><span style={jb(11,600,{color:c,opacity:0.65})}>{v}</span></div>
+            ))}
+          </div>
+        </div>
+
+        {/* POC migration + Half Back + Excess */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:6 }}>
+          <div style={{ padding:'8px 12px', background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.18)', borderRadius:3 }}>
+            <div style={jb(7,400,{color:C.muted,marginBottom:4})}>MIGRATION POC vs J-1</div>
+            <span style={jb(12,700,{color:va.pocDirCol})}>{va.pocDir}</span>
+          </div>
+          <div style={{ padding:'8px 12px', background:'rgba(30,179,188,0.06)', border:'1px solid rgba(30,179,188,0.18)', borderRadius:3 }}>
+            <div style={jb(7,400,{color:C.muted,marginBottom:4})}>HALF BACK J-1</div>
+            <span style={jb(12,700,{color:C.teal})}>{va.hbJ1 > 0 ? fmt2(va.hbJ1) : '—'}</span>
+          </div>
+          {va.excessHaut && (
+            <div style={{ padding:'8px 12px', background:'rgba(255,68,68,0.07)', border:'1px solid rgba(255,68,68,0.28)', borderRadius:3 }}>
+              <div style={jb(7,400,{color:C.muted,marginBottom:4})}>EXCÈS DETECÉ</div>
+              <span style={jb(10,700,{color:C.down})}>EXCESS HAUT J-1</span>
+              <div style={jb(7,400,{color:C.muted,marginTop:3})}>Prix &gt; VAH J-1 ({fmt2(va.vahJ1)})</div>
+            </div>
+          )}
+          {va.excessBas && (
+            <div style={{ padding:'8px 12px', background:'rgba(0,255,136,0.06)', border:'1px solid rgba(0,255,136,0.22)', borderRadius:3 }}>
+              <div style={jb(7,400,{color:C.muted,marginBottom:4})}>EXCÈS DETECÉ</div>
+              <span style={jb(10,700,{color:C.up})}>EXCESS BAS J-1</span>
+              <div style={jb(7,400,{color:C.muted,marginTop:3})}>Prix &lt; VAL J-1 ({fmt2(va.valJ1)})</div>
+            </div>
+          )}
+        </div>
+      </div>
     )
   }
 
   const renderTPO = () => {
-    const letters = tpoLetters[tab]
     const analysis = tpoAnalysis
     const mgiItems: [string,boolean,string][] = analysis?.mgi ? [
       ['Buying Tail',  analysis.mgi.buyingTail,  C.up],
@@ -666,115 +869,78 @@ export default function Calculateur() {
       ['Excess Low',   analysis.mgi.excessLow,   C.up],
     ] : []
     return (
-      <Sec title={`TPO / MGI · ${tab}`} col={col}>
-        {/* Saisie des lettres — 6 colonnes manuelles */}
-        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-          {letters.length > 0 && (
-            <div style={{ display:'grid', gridTemplateColumns:'36px 1fr 1fr 1fr 1fr 1fr 26px', gap:3, marginBottom:2 }}>
-              {['','High','Low','POC','VAH','VAL',''].map((h,i)=><div key={i} style={jb(7,600,{color:C.muted})}>{h}</div>)}
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        {/* A — TPO J-1 */}
+        <Sec title={`TPO J-1 · ${tab}`} col={col}>
+          {tpoInputBlock(tpoLettersJ1[tab], ()=>addTpoLetterJ1(tab), (id,k,v)=>upTpoLetterJ1(tab,id,k,v), id=>delTpoLetterJ1(tab,id), col)}
+          {tpoMod1Block(tpoStepsJ1, col)}
+        </Sec>
+
+        {/* VALUE AREA J vs J-1 */}
+        <Sec title={`VALUE AREA J vs J-1 · ${tab} · Dalton`} col={C.amber}>
+          {renderVaBlock()}
+        </Sec>
+
+        {/* B — TPO DU JOUR */}
+        <Sec title={`TPO DU JOUR · ${tab}`} col={col}>
+          {tpoInputBlock(tpoLetters[tab], ()=>addTpoLetter(tab), (id,k,v)=>upTpoLetter(tab,id,k,v), id=>delTpoLetter(tab,id), col)}
+          {tpoMod1Block(analysis?.steps ?? [], col)}
+
+          {/* Module 2 : MGI Dalton */}
+          {analysis?.mgi && (
+            <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:6 }}>
+              <div style={orb(8,700,{color:C.teal,letterSpacing:'0.12em'})}>MODULE 2 · MGI DALTON</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:5 }}>
+                {mgiItems.map(([label,active,activeCol])=>(
+                  <div key={label} style={{ padding:'5px 8px', borderRadius:2, background:active?`${activeCol}10`:'rgba(136,153,187,0.03)', border:`1px solid ${active?activeCol+'30':'rgba(136,153,187,0.10)'}` }}>
+                    <div style={jb(7,400,{color:C.muted,marginBottom:3})}>{label}</div>
+                    <Pill label={active?'OUI':'NON'} col={active?activeCol:'rgba(136,153,187,0.45)'} />
+                  </div>
+                ))}
+              </div>
+
+              {(analysis.mgi.excessShort||analysis.mgi.excessLong) && (
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  <div style={orb(7,700,{color:C.amber,letterSpacing:'0.10em'})}>RÈGLE 13 · SETUP EXCESS</div>
+                  {analysis.mgi.excessShort && (
+                    <div style={{ padding:'6px 10px', background:'rgba(255,68,68,0.07)', border:'1px solid rgba(255,68,68,0.25)', borderRadius:3, display:'flex', gap:10, alignItems:'center' }}>
+                      <span style={jb(9,700,{color:C.down})}>SHORT</span>
+                      <span style={jb(8,400,{color:C.muted})}>Entrée</span>
+                      <span style={jb(9,700,{color:C.gold})}>{analysis.mgi.excessShort.entry}</span>
+                      <span style={jb(8,400,{color:C.muted})}>Stop</span>
+                      <span style={jb(9,700,{color:C.down})}>{analysis.mgi.excessShort.stop}</span>
+                    </div>
+                  )}
+                  {analysis.mgi.excessLong && (
+                    <div style={{ padding:'6px 10px', background:'rgba(0,255,136,0.06)', border:'1px solid rgba(0,255,136,0.22)', borderRadius:3, display:'flex', gap:10, alignItems:'center' }}>
+                      <span style={jb(9,700,{color:C.up})}>LONG</span>
+                      <span style={jb(8,400,{color:C.muted})}>Entrée</span>
+                      <span style={jb(9,700,{color:C.gold})}>{analysis.mgi.excessLong.entry}</span>
+                      <span style={jb(8,400,{color:C.muted})}>Stop</span>
+                      <span style={jb(9,700,{color:C.up})}>{analysis.mgi.excessLong.stop}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ padding:'8px 12px', background:`${analysis.mgi.biasCol}08`, border:`1px solid ${analysis.mgi.biasCol}28`, borderRadius:3, display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+                <div>
+                  <div style={jb(7,400,{color:C.muted,marginBottom:2})}>BIAIS MGI</div>
+                  <span style={orb(16,900,{color:analysis.mgi.biasCol})}>{analysis.mgi.bias}</span>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(5,minmax(60px,1fr))', gap:10, flex:1 }}>
+                  {([['POC',fmt2(analysis.mgi.poc),C.gold],['VAH',fmt2(analysis.mgi.vah),C.up],['VAL',fmt2(analysis.mgi.val),C.down],['Haut',fmt2(analysis.mgi.dayHigh),C.muted],['Bas',fmt2(analysis.mgi.dayLow),C.muted]] as [string,string,string][]).map(([l,v,c])=>(
+                    <div key={l}>
+                      <div style={jb(7,400,{color:C.muted,marginBottom:2})}>{l}</div>
+                      <span style={jb(11,700,{color:c})}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
-          {letters.map(row=>(
-            <div key={row.id} style={{ display:'grid', gridTemplateColumns:'36px 1fr 1fr 1fr 1fr 1fr 26px', gap:3 }}>
-              <div style={{...rthInStyle,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,color:col,fontSize:11}}>{row.letter}</div>
-              <input type="number" value={row.high} onChange={e=>upTpoLetter(tab,row.id,'high',e.target.value)} style={rthInStyle} />
-              <input type="number" value={row.low}  onChange={e=>upTpoLetter(tab,row.id,'low',e.target.value)}  style={rthInStyle} />
-              <input type="number" value={row.poc}  onChange={e=>upTpoLetter(tab,row.id,'poc',e.target.value)}  style={{...rthInStyle,color:C.gold}} />
-              <input type="number" value={row.vah}  onChange={e=>upTpoLetter(tab,row.id,'vah',e.target.value)}  style={{...rthInStyle,color:C.up}} />
-              <input type="number" value={row.val}  onChange={e=>upTpoLetter(tab,row.id,'val',e.target.value)}  style={{...rthInStyle,color:C.down}} />
-              <button onClick={()=>delTpoLetter(tab,row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
-            </div>
-          ))}
-          {letters.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune lettre TPO — cliquez sur &quot;+ AJOUTER&quot; (A, B, C...) puis saisissez High/Low/POC/VAH/VAL.</span>}
-          <button onClick={()=>addTpoLetter(tab)} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${col}50`, borderRadius:2, background:`${col}0d`, color:col, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', marginTop:4 }}>+ AJOUTER LETTRE</button>
-        </div>
-
-        {/* Module 1 : POC Migration — tableau cumulatif */}
-        {analysis && analysis.steps.length > 0 && (
-          <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
-            <div style={orb(8,700,{color:C.amber,letterSpacing:'0.12em',marginBottom:4})}>MODULE 1 · POC MIGRATION</div>
-            <div style={{ overflowX:'auto' }}>
-              <div style={{ minWidth:600 }}>
-                <div style={{ display:'grid', gridTemplateColumns:'70px repeat(7,minmax(62px,1fr))', gap:3, marginBottom:4 }}>
-                  {['Lettres','High','Low','POC','VAH','VAL','ΔPOC','Verdict'].map(h=><div key={h} style={jb(7,600,{color:C.muted})}>{h}</div>)}
-                </div>
-                {analysis.steps.map((step,i)=>(
-                  <div key={i} style={{ display:'grid', gridTemplateColumns:'70px repeat(7,minmax(62px,1fr))', gap:3, marginBottom:3, padding:'2px 0', borderBottom:'1px solid rgba(201,168,76,0.06)' }}>
-                    <div style={jb(9,700,{color:col})}>{step.label}</div>
-                    <div style={jb(9,400,{color:C.muted})}>{step.high>0?fmt2(step.high):'—'}</div>
-                    <div style={jb(9,400,{color:C.muted})}>{step.low>0?fmt2(step.low):'—'}</div>
-                    <div style={jb(9,600,{color:C.gold})}>{step.poc>0?fmt2(step.poc):'—'}</div>
-                    <div style={jb(9,500,{color:C.up})}>{step.vah>0?fmt2(step.vah):'—'}</div>
-                    <div style={jb(9,500,{color:C.down})}>{step.val>0?fmt2(step.val):'—'}</div>
-                    <div style={jb(9,500,{color:step.delta!==null&&step.delta>0?C.up:step.delta!==null&&step.delta<0?C.down:C.muted})}>
-                      {step.delta!==null ? (step.delta>0?'+':'')+fmt2(step.delta) : '—'}
-                    </div>
-                    <div style={jb(8,500,{color:step.verdict.includes('▲')?C.up:step.verdict.includes('▼')?C.down:C.muted})}>
-                      {step.verdict||'—'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Module 2 : MGI Dalton */}
-        {analysis?.mgi && (
-          <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:6 }}>
-            <div style={orb(8,700,{color:C.teal,letterSpacing:'0.12em'})}>MODULE 2 · MGI DALTON</div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:5 }}>
-              {mgiItems.map(([label,active,activeCol])=>(
-                <div key={label} style={{ padding:'5px 8px', borderRadius:2, background:active?`${activeCol}10`:'rgba(136,153,187,0.03)', border:`1px solid ${active?activeCol+'30':'rgba(136,153,187,0.10)'}` }}>
-                  <div style={jb(7,400,{color:C.muted,marginBottom:3})}>{label}</div>
-                  <Pill label={active?'OUI':'NON'} col={active?activeCol:'rgba(136,153,187,0.45)'} />
-                </div>
-              ))}
-            </div>
-
-            {/* Règle 13 — Excess Setup */}
-            {(analysis.mgi.excessShort||analysis.mgi.excessLong) && (
-              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                <div style={orb(7,700,{color:C.amber,letterSpacing:'0.10em'})}>RÈGLE 13 · SETUP EXCESS</div>
-                {analysis.mgi.excessShort && (
-                  <div style={{ padding:'6px 10px', background:'rgba(255,68,68,0.07)', border:'1px solid rgba(255,68,68,0.25)', borderRadius:3, display:'flex', gap:10, alignItems:'center' }}>
-                    <span style={jb(9,700,{color:C.down})}>SHORT</span>
-                    <span style={jb(8,400,{color:C.muted})}>Entrée</span>
-                    <span style={jb(9,700,{color:C.gold})}>{analysis.mgi.excessShort.entry}</span>
-                    <span style={jb(8,400,{color:C.muted})}>Stop</span>
-                    <span style={jb(9,700,{color:C.down})}>{analysis.mgi.excessShort.stop}</span>
-                  </div>
-                )}
-                {analysis.mgi.excessLong && (
-                  <div style={{ padding:'6px 10px', background:'rgba(0,255,136,0.06)', border:'1px solid rgba(0,255,136,0.22)', borderRadius:3, display:'flex', gap:10, alignItems:'center' }}>
-                    <span style={jb(9,700,{color:C.up})}>LONG</span>
-                    <span style={jb(8,400,{color:C.muted})}>Entrée</span>
-                    <span style={jb(9,700,{color:C.gold})}>{analysis.mgi.excessLong.entry}</span>
-                    <span style={jb(8,400,{color:C.muted})}>Stop</span>
-                    <span style={jb(9,700,{color:C.up})}>{analysis.mgi.excessLong.stop}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Biais */}
-            <div style={{ padding:'8px 12px', background:`${analysis.mgi.biasCol}08`, border:`1px solid ${analysis.mgi.biasCol}28`, borderRadius:3, display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
-              <div>
-                <div style={jb(7,400,{color:C.muted,marginBottom:2})}>BIAIS MGI</div>
-                <span style={orb(16,900,{color:analysis.mgi.biasCol})}>{analysis.mgi.bias}</span>
-              </div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(5,minmax(60px,1fr))', gap:10, flex:1 }}>
-                {([['POC',fmt2(analysis.mgi.poc),C.gold],['VAH',fmt2(analysis.mgi.vah),C.up],['VAL',fmt2(analysis.mgi.val),C.down],['Haut',fmt2(analysis.mgi.dayHigh),C.muted],['Bas',fmt2(analysis.mgi.dayLow),C.muted]] as [string,string,string][]).map(([l,v,c])=>(
-                  <div key={l}>
-                    <div style={jb(7,400,{color:C.muted,marginBottom:2})}>{l}</div>
-                    <span style={jb(11,700,{color:c})}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </Sec>
+        </Sec>
+      </div>
     )
   }
 
