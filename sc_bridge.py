@@ -93,8 +93,10 @@ extract_date = parse_sc_date   # alias pour compatibilité
 
 # ─── PARSING CSV ──────────────────────────────────────────────────────────────
 
-def parse_csv(filepath: str) -> list:
-    """Retourne [] silencieusement si le fichier est absent."""
+def parse_csv(filepath: str, diag: bool = False) -> list:
+    """Retourne [] silencieusement si le fichier est absent.
+    diag=True : affiche les headers détectés et les indices de colonnes.
+    """
     rows = []
     try:
         content = Path(filepath).read_text(encoding='utf-8-sig')
@@ -117,6 +119,11 @@ def parse_csv(filepath: str) -> list:
         return [c.strip().strip('"') for c in l.split(sep)]
 
     hdrs = [h.lower().strip() for h in split(hdr)]
+
+    if diag:
+        print(f"  [DIAG] Séparateur détecté : {repr(sep)}")
+        print(f"  [DIAG] Headers bruts      : {split(hdr)}")
+        print(f"  [DIAG] Headers normalisés : {hdrs}")
 
     def find(*names):
         for n in names:
@@ -141,9 +148,22 @@ def parse_csv(filepath: str) -> list:
     idx_vah  = find('tpo vah')
     idx_val  = find('tpo val')
 
+    if diag:
+        print(f"  [DIAG] idx_date={idx_date}  idx_time={idx_time}  "
+              f"idx_open={idx_open}  idx_high={idx_high}  idx_low={idx_low}  idx_last={idx_last}")
+        print(f"  [DIAG] idx_vwap={idx_vwap}  idx_sp1={idx_sp1}  idx_sm1={idx_sm1}  "
+              f"idx_sp2={idx_sp2}  idx_sm2={idx_sm2}")
+        print(f"  [DIAG] idx_poc={idx_poc}  idx_vah={idx_vah}  idx_val={idx_val}")
+        # Affiche la première ligne de données brute
+        if len(lines) > 1:
+            print(f"  [DIAG] 1ère ligne données : {lines[1]}")
+            print(f"  [DIAG] 1ère ligne colonnes: {split(lines[1])}")
+
     time_col = idx_time if idx_time >= 0 else idx_date
     if time_col < 0:
         print(f"[WARN] Colonne horaire introuvable dans {filepath}")
+        if diag:
+            print(f"  [DIAG] Aucune colonne 'date/time/heure' trouvée — parsing impossible.")
         return rows
 
     def get(cols, j):
@@ -188,6 +208,11 @@ def parse_csv(filepath: str) -> list:
             'tpo_vah': get(cols, idx_vah),
             'tpo_val': get(cols, idx_val),
         })
+
+    if diag and rows:
+        print(f"  [DIAG] 1ère barre parsée   : date={rows[0]['date']}  time={rows[0]['time']}  "
+              f"open={rows[0]['open']}  high={rows[0]['high']}  low={rows[0]['low']}  close={rows[0]['close']}")
+        print(f"  [DIAG] Total lignes parsées: {len(rows)}")
 
     return rows
 
@@ -295,6 +320,8 @@ def build_payload(instr: str, all_rows: list) -> dict:
         'bars_london': [bar_dict(r) for r in bars_london],
     }
 
+_DIAG_DONE: set = set()   # instruments déjà diagnostiqués (une seule fois)
+
 def build_message() -> str:
     from datetime import date as _date
     now    = now_et()
@@ -305,7 +332,12 @@ def build_message() -> str:
 
     data = {}
     for instr, filepath in FILES.items():
-        rows = parse_csv(filepath)
+        diag = instr not in _DIAG_DONE
+        if diag:
+            print(f"\n  [DIAG] ── {instr} ─── {filepath}")
+        rows = parse_csv(filepath, diag=diag)
+        if diag:
+            _DIAG_DONE.add(instr)
         if not rows:
             # fichier absent ou vide → instrument omis du JSON
             continue
