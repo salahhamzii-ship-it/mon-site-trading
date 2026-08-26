@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, ReactNode, ChangeEvent } from 'react'
 
 type Tab = 'NQ' | 'ES' | 'GC' | 'CL'
 type OTF = 'Higher' | 'Lower' | 'Neutral' | ''
@@ -78,6 +78,26 @@ const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:m
 const TICK_SZ: Record<Tab, number> = { NQ:0.25, ES:0.25, GC:0.10, CL:0.01 }
 interface TpoLetter { id:string; letter:string; high:string; low:string; poc:string; vah:string; val:string }
 const mkTpoLetters = (): Record<Tab, TpoLetter[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
+
+interface SierraRow { time:string; open:string; high:string; low:string; last:string; tpoPoc:string; tpoVah:string; tpoVal:string }
+function parseSierraCSV(text:string): SierraRow[] {
+  const lines = text.split(/\r?\n/).filter(l=>l.trim())
+  if (lines.length < 2) return []
+  const headers = lines[0].split(',').map(h=>h.trim().toLowerCase())
+  const idx = (name:string) => headers.findIndex(h=>h===name)
+  const idxTime=idx('time'), idxOpen=idx('open'), idxHigh=idx('high'), idxLow=idx('low'), idxLast=idx('last')
+  const idxPoc=idx('tpo poc'), idxVah=idx('tpo vah'), idxVal=idx('tpo val')
+  if (idxTime<0) return []
+  const rows:SierraRow[] = []
+  for (let i=1;i<lines.length;i++) {
+    const cols = lines[i].split(',').map(c=>c.trim())
+    const get = (j:number) => j>=0&&j<cols.length ? normNum(cols[j]) : ''
+    const timeRaw = get(idxTime)
+    if (!timeRaw) continue
+    rows.push({ time:timeRaw.substring(0,5), open:get(idxOpen), high:get(idxHigh), low:get(idxLow), last:get(idxLast), tpoPoc:get(idxPoc), tpoVah:get(idxVah), tpoVal:get(idxVal) })
+  }
+  return rows
+}
 
 // Distribution utilisée uniquement pour MGI Module 2 (buying/selling tail, excess, bimodal)
 function buildDist(letters: TpoLetter[], tick: number): Map<number, number> {
@@ -259,6 +279,55 @@ export default function Calculateur() {
   }
   const upTpoLetterJ1  = (t:Tab, id:string, k:keyof TpoLetter, v:string) => setTpoLettersJ1(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
   const delTpoLetterJ1 = (t:Tab, id:string) => setTpoLettersJ1(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
+
+  const csvInputRef  = useRef<HTMLInputElement>(null)
+  const csvSectionRef = useRef<'rthJ1'|'tpoJ1'>('rthJ1')
+  const csvTabRef    = useRef<Tab>('NQ')
+
+  const triggerCsvImport = (section:'rthJ1'|'tpoJ1') => {
+    csvSectionRef.current = section
+    csvTabRef.current = tab
+    csvInputRef.current?.click()
+  }
+
+  const handleCsvFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    const section = csvSectionRef.current
+    const t = csvTabRef.current
+    reader.onload = ev => {
+      const text = ev.target?.result as string
+      if (!text) return
+      const rows = parseSierraCSV(text)
+      if (!rows.length) return
+      if (section === 'rthJ1') {
+        setRthRowsJ1(prev => {
+          const updated = prev[t].map(row => {
+            const match = rows.find(r=>r.time===row.heure)
+            if (!match) return row
+            return { ...row, open:match.open||row.open, high:match.high||row.high, low:match.low||row.low, close:match.last||row.close }
+          })
+          return {...prev, [t]:updated}
+        })
+        const last = rows[rows.length-1]
+        if (last.tpoPoc) upI(t,'rPoc',last.tpoPoc)
+        if (last.tpoVah) upI(t,'rVah',last.tpoVah)
+        if (last.tpoVal) upI(t,'rVal',last.tpoVal)
+      } else {
+        let cumH=-Infinity, cumL=Infinity
+        const letters:TpoLetter[] = rows.slice(0,13).map((r,i)=>{
+          const h=parseFloat(r.high)||0, l=parseFloat(r.low)||0
+          if (h>0&&h>cumH) cumH=h
+          if (l>0&&l<cumL) cumL=l
+          return { id:`csv-${Date.now()}-${i}`, letter:TPO_RTH_LETTERS[i]||'?', high:cumH>-Infinity?String(cumH):'', low:cumL<Infinity?String(cumL):'', poc:r.tpoPoc, vah:r.tpoVah, val:r.tpoVal }
+        })
+        setTpoLettersJ1(prev=>({...prev,[t]:letters}))
+      }
+    }
+    reader.readAsText(file)
+    e.target.value=''
+  }
 
   const I   = II[tab]
   const col = TC[tab]
@@ -756,6 +825,9 @@ export default function Calculateur() {
     return (
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
         <Sec title={`SUIVI RTH J-1 · ${tab} · ${freq}`} col={col}>
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:4 }}>
+            <button onClick={()=>triggerCsvImport('rthJ1')} style={{ padding:'4px 10px', border:`1px solid rgba(30,179,188,0.40)`, borderRadius:2, background:'rgba(30,179,188,0.07)', color:C.teal, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>⬆ IMPORTER CSV</button>
+          </div>
           {rthTableBlock(rthRowsJ1[tab], times, (id,k,v)=>upRthRowJ1(tab,id,k,v))}
         </Sec>
         <Sec title={`SUIVI RTH DU JOUR · ${tab} · ${freq}`} col={col}>
@@ -914,6 +986,9 @@ export default function Calculateur() {
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
         {/* A — TPO J-1 */}
         <Sec title={`TPO J-1 · ${tab}`} col={col}>
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:4 }}>
+            <button onClick={()=>triggerCsvImport('tpoJ1')} style={{ padding:'4px 10px', border:`1px solid rgba(30,179,188,0.40)`, borderRadius:2, background:'rgba(30,179,188,0.07)', color:C.teal, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>⬆ IMPORTER CSV</button>
+          </div>
           {tpoInputBlock(tpoLettersJ1[tab], ()=>addTpoLetterJ1(tab), (id,k,v)=>upTpoLetterJ1(tab,id,k,v), id=>delTpoLetterJ1(tab,id), col)}
           {tpoMod1Block(tpoStepsJ1, col)}
         </Sec>
@@ -1329,6 +1404,8 @@ export default function Calculateur() {
           </div>
         </div>
       )}
+
+      <input ref={csvInputRef} type="file" accept=".csv,.txt" style={{ display:'none' }} onChange={handleCsvFile} />
     </div>
   )
 }
