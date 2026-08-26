@@ -88,18 +88,15 @@ def extract_time(s: str) -> str:
         return f"{m.group(1)}:{m.group(2)}"
     return ''
 
-def extract_date(s: str):
-    """Extrait un objet date depuis divers formats (retourne None si échec)."""
-    s = s.strip()
-    m = re.match(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', s)
-    if m:
-        try: return date_t(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-        except Exception: pass
-    m = re.match(r'(\d{1,2})/(\d{1,2})/(\d{4})', s)
-    if m:
-        try: return date_t(int(m.group(3)), int(m.group(1)), int(m.group(2)))
-        except Exception: pass
-    return None
+def parse_sc_date(s: str):
+    """Parse 'YYYY-M-D' ou 'YYYY-MM-DD' Sierra Chart → objet date. None si échec."""
+    try:
+        parts = s.strip().split('-')
+        return date_t(int(parts[0]), int(parts[1]), int(parts[2]))
+    except Exception:
+        return None
+
+extract_date = parse_sc_date   # alias pour compatibilité
 
 # ─── PARSING CSV ──────────────────────────────────────────────────────────────
 
