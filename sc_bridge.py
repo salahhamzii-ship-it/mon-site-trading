@@ -260,22 +260,25 @@ def build_payload(instr: str, all_rows: list) -> dict:
     has_dates = any(r['date'] is not None for r in all_rows[:20])
 
     if has_dates:
-        today_rows = filter_rth([r for r in all_rows if r['date'] == today], instr)
-        j1_rows    = filter_rth([r for r in all_rows if r['date'] == j1_d],  instr)
+        today_all  = [r for r in all_rows if r['date'] == today]   # OVN + RTH
+        today_rows = filter_rth(today_all, instr)                   # RTH only
+        j1_rows    = filter_rth([r for r in all_rows if r['date'] == j1_d], instr)
     else:
         today_rows, j1_rows = session_split(all_rows, instr)
+        today_all = today_rows
 
     last_j1  = j1_rows[-1]  if j1_rows  else {}
     first_j1 = j1_rows[0]   if j1_rows  else {}
 
-    # last= : barre today, sinon dernière barre disponible toutes sessions confondues
+    # last= : barre RTH today → barre OVN today → dernière barre J-1 RTH
     if today_rows:
         last_val = today_rows[-1]['close']
-    elif all_rows:
-        rth_all = filter_rth(all_rows, instr)
-        last_val = rth_all[-1]['close'] if rth_all else all_rows[-1]['close']
+    elif today_all:
+        last_val = today_all[-1]['close']        # cours OVN avant ouverture RTH
+    elif j1_rows:
+        last_val = j1_rows[-1]['close']
     else:
-        last_val = ''
+        last_val = all_rows[-1]['close'] if all_rows else ''
 
     return {
         'last':      last_val,
