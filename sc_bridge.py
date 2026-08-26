@@ -40,7 +40,7 @@ def now_et(): return datetime.now()   # PC déjà en heure New York
 # ─── CONFIG — CHEMINS DES FICHIERS CSV ────────────────────────────────────────
 FILES = {
     'NQ': r"C:\SierraChart_CME\Data\nq 30 mn.txt",
-    'ES': r"C:\SierraChart_CME\Data\ESU26_FUT_CME[M]  30 Min  #15_GraphData.txt",
+    'ES': r"C:\SierraChart_CME\Data\ESU26_FUT_CME[M] 30 Min #17_GraphData.txt",
     'GC': r"C:\SierraChart_CME\Data\GC.csv.txt",
     'CL': r"C:\SierraChart_CME\Data\CL.csv.txt",
 }
