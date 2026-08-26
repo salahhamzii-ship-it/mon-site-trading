@@ -125,7 +125,7 @@ function F({ l, v='', s, t, opts, ro, dv }: { l:string; v?:string; s?:(x:string)
     <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:0 }}>
       <span style={jb(12, 500, { color:'#b4c2d9', letterSpacing:'0.02em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:3, lineHeight:1.1 })}>{l}</span>
       {ro ? <div style={iS(true)}>{dv ?? v ?? '—'}</div>
-       : opts ? <select value={v} onChange={e=>s!(e.target.value)} style={{...iS(false),cursor:'pointer'}}><option value="">—</option>{opts.map(o=><option key={o} value={o}>{o}</option>)}</select>
+       : opts ? <select value={v} onChange={e=>s!(e.target.value)} style={{...iS(false),cursor:'pointer',paddingRight:30}}><option value="">—</option>{opts.map(o=><option key={o} value={o}>{o}</option>)}</select>
        : <input
            type="text"
            inputMode={(!t || t==='number') ? 'decimal' : 'text'}
@@ -1458,7 +1458,7 @@ export default function Calculateur() {
       <div style={{ border:`1px solid ${C.brd}`, borderRadius:4, overflow:'hidden' }}>
         <div style={{ display:'flex', borderBottom:`1px solid ${C.brd}`, background:'rgba(7,10,18,0.6)', overflowX:'auto' }}>
           {TABS.map(t=>(
-            <button key={t} onClick={()=>setTab(t)} style={{ flex:1, minWidth:52, padding:'8px 4px', border:'none', cursor:'pointer', background: tab===t ? `${TC[t]}12` : 'transparent', borderBottom: tab===t ? `2px solid ${TC[t]}` : '2px solid transparent', transition:'all 0.14s' }}>
+            <button key={t} onClick={()=>setTab(t)} style={{ flex:1, minWidth:52, padding:'8px 0', border:'none', cursor:'pointer', background: tab===t ? `${TC[t]}12` : 'transparent', borderBottom: tab===t ? `2px solid ${TC[t]}` : '2px solid transparent', transition:'all 0.14s' }}>
               <span style={orb(14, 900, { color: tab===t ? '#f0d070' : '#8f9fbd', letterSpacing:'0.18em' })}>{t}</span>
             </button>
           ))}
