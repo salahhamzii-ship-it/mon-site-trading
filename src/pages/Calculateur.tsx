@@ -364,6 +364,7 @@ export default function Calculateur() {
   const [btBars,   setBtBars]   = useState<BtBar[]>([])
   const [btTrades, setBtTrades] = useState<BtTrade[]>([])
   const [btFile,   setBtFile]   = useState('')
+  const [slOpen,   setSlOpen]   = useState(true)
   const [posOpen,  setPosOpen]  = useState(false)
   const [posMode,  setPosMode]  = useState<'OVN'|'RTH'|null>(null)
   const [posEntry, setPosEntry] = useState('')
@@ -1937,6 +1938,208 @@ export default function Calculateur() {
     )
   }
 
+  const renderSetupLauncher = () => {
+    type Status = 'ok' | 'wait' | 'no' | 'na'
+    const lp    = pf(I.lastPx)
+    const vw18  = pf(I.vwap18h)
+    const rVah  = pf(I.rVah), rVal = pf(I.rVal)
+    const nqLp  = pf(II.NQ.lastPx), nqVal = pf(II.NQ.rVal)
+    const esLp  = pf(II.ES.lastPx), esVal = pf(II.ES.rVal)
+
+    // 1. CONTEXTE
+    const valAccepted: Status = !lp||!rVah ? 'na' : lp>rVah ? 'ok' : lp>rVal ? 'wait' : 'no'
+    const pocMigStatus: Status = td.pocMig==='Ascendant'?'ok':td.pocMig==='Stable'?'wait':td.pocMig==='Descendant'?'no':'na'
+    const alnPat  = tab==='NQ' ? I.alnPattern : ''
+    const alnBiais = alnPat==='P3'?'Haussier':alnPat==='P4'?'Baissier':alnPat?'Neutre':'—'
+
+    // 2. §9 — NQ/ES vs VAL J-1
+    const nqAboveVal = nqLp>0&&nqVal>0&&nqLp>nqVal
+    const esAboveVal = esLp>0&&esVal>0&&esLp>esVal
+    const p9NQ: Status = !nqLp||!nqVal?'na':nqAboveVal?'ok':'no'
+    const p9ES: Status = !esLp||!esVal?'na':esAboveVal?'ok':'no'
+    const p9All: Status = nqAboveVal&&esAboveVal?'ok':(!nqLp||!esLp||!nqVal||!esVal)?'na':(nqAboveVal||esAboveVal)?'wait':'no'
+
+    // 3. TPO structure
+    const tpoLetts = tpoLetters[tab]
+    let otfStatus: Status = 'na'
+    if (tpoLetts.length >= 2) {
+      const lastPoc = pf(tpoLetts[tpoLetts.length-1].poc)
+      const prevPoc = pf(tpoLetts[tpoLetts.length-2].poc)
+      if (lastPoc>0&&prevPoc>0) otfStatus = lastPoc>prevPoc?'ok':lastPoc<prevPoc?'no':'wait'
+    }
+    let equalHighStatus: Status = 'na'
+    if (tpoLetts.length >= 2) {
+      const h1=pf(tpoLetts[tpoLetts.length-1].high), h2=pf(tpoLetts[tpoLetts.length-2].high)
+      if (h1>0&&h2>0) equalHighStatus = Math.abs(h1-h2)<TICK_SZ[tab]*3?'ok':'no'
+    }
+
+    // 4. TRIGGER
+    const vwapStatus: Status = !lp||!vw18?'na':lp>vw18?'ok':lp===vw18?'wait':'no'
+
+    // 5. NOON CURVE
+    const parts0 = nyTime.split(':')
+    const totMin = parseInt(parts0[0]||'0')*60+parseInt(parts0[1]||'0')
+    const isNoon = totMin>=12*60&&totMin<14*60
+    let amHigh=0
+    if (isNoon) {
+      const amBars = rthRows[tab].filter(r=>r.heure>='09:30'&&r.heure<'12:00')
+      amHigh = amBars.reduce((mx,r)=>{const h=pf(r.high);return h>mx?h:mx},0)
+    }
+    const noonAMSet: Status = isNoon?(amHigh>0?'ok':'wait'):'na'
+    const noonPM: Status = isNoon&&amHigh>0&&lp>0 ? (Math.abs(lp-amHigh)<(pf(I.atr)||5)*0.35?'ok':lp<amHigh?'wait':'no') : 'na'
+
+    // Signal direction + score
+    const checks: Status[] = [valAccepted, pocMigStatus, p9All, otfStatus, vwapStatus]
+    const okCnt = checks.filter(s=>s==='ok').length
+    const naCnt = checks.filter(s=>s==='na').length
+    const active = checks.length-naCnt
+    const setupReady   = okCnt>=4
+    const setupPartial = okCnt>=2
+
+    // Direction: prefer cSig if confident, else vote from conditions
+    const dir = cSig.signal==='LONG'?'LONG':cSig.signal==='SHORT'?'SHORT':'LONG'
+    const dirCol = dir==='LONG'?C.up:C.down
+
+    // Levels
+    const stopL   = rVal>0?rVal:pf(sdVals.sm1)
+    const c1L     = pf(sdVals.sp1), c2L=rVah, c3L=pf(sdVals.sp2)
+    const stopS   = rVah>0?rVah:pf(sdVals.sp1)
+    const c1S     = pf(sdVals.sm1), c2S=rVal, c3S=pf(sdVals.sm2)
+    const eApprox = vw18>0?vw18:lp
+    const rrL = eApprox>0&&stopL>0&&c1L>0&&c1L>eApprox&&eApprox>stopL ? ((c1L-eApprox)/(eApprox-stopL)).toFixed(1) : '—'
+    const rrS = eApprox>0&&stopS>0&&c1S>0&&c1S<eApprox&&stopS>eApprox ? ((eApprox-c1S)/(stopS-eApprox)).toFixed(1) : '—'
+
+    const si = (s: Status) => s==='ok'?'✅':s==='wait'?'⏳':s==='no'?'❌':'⬜'
+    const sc2 = (s: Status) => s==='ok'?C.up:s==='wait'?C.amber:s==='no'?C.down:C.muted
+
+    const sHdr = (txt: string) => (
+      <div style={{ fontSize:7.5, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)', marginTop:6 }}>{txt}</div>
+    )
+    const Row2 = ({ s, label, val }: { s: Status; label: string; val?: string }) => (
+      <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
+        <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>{si(s)}</span>
+        <span style={jb(8.5, s==='ok'?600:400, { color:sc2(s), flex:1 })}>{label}</span>
+        {val&&<span style={jb(8.5, 700, { color:sc2(s), fontVariantNumeric:'tabular-nums' })}>{val}</span>}
+      </div>
+    )
+
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {/* Setup score banner */}
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 12px', background: setupReady?'rgba(0,255,136,0.07)':setupPartial?'rgba(212,175,55,0.07)':'rgba(136,153,187,0.05)', borderRadius:3, border:`1px solid ${setupReady?'rgba(0,255,136,0.25)':setupPartial?'rgba(212,175,55,0.22)':'rgba(136,153,187,0.14)'}` }}>
+          <span style={orb(11, 900, { color: setupReady?C.up:setupPartial?C.amber:C.muted, letterSpacing:'0.14em' })}>{setupReady?'◈ SETUP PRÊT':setupPartial?'◈ SETUP PARTIEL':'◈ PAS DE SETUP'}</span>
+          <span style={jb(9, 600, { color:C.muted })}>{okCnt}/{active}</span>
+          <span style={{ flex:1 }} />
+          <span style={orb(10, 900, { color:dirCol })}>{dir}</span>
+          {nyTime && <span style={jb(8, 400, { color:'rgba(136,153,187,0.55)' })}>{nyTime.slice(0,5)} ET</span>}
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          {/* ── LEFT: Checklist ─────────────────── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+            {sHdr('1 · CONTEXTE (TOP-DOWN)')}
+            <Row2 s={valAccepted}  label="VAL J-1 acceptée (prix > VAH)"    val={rVah>0?`>${fmt2(rVah)}`:''} />
+            <Row2 s={pocMigStatus} label="POC migration"                     val={td.pocMig||'—'} />
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
+              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>{alnPat?'ℹ️':'⬜'}</span>
+              <span style={jb(8.5, 400, { color:C.muted, flex:1 })}>ALN Pattern</span>
+              <span style={jb(8.5, 700, { color:alnPat==='P3'?C.up:alnPat==='P4'?C.down:C.muted })}>{alnPat||'—'}{alnBiais!=='—'?` · ${alnBiais}`:''}</span>
+            </div>
+
+            {sHdr('2 · §9 — ALIGNEMENT NQ/ES')}
+            <Row2 s={p9NQ} label={`NQ > VAL J-1`} val={nqVal>0?fmt2(nqVal):''} />
+            <Row2 s={p9ES} label={`ES > VAL J-1`} val={esVal>0?fmt2(esVal):''} />
+            <Row2 s={p9All} label="§9 Global" val={p9All==='ok'?'CONFIRMÉ':p9All==='wait'?'PARTIEL':p9All==='no'?'DIVERGENT':'—'} />
+
+            {sHdr('3 · STRUCTURE TPO')}
+            <Row2 s={otfStatus}      label="OTF Higher (POC montant)"          val={otfStatus==='ok'?'OUI':otfStatus==='no'?'NON':otfStatus==='wait'?'STABLE':'—'} />
+            <Row2 s={equalHighStatus} label="Equal High"                        val={equalHighStatus==='ok'?'Détecté':equalHighStatus==='no'?'Non':'—'} />
+            <Row2 s={pocMigStatus}   label="POC stable ou montant"             val={td.pocMig||'—'} />
+
+            {sHdr('4 · TRIGGER')}
+            <Row2 s={vwapStatus} label="Prix > VWAP18h" val={vw18>0?fmt2(vw18):''} />
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
+              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>⏳</span>
+              <span style={jb(8.5, 400, { color:C.amber, flex:1 })}>Bougie {dir==='LONG'?'rouge':'verte'} sur pullback</span>
+              <span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
+              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>⏳</span>
+              <span style={jb(8.5, 400, { color:C.amber, flex:1 })}>Close &gt; niveau clé → ENTRÉE</span>
+              <span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
+            </div>
+
+            {isNoon && (<>
+              {sHdr('5 · NOON CURVE (12h–14h)')}
+              <Row2 s={noonAMSet} label="High AM posé"              val={amHigh>0?fmt2(amHigh):''} />
+              <Row2 s={noonPM}    label="PM retour vers High AM"     val={amHigh>0&&lp>0?`Δ${Math.abs(lp-amHigh).toFixed(2)}`:''} />
+            </>)}
+          </div>
+
+          {/* ── RIGHT: Signal Output ─────────────── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <div style={{ fontSize:7.5, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)' }}>SIGNAL OUTPUT</div>
+
+            <div style={{ border:`1px solid ${dirCol}30`, borderRadius:4, overflow:'hidden', flexGrow:1 }}>
+              <div style={{ padding:'7px 10px', background:`${dirCol}0a`, borderBottom:`1px solid ${dirCol}20`, display:'flex', alignItems:'center', gap:6 }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:dirCol, flexShrink:0, animation: setupReady?`pulseDot${dir==='LONG'?'':' '} 1.8s infinite`:'none' }} />
+                <span style={orb(10, 900, { color:dirCol, letterSpacing:'0.16em' })}>SETUP {tab} — {dir}</span>
+              </div>
+              <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:5 }}>
+                {/* Condition summary rows */}
+                {valAccepted!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>{si(valAccepted)}</span>
+                  <span style={jb(8.5, valAccepted==='ok'?600:400, { color:sc2(valAccepted) })}>VAL J-1 acceptée</span>
+                </div>}
+                {p9All!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>{si(p9All)}</span>
+                  <span style={jb(8.5, p9All==='ok'?600:400, { color:sc2(p9All) })}>§9 {p9All==='ok'?'confirmé':p9All==='wait'?'partiel':'divergent'}</span>
+                </div>}
+                {otfStatus!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>{si(otfStatus)}</span>
+                  <span style={jb(8.5, otfStatus==='ok'?600:400, { color:sc2(otfStatus) })}>OTF Higher</span>
+                </div>}
+                {vwapStatus!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>{si(vwapStatus)}</span>
+                  <span style={jb(8.5, vwapStatus==='ok'?600:400, { color:sc2(vwapStatus) })}>VWAP18h {vwapStatus==='ok'?'au-dessus':'en-dessous'}</span>
+                </div>}
+                <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>⏳</span>
+                  <span style={jb(8.5, 400, { color:C.amber })}>Attendre bougie {dir==='LONG'?'rouge':'verte'}</span>
+                </div>
+
+                <div style={{ height:1, background:'rgba(201,168,76,0.10)', margin:'3px 0' }} />
+
+                {/* Entry rule */}
+                <div style={{ padding:'5px 8px', background:`${dirCol}08`, borderRadius:2, borderLeft:`2px solid ${dirCol}60` }}>
+                  <div style={jb(8, 400, { color:C.muted, marginBottom:2 })}>Règle entrée</div>
+                  <div style={jb(8.5, 600, { color:dirCol })}>Close {dir==='LONG'?'rouge':'verte'} {dir==='LONG'?'>':'<'} VWAP18h{vw18>0?` (${fmt2(vw18)})`:''}</div>
+                </div>
+
+                <div style={{ height:1, background:'rgba(201,168,76,0.10)', margin:'1px 0' }} />
+
+                {/* Levels */}
+                {dir==='LONG'?(<>
+                  {stopL>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>sous VAL J-1  {fmt2(stopL)}</span></div>}
+                  {c1L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+1  {fmt2(c1L)}</span></div>}
+                  {c2L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAH J-1  {fmt2(c2L)}</span></div>}
+                  {c3L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+2  {fmt2(c3L)}</span></div>}
+                  {rrL!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrL}</span></div>}
+                </>):(<>
+                  {stopS>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>sur VAH J-1  {fmt2(stopS)}</span></div>}
+                  {c1S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-1  {fmt2(c1S)}</span></div>}
+                  {c2S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAL J-1  {fmt2(c2S)}</span></div>}
+                  {c3S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-2  {fmt2(c3S)}</span></div>}
+                  {rrS!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrS}</span></div>}
+                </>)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const renderPositionActive = () => {
     const lp     = pf(I.lastPx)
     const entry  = pf(posEntry)
@@ -2159,6 +2362,7 @@ export default function Calculateur() {
           <span style={{ width:5, height:5, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
           <span style={orb(7, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.14em' })}>{wsSc==='live' ? 'SC LIVE' : 'SC OFF'}</span>
         </div>
+        <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />
         <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
         <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
         <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
@@ -2185,6 +2389,19 @@ export default function Calculateur() {
           {td.mOtf   && <Pill label={`MONTHLY: ${td.mOtf}`}    col={td.mOtf==='Higher'?C.up:td.mOtf==='Lower'?C.down:C.muted} />}
         </div>
       </div>
+
+      {/* Setup Launcher */}
+      {slOpen && (
+        <div style={{ border:'1px solid rgba(0,212,255,0.22)', borderRadius:4, overflow:'hidden' }}>
+          <div style={{ padding:'6px 12px', borderLeft:'3px solid #00d4ff', background:'rgba(0,212,255,0.04)', borderBottom:'1px solid rgba(0,212,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
+            <span style={orb(8.5, 900, { color:'#00d4ff', letterSpacing:'0.22em' })}>◉ SETUP LAUNCHER · {tab}</span>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'#00d4ff', animation:'pulseDot 2.4s infinite', flexShrink:0 }} />
+          </div>
+          <div style={{ padding:'12px 12px', background:C.sur }}>
+            {renderSetupLauncher()}
+          </div>
+        </div>
+      )}
 
       {/* Top-Down Dalton */}
       {tdOpen && (
