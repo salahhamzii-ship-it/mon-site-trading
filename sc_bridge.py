@@ -24,7 +24,7 @@ import asyncio
 import json
 import re
 import sys
-from datetime import date, timedelta
+from datetime import date as date_t, timedelta
 from pathlib import Path
 
 try:
@@ -88,16 +88,18 @@ def extract_time(s: str) -> str:
         return f"{m.group(1)}:{m.group(2)}"
     return ''
 
-def extract_date(s: str) -> str:
-    """Extrait YYYY-MM-DD depuis divers formats."""
+def extract_date(s: str):
+    """Extrait un objet date depuis divers formats (retourne None si échec)."""
     s = s.strip()
     m = re.match(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', s)
     if m:
-        return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+        try: return date_t(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except Exception: pass
     m = re.match(r'(\d{1,2})/(\d{1,2})/(\d{4})', s)
     if m:
-        return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
-    return ''
+        try: return date_t(int(m.group(3)), int(m.group(1)), int(m.group(2)))
+        except Exception: pass
+    return None
 
 # ─── PARSING CSV ──────────────────────────────────────────────────────────────
 
@@ -167,21 +169,21 @@ def parse_csv(filepath: str) -> list:
 
         # Date + heure
         if idx_date >= 0 and idx_time >= 0:
-            date_s = extract_date(get(cols, idx_date))
+            date_obj = extract_date(get(cols, idx_date))
             time_s = extract_time(get(cols, idx_time))
         elif ' ' in raw:
             parts = raw.split(' ', 1)
-            date_s = extract_date(parts[0])
+            date_obj = extract_date(parts[0])
             time_s = extract_time(parts[1])
         else:
-            date_s = ''
+            date_obj = None
             time_s = extract_time(raw)
 
         if not time_s:
             continue
 
         rows.append({
-            'date':    date_s,
+            'date':    date_obj,
             'time':    time_s,
             'open':    get(cols, idx_open),
             'high':    get(cols, idx_high),
@@ -254,22 +256,29 @@ def build_payload(instr: str, all_rows: list) -> dict:
     # J-1 : vendredi si lundi, sinon hier
     delta  = 3 if today.weekday() == 0 else 1
     j1_d   = today - timedelta(days=delta)
-    today_s = today.strftime('%Y-%m-%d')
-    j1_s    = j1_d.strftime('%Y-%m-%d')
 
-    has_dates = any(r['date'] for r in all_rows[:20])
+    has_dates = any(r['date'] is not None for r in all_rows[:20])
 
     if has_dates:
-        today_rows = filter_rth([r for r in all_rows if r['date'] == today_s], instr)
-        j1_rows    = filter_rth([r for r in all_rows if r['date'] == j1_s],    instr)
+        today_rows = filter_rth([r for r in all_rows if r['date'] == today], instr)
+        j1_rows    = filter_rth([r for r in all_rows if r['date'] == j1_d],  instr)
     else:
         today_rows, j1_rows = session_split(all_rows, instr)
 
     last_j1  = j1_rows[-1]  if j1_rows  else {}
     first_j1 = j1_rows[0]   if j1_rows  else {}
 
+    # last= : barre today, sinon dernière barre disponible toutes sessions confondues
+    if today_rows:
+        last_val = today_rows[-1]['close']
+    elif all_rows:
+        rth_all = filter_rth(all_rows, instr)
+        last_val = rth_all[-1]['close'] if rth_all else all_rows[-1]['close']
+    else:
+        last_val = ''
+
     return {
-        'last':      today_rows[-1]['close'] if today_rows else '',
+        'last':      last_val,
         # J-1 aggregates
         'j1_high':   agg_high(j1_rows),
         'j1_low':    agg_low(j1_rows),
