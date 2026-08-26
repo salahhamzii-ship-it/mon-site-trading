@@ -102,12 +102,12 @@ def extract_date(s: str) -> str:
 # ─── PARSING CSV ──────────────────────────────────────────────────────────────
 
 def parse_csv(filepath: str) -> list:
+    """Retourne [] silencieusement si le fichier est absent."""
     rows = []
     try:
         content = Path(filepath).read_text(encoding='utf-8-sig')
     except FileNotFoundError:
-        print(f"[WARN] Fichier non trouvé : {filepath}")
-        return rows
+        return rows          # silencieux — GC/CL optionnels
     except Exception as e:
         print(f"[WARN] Lecture échouée {filepath}: {e}")
         return rows
@@ -287,6 +287,9 @@ def build_message() -> str:
     data = {}
     for instr, filepath in FILES.items():
         rows = parse_csv(filepath)
+        if not rows:
+            # fichier absent ou vide → instrument omis du JSON
+            continue
         data[instr] = build_payload(instr, rows)
         bt = data[instr]['bars_today']
         bj = data[instr]['bars_j1']
@@ -331,7 +334,8 @@ async def main() -> None:
     print(f"SC Bridge ws://{WS_HOST}:{WS_PORT}  (rafraîchissement {REFRESH_S}s)")
     print("Fichiers configurés :")
     for k, v in FILES.items():
-        status = "OK" if Path(v).exists() else "INTROUVABLE"
+        exists = Path(v).exists()
+        status = "OK" if exists else "absent (ignoré)"
         print(f"  {k}: {v}  [{status}]")
     print()
     async with websockets.serve(handler, WS_HOST, WS_PORT):
