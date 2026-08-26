@@ -45,6 +45,8 @@ interface Cfg {
 const TABS: Tab[]              = ['NQ', 'ES', 'GC', 'CL']
 const IB_H: Record<Tab,string> = { NQ:'09:30–10:30 EST', ES:'09:30–10:30 EST', GC:'08:20–09:20 EST', CL:'09:00–10:00 EST' }
 const OR_H: Record<Tab,string> = { NQ:'09:30–09:50 EST', ES:'09:30–09:50 EST', GC:'08:20–08:40 EST', CL:'09:00–09:20 EST' }
+const IB_RANGE:  Record<Tab,[string,string]> = { NQ:['09:30','10:30'], ES:['09:30','10:30'], GC:['08:20','09:20'], CL:['09:00','10:00'] }
+const ORB_RANGE: Record<Tab,[string,string]> = { NQ:['09:30','09:50'], ES:['09:30','09:50'], GC:['08:20','08:40'], CL:['09:00','09:20'] }
 const TC: Record<Tab,string>   = { NQ:'#c9a84c', ES:'#1eb3bc', GC:'#d4af37', CL:'#ff8c42' }
 const C = { gold:'#c9a84c', goldL:'#f0d070', up:'#00ff88', down:'#ff4444', teal:'#1eb3bc', amber:'#d4af37', muted:'#8899bb', sur:'#141b2d', brd:'rgba(201,168,76,0.14)', pg:'#0b1120' }
 const orb = (sz:number, w=700, ex?:CSSProperties):CSSProperties => ({ fontFamily:'Orbitron,monospace', fontSize:sz, fontWeight:w, ...ex })
@@ -431,7 +433,42 @@ export default function Calculateur() {
         if (last.tpoPoc) upI(t,'rPoc',last.tpoPoc)
         if (last.tpoVah) upI(t,'rVah',last.tpoVah)
         if (last.tpoVal) upI(t,'rVal',last.tpoVal)
-        showCsvMsg(`✓ ${rows.length} barres importées (RTH J-1 ${t})`, true)
+
+        // ---- Auto-compute IB and ORB from CSV rows ----
+        const t2m = (s:string) => { const [h,m] = s.split(':').map(Number); return h*60+(m||0) }
+        const [ibS,ibE]   = IB_RANGE[t]
+        const [orbS,orbE] = ORB_RANGE[t]
+        const ibRows  = rows.filter(r => { const m=t2m(r.time); return m>=t2m(ibS)&&m<t2m(ibE) })
+        const orbRows = rows.filter(r => { const m=t2m(r.time); return m>=t2m(orbS)&&m<t2m(orbE) })
+        // Detect bar interval (minutes) from first two timestamps
+        let barMin = 30
+        if (rows.length>=2) { const d=t2m(rows[1].time)-t2m(rows[0].time); if(d>0) barMin=d }
+        const maxH = (rs:SierraRow[]) => rs.reduce((a,r)=>{ const v=pf(r.high); return v>a?v:a }, 0)
+        const minL = (rs:SierraRow[]) => { const vs=rs.map(r=>pf(r.low)).filter(v=>v>0); return vs.length?Math.min(...vs):0 }
+        const lastC= (rs:SierraRow[]) => rs.length ? pf(rs[rs.length-1].last) : 0
+        const instrUp: Partial<Instr> = {}
+        if (ibRows.length) {
+          const h=maxH(ibRows),l=minL(ibRows),c=lastC(ibRows)
+          if (h>0) instrUp.ibHigh  = String(h)
+          if (l>0) instrUp.ibLow   = String(l)
+          if (c>0) instrUp.ibClose = String(c)
+        }
+        // ORB exact only when bar interval <= 10 min (5 or 10 min bars fully fit in 20-min window)
+        const orbExact = barMin <= 10
+        if (orbRows.length) {
+          const h=maxH(orbRows),l=minL(orbRows),c=lastC(orbRows)
+          if (h>0) instrUp.orbHigh  = String(h)
+          if (l>0) instrUp.orbLow   = String(l)
+          if (c>0) instrUp.orbClose = String(c)
+        }
+        if (Object.keys(instrUp).length) setII(prev=>({...prev,[t]:{...prev[t],...instrUp}}))
+
+        let msg = `✓ ${rows.length} barres importées (RTH J-1 ${t})`
+        if (ibRows.length)  msg += ` · IB auto (${ibRows.length}b)`
+        else                msg += ` · IB ⚠ non détecté (hors plage ?)`
+        if (orbRows.length) msg += orbExact ? ` · ORB exact (${orbRows.length}b)` : ` · ORB PROXY ⚠ barres ${barMin}min`
+        else                msg += ` · ORB non détecté`
+        showCsvMsg(msg, true)
       } else if (section === 'tpoJ1') {
         let cumH=-Infinity, cumL=Infinity
         const letters:TpoLetter[] = rows.slice(0,13).map((r,i)=>{
