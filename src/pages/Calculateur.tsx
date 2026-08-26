@@ -87,6 +87,8 @@ interface TpoLetter { id:string; letter:string; high:string; low:string; poc:str
 const mkTpoLetters = (): Record<Tab, TpoLetter[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
 
 interface SierraRow { time:string; open:string; high:string; low:string; last:string; vwap:string; sp1:string; sm1:string; sp2:string; sm2:string; tpoPoc:string; tpoVah:string; tpoVal:string }
+interface BtBar   { date:string; time:string; open:number; high:number; low:number; close:number; vwap:number; sp1:number; sm1:number; sp2:number; sm2:number }
+interface BtTrade { date:string; entryTime:string; entry:number; stop:number; c1:number; c2:number; c3:number; hitC1:boolean; hitC2:boolean; hitC3:boolean; exitPrice:number; result:number; win:boolean }
 function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
   // Strip BOM and normalize line endings (handles \r\n, \n, \r)
   const clean = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
@@ -150,6 +152,77 @@ function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
   }
   if (!rows.length) return { rows:[], error:`Aucune heure valide. Colonne ${timeCol} (${raw[timeCol]}), valeur brute : "${firstTimeRaw}", parsé : "${firstTimeParsed}"` }
   return { rows }
+}
+
+function parseBtCsv(text: string): { bars: BtBar[]; error?: string } {
+  const clean = text.replace(/^﻿/, '').replace(/\r\n|\r/g, '\n')
+  const lines = clean.split('\n').filter(l => l.trim())
+  if (lines.length < 2) return { bars: [], error: 'Fichier vide.' }
+  const hdrLine = lines[0]
+  const cS = (hdrLine.match(/;/g)||[]).length, cT = (hdrLine.match(/\t/g)||[]).length, cC = (hdrLine.match(/,/g)||[]).length
+  const sep = cS > cC && cS > cT ? ';' : cT > cC ? '\t' : ','
+  const sp  = (l: string) => l.split(sep).map(c => c.trim().replace(/^"|"$/g, ''))
+  const raw = sp(hdrLine).map(h => h.toLowerCase().trim())
+  const fi  = (...ns: string[]) => { for (const n of ns) { const i = raw.findIndex(h => h === n || h.replace(/\s/g,'') === n.replace(/\s/g,'')); if (i >= 0) return i } return -1 }
+  const iDate = fi('date'); const iTime = fi('time','heure','date/time','datetime','timestamp')
+  const iOpen = fi('open'); const iHigh = fi('high'); const iLow = fi('low'); const iLast = fi('last','close')
+  const iVwap = fi('vwap')
+  const iSp1 = fi('sd+1','sd +1','vwap sd+1','+1sd'); const iSm1 = fi('sd-1','sd -1','vwap sd-1','-1sd')
+  const iSp2 = fi('sd+2','sd +2','vwap sd+2','+2sd'); const iSm2 = fi('sd-2','sd -2','vwap sd-2','-2sd')
+  if (iDate < 0 && iTime < 0) return { bars: [], error: `Colonnes Date/Time introuvables. En-têtes: ${raw.slice(0,8).join(' | ')}` }
+  const pDate = (s: string) => { const m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/); return m ? `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}` : s }
+  const pTime = (s: string) => { s = s.trim(); if (s.includes(' ')) s = s.split(' ').pop()!; const m = s.match(/^(\d{1,2}):(\d{2})/); return m ? m[1].padStart(2,'0')+':'+m[2] : '' }
+  const bars: BtBar[] = []
+  for (let i = 1; i < lines.length; i++) {
+    const cols = sp(lines[i])
+    const g  = (j: number) => j >= 0 && j < cols.length ? cols[j].replace(',', '.') : ''
+    const gn = (j: number) => parseFloat(g(j)) || 0
+    let date = '', time = ''
+    if (iDate >= 0 && iTime >= 0) { date = pDate(g(iDate)); time = pTime(g(iTime)) }
+    else if (iTime >= 0) { const r = g(iTime); if (r.includes(' ')) { const [d,t] = r.split(' '); date = pDate(d); time = pTime(t) } else time = pTime(r) }
+    else if (iDate >= 0) { const r = g(iDate); if (r.includes(' ')) { const [d,t] = r.split(' '); date = pDate(d); time = pTime(t) } }
+    if (!time || !date) continue
+    bars.push({ date, time, open:gn(iOpen), high:gn(iHigh), low:gn(iLow), close:gn(iLast), vwap:gn(iVwap), sp1:gn(iSp1), sm1:gn(iSm1), sp2:gn(iSp2), sm2:gn(iSm2) })
+  }
+  return bars.length ? { bars } : { bars:[], error:'Aucune barre parsée — vérifiez le format CSV.' }
+}
+
+function runBacktest(bars: BtBar[]): BtTrade[] {
+  const sorted = [...bars].sort((a, b) => (a.date+a.time) < (b.date+b.time) ? -1 : 1)
+  const trades: BtTrade[] = []
+  const usedAsRej = new Set<number>()
+  for (let i = 0; i < sorted.length - 1; i++) {
+    if (usedAsRej.has(i)) continue
+    const bar = sorted[i]
+    // OVN window 18:00-22:00
+    if (bar.time < '18:00' || bar.time > '22:00') continue
+    // Condition 1 — touche ou passe sous SD-2
+    if (bar.sm2 <= 0 || bar.low > bar.sm2) continue
+    // Condition 2 — bougie suivante ferme au-dessus du low excess
+    const rej = sorted[i + 1]
+    if (!rej || rej.close <= bar.low) continue
+    const entry = rej.close
+    const stop  = parseFloat((bar.low - 10).toFixed(2))
+    const c1 = rej.vwap, c2 = rej.sp1, c3 = rej.sp2
+    if (!c1 || !c2 || !c3) continue
+    usedAsRej.add(i + 1)
+    let hitC1 = false, hitC2 = false, hitC3 = false, exitPrice = 0, win = false
+    for (let j = i + 2; j < Math.min(i + 60, sorted.length); j++) {
+      const fb = sorted[j]
+      if (fb.low <= stop) { exitPrice = stop; win = false; break }
+      if (!hitC1 && fb.high >= c1) hitC1 = true
+      if (hitC1 && !hitC2 && fb.high >= c2) hitC2 = true
+      if (hitC2 && !hitC3 && fb.high >= c3) { hitC3 = true; exitPrice = c3; win = true; break }
+    }
+    if (!exitPrice) {
+      if (hitC2) { exitPrice = c2; win = true }
+      else if (hitC1) { exitPrice = c1; win = true }
+      else { exitPrice = entry; win = false }
+    }
+    trades.push({ date:bar.date, entryTime:rej.time, entry, stop, c1, c2, c3, hitC1, hitC2, hitC3, exitPrice, result:parseFloat((exitPrice-entry).toFixed(2)), win })
+    i++
+  }
+  return trades
 }
 
 // Distribution utilisée uniquement pour MGI Module 2 (buying/selling tail, excess, bimodal)
@@ -287,12 +360,17 @@ export default function Calculateur() {
   const [csvMsg,      setCsvMsg]      = useState<{text:string;ok:boolean}|null>(null)
   const [wsSc,        setWsSc]        = useState<'live'|'off'>('off')
   const [nyTime,      setNyTime]      = useState('')
+  const [btOpen,   setBtOpen]   = useState(false)
+  const [btBars,   setBtBars]   = useState<BtBar[]>([])
+  const [btTrades, setBtTrades] = useState<BtTrade[]>([])
+  const [btFile,   setBtFile]   = useState('')
 
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
   const wsRef           = useRef<WebSocket|null>(null)
   const wsReconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const mounted         = useRef(false)
+  const btCsvRef        = useRef<HTMLInputElement|null>(null)
 
   const triggerSaved = useCallback(() => {
     setShowSaved(true)
@@ -1736,6 +1814,123 @@ export default function Calculateur() {
     </div>
   )
 
+  const renderBacktest = () => {
+    const wins   = btTrades.filter(t => t.win)
+    const losses = btTrades.filter(t => !t.win)
+    const wr     = btTrades.length ? Math.round(wins.length / btTrades.length * 100) : 0
+    const c1Rate = btTrades.length ? Math.round(btTrades.filter(t=>t.hitC1).length / btTrades.length * 100) : 0
+    const c2Rate = btTrades.length ? Math.round(btTrades.filter(t=>t.hitC2).length / btTrades.length * 100) : 0
+    const c3Rate = btTrades.length ? Math.round(btTrades.filter(t=>t.hitC3).length / btTrades.length * 100) : 0
+    const avgWin  = wins.length   ? wins.reduce((s,t)=>s+t.result,0)/wins.length   : 0
+    const avgLoss = losses.length ? losses.reduce((s,t)=>s+t.result,0)/losses.length : 0
+    const ratio   = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0
+    const best    = btTrades.length ? Math.max(...btTrades.map(t=>t.result)) : 0
+    const worst   = btTrades.length ? Math.min(...btTrades.map(t=>t.result)) : 0
+
+    const statBox = (label: string, value: string, col = C.gold) => (
+      <div style={{ textAlign:'center', padding:'8px 6px', background:'rgba(0,0,0,0.25)', borderRadius:3 }}>
+        <div style={jb(8, 400, { color:C.muted, letterSpacing:'0.10em', marginBottom:4 })}>{label}</div>
+        <div style={orb(14, 900, { color:col })}>{value}</div>
+      </div>
+    )
+
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {/* Controls */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+          <button onClick={()=>btCsvRef.current?.click()} style={{ padding:'6px 14px', border:'none', borderRadius:3, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:700, letterSpacing:'0.14em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.35)', color:C.gold }}>
+            ⬆ CHARGER NQ.csv.txt
+          </button>
+          {btFile && <span style={jb(10, 400, { color:C.muted })}>{btFile}</span>}
+          <span style={{ flex:1 }} />
+          <button
+            disabled={!btBars.length}
+            onClick={() => setBtTrades(runBacktest(btBars))}
+            style={{ padding:'6px 18px', border:'none', borderRadius:3, cursor: btBars.length ? 'pointer' : 'not-allowed', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:900, letterSpacing:'0.18em', background: btBars.length ? C.up : 'rgba(0,255,136,0.04)', color: btBars.length ? '#001a0d' : 'rgba(0,255,136,0.3)', opacity: btBars.length ? 1 : 0.5 }}>
+            ▶ LANCER BACKTEST
+          </button>
+        </div>
+
+        {/* Rule reminder */}
+        <div style={{ padding:'6px 10px', borderRadius:3, background:'rgba(201,168,76,0.04)', border:'1px solid rgba(201,168,76,0.14)', display:'flex', gap:16, flexWrap:'wrap' }}>
+          {[['Fenêtre','18h00–22h00 ET'],['Signal','Prix ≤ SD-2 → rejet'],['Stop','Low excess −10 pts'],['C1','VWAP 18h'],['C2','SD+1'],['C3','SD+2']].map(([k,v])=>(
+            <span key={k}><span style={jb(8,400,{color:C.muted})}>{k} </span><span style={jb(9,700,{color:C.gold})}>{v}</span></span>
+          ))}
+        </div>
+
+        {btTrades.length > 0 && (<>
+          {/* Stats grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(90px,1fr))', gap:6 }}>
+            {statBox('SETUPS',    String(btTrades.length))}
+            {statBox('WIN RATE',  `${wr}%`,   wr >= 60 ? C.up : wr >= 45 ? C.amber : C.down)}
+            {statBox('C1 %',      `${c1Rate}%`, c1Rate >= 60 ? C.up : C.muted)}
+            {statBox('C2 %',      `${c2Rate}%`, c2Rate >= 45 ? C.up : C.muted)}
+            {statBox('C3 %',      `${c3Rate}%`, c3Rate >= 30 ? C.up : C.muted)}
+            {statBox('AVG WIN',   `+${avgWin.toFixed(1)}`, C.up)}
+            {statBox('AVG LOSS',  avgLoss.toFixed(1), C.down)}
+            {statBox('RATIO',     ratio.toFixed(2), ratio >= 1.5 ? C.up : ratio >= 1 ? C.amber : C.down)}
+            {statBox('BEST',      `+${best.toFixed(1)}`, C.up)}
+            {statBox('WORST',     worst.toFixed(1), C.down)}
+          </div>
+
+          {/* Results table */}
+          <div style={{ overflowX:'auto' }}>
+            <div style={{ overflowY:'auto', maxHeight:420, borderRadius:3, border:'1px solid rgba(201,168,76,0.15)' }}>
+              <table style={{ width:'100%', borderCollapse:'collapse', minWidth:680 }}>
+                <thead>
+                  <tr style={{ background:'rgba(201,168,76,0.10)', position:'sticky', top:0, zIndex:1 }}>
+                    {['Date','Heure','Entrée','Stop','C1 VWAP','C2 SD+1','C3 SD+2','Résultat','C1','C2','C3','W/L'].map(h=>(
+                      <th key={h} style={{ padding:'5px 8px', textAlign:'center', ...jb(8, 700, { color:C.gold, letterSpacing:'0.10em', whiteSpace:'nowrap' }) }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {btTrades.map((t, idx) => {
+                    const rowBg = idx % 2 === 0 ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.12)'
+                    const resBg = t.win ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.08)'
+                    const resCol = t.win ? C.up : C.down
+                    const cell = (v: string, col?: string, bg?: string) => (
+                      <td style={{ padding:'4px 8px', textAlign:'center', background: bg || rowBg, ...jb(9, t.win ? 600 : 400, { color: col || '#d0ddf0', fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' }) }}>{v}</td>
+                    )
+                    const tick = (hit: boolean) => (
+                      <td style={{ padding:'4px 8px', textAlign:'center', background: hit ? 'rgba(0,255,136,0.08)' : rowBg }}>
+                        <span style={{ color: hit ? C.up : 'rgba(136,153,187,0.35)', fontSize:11 }}>{hit ? '✓' : '·'}</span>
+                      </td>
+                    )
+                    return (
+                      <tr key={idx}>
+                        {cell(t.date)}
+                        {cell(t.entryTime)}
+                        {cell(t.entry.toFixed(2))}
+                        {cell(t.stop.toFixed(2), C.down)}
+                        {cell(t.c1.toFixed(2))}
+                        {cell(t.c2.toFixed(2))}
+                        {cell(t.c3.toFixed(2))}
+                        {cell((t.result >= 0 ? '+' : '') + t.result.toFixed(2), resCol, resBg)}
+                        {tick(t.hitC1)}
+                        {tick(t.hitC2)}
+                        {tick(t.hitC3)}
+                        <td style={{ padding:'4px 8px', textAlign:'center', background: resBg }}>
+                          <span style={orb(8, 900, { color: resCol })}>{t.win ? 'WIN' : 'LOSS'}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>)}
+
+        {btBars.length > 0 && btTrades.length === 0 && (
+          <div style={{ textAlign:'center', padding:20, ...jb(11, 400, { color:C.muted }) }}>
+            {btBars.length.toLocaleString()} barres chargées — cliquez ▶ LANCER BACKTEST
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ width:'100%', height:'100%', overflowY:'auto', overflowX:'hidden', padding:'10px 14px', display:'flex', flexDirection:'column', gap:10, fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box', background:C.pg }}>
 
@@ -1761,6 +1956,7 @@ export default function Calculateur() {
         <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
         <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
         <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
+        <Btn label="◈ BACKTEST SD-2"    active={btOpen} col={C.teal}  onClick={()=>setBtOpen(o=>!o)} />
         <button onClick={handleReset} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(255,68,68,0.08)', outline:'1px solid rgba(255,68,68,0.25)', color:'rgba(255,100,100,0.75)', transition:'all 0.14s' }}>
           ↺ RESET
         </button>
@@ -1834,7 +2030,25 @@ export default function Calculateur() {
         </div>
       )}
 
+      {/* Backtest SD-2 Bounce OVN */}
+      {btOpen && (
+        <div style={{ border:`1px solid rgba(30,179,188,0.22)`, borderRadius:4, overflow:'hidden' }}>
+          <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.teal}`, background:'rgba(30,179,188,0.04)', borderBottom:'1px solid rgba(30,179,188,0.14)', display:'flex', alignItems:'center', gap:8 }}>
+            <span style={orb(8.5, 900, { color:C.teal, letterSpacing:'0.22em' })}>◈ BACKTEST — SD-2 BOUNCE OVN · NQ</span>
+          </div>
+          <div style={{ padding:'12px 12px', background:C.sur }}>
+            {renderBacktest()}
+          </div>
+        </div>
+      )}
+
       <input ref={csvInputRef} type="file" accept=".csv,.txt" style={{ display:'none' }} onChange={handleCsvFile} />
+      <input ref={btCsvRef} type="file" accept=".csv,.txt" style={{ display:'none' }} onChange={e => {
+        const f = e.target.files?.[0]; if (!f) return
+        setBtFile(f.name); setBtTrades([])
+        const r = new FileReader(); r.onload = ev => { const { bars, error } = parseBtCsv(ev.target?.result as string || ''); if (error) alert('Erreur CSV: ' + error); else setBtBars(bars) }; r.readAsText(f, 'utf-8')
+        e.target.value = ''
+      }} />
 
       {csvMsg && (
         <div style={{ position:'fixed', bottom:16, right:16, zIndex:9999, maxWidth:380, padding:'8px 14px', borderRadius:4, background: csvMsg.ok ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,68,0.12)', border:`1px solid ${csvMsg.ok ? 'rgba(0,255,136,0.4)' : 'rgba(255,68,68,0.4)'}`, backdropFilter:'blur(4px)' }}>
