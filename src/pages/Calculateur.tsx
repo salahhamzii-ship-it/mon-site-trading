@@ -84,10 +84,16 @@ interface SierraRow { time:string; open:string; high:string; low:string; last:st
 function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
   const lines = text.split(/\r?\n/).filter(l=>l.trim())
   if (lines.length < 2) return { rows:[], error:'Fichier vide ou trop court.' }
-  const raw = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/\s+/g,' '))
-  // Map normalized header → index, supporting multiple aliases
+  // Auto-detect delimiter: compare count of ; vs , vs tab in header line
+  const hdrLine = lines[0]
+  const cntSemi = (hdrLine.match(/;/g)||[]).length
+  const cntComma = (hdrLine.match(/,/g)||[]).length
+  const cntTab = (hdrLine.match(/\t/g)||[]).length
+  const sep = cntSemi>cntComma && cntSemi>cntTab ? ';' : cntTab>cntComma ? '\t' : ','
+  const splitLine = (l:string) => l.split(sep).map(c=>c.trim().replace(/^"|"$/g,''))
+  const raw = splitLine(hdrLine).map(h=>h.toLowerCase().replace(/\s+/g,' '))
   const find = (...names:string[]) => { for (const n of names) { const i=raw.findIndex(h=>h===n||h.replace(/\s/g,'')===n.replace(/\s/g,'')); if (i>=0) return i } return -1 }
-  const idxTime = find('time','heure','date/time','datetime','date time','timestamp')
+  const idxTime = find('time','heure','date/time','datetime','date time','timestamp','date')
   const idxOpen = find('open')
   const idxHigh = find('high')
   const idxLow  = find('low')
@@ -100,20 +106,28 @@ function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
   const idxPoc  = find('tpo poc')
   const idxVah  = find('tpo vah')
   const idxVal  = find('tpo val')
-  if (idxTime < 0) return { rows:[], error:`Colonne horaire introuvable. En-têtes détectés : ${raw.slice(0,8).join(', ')}` }
+  if (idxTime < 0) return { rows:[], error:`Colonne horaire introuvable. En-têtes (${sep===',' ? 'virgule' : sep===';' ? 'point-virgule' : 'tab'}) : ${raw.slice(0,8).join(' | ')}` }
+  // Extract HH:MM from any time/datetime string, handling single-digit hours
+  const extractTime = (raw:string): string => {
+    let s = raw.trim()
+    if (s.includes(' ')) s = s.split(' ').pop()! // remove date prefix
+    const m = s.match(/^(\d{1,2}):(\d{2})/)
+    if (!m) return ''
+    return m[1].padStart(2,'0') + ':' + m[2]
+  }
   const rows:SierraRow[] = []
+  let firstDataLine = ''
   for (let i=1;i<lines.length;i++) {
-    const cols = lines[i].split(',').map(c=>c.trim())
+    const cols = splitLine(lines[i])
     const get = (j:number) => j>=0&&j<cols.length ? normNum(cols[j]) : ''
-    let timeRaw = get(idxTime)
+    const timeRaw = get(idxTime)
     if (!timeRaw) continue
-    // Handle "YYYY/MM/DD HH:MM:SS" or "YYYY-MM-DD HH:MM:SS" → extract time part
-    if (timeRaw.includes(' ')) timeRaw = timeRaw.split(' ').pop()!
-    const time = timeRaw.substring(0,5)
-    if (!/^\d{2}:\d{2}$/.test(time)) continue
+    if (i===1) firstDataLine = lines[i]
+    const time = extractTime(timeRaw)
+    if (!time) continue
     rows.push({ time, open:get(idxOpen), high:get(idxHigh), low:get(idxLow), last:get(idxLast), vwap:get(idxVwap), sp1:get(idxSp1), sm1:get(idxSm1), sp2:get(idxSp2), sm2:get(idxSm2), tpoPoc:get(idxPoc), tpoVah:get(idxVah), tpoVal:get(idxVal) })
   }
-  if (!rows.length) return { rows:[], error:'Aucune ligne valide trouvée dans le fichier.' }
+  if (!rows.length) return { rows:[], error:`Aucune heure valide trouvée.\nPremière ligne de données : ${firstDataLine.substring(0,80)}` }
   return { rows }
 }
 
