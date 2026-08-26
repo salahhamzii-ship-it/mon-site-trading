@@ -26,6 +26,7 @@ interface Instr {
   asiaHigh: string; asiaLow: string; asiaClose: string
   londonHigh: string; londonLow: string; londonClose: string
   alnPattern: Pat; alnFiab: string
+  boxHigh: string; boxLow: string
   rSignal: string; rFiab: string; rEntry: string; rStop: string; rC1: string; rC2: string
 }
 interface Cfg {
@@ -67,6 +68,7 @@ const mkI = (): Instr => ({
   vwap18h:'', atr:'',
   asiaHigh:'', asiaLow:'', asiaClose:'', londonHigh:'', londonLow:'', londonClose:'',
   alnPattern:'', alnFiab:'',
+  boxHigh:'', boxLow:'',
   rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:''
 })
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
@@ -780,6 +782,7 @@ export default function Calculateur() {
 
   const halfBack = useMemo(() => { const h=pf(I.rHigh),l=pf(I.rLow); return h>0&&l>0 ? fmt2((h+l)/2) : '' }, [I.rHigh, I.rLow])
   const ibMid    = useMemo(() => { const h=pf(I.ibHigh),l=pf(I.ibLow); return h>0&&l>0 ? fmt2((h+l)/2) : '' }, [I.ibHigh, I.ibLow])
+  const boxMid   = useMemo(() => { const h=pf(I.boxHigh),l=pf(I.boxLow); return h>0&&l>0 ? fmt2((h+l)/2) : '' }, [I.boxHigh, I.boxLow])
 
   const ovnVsS = useMemo(() => {
     const oc=pf(I.oClose), se=pf(I.rSettle)
@@ -829,11 +832,20 @@ export default function Calculateur() {
 
     const s9 = p9Align==='Aligné' ? 1 : p9Align==='Divergent' ? -1 : 0
 
-    const active = [mid2>0&&ibC2>0?1:0, lp2>0&&vw18_2>0?1:0, lp2>0&&orbH2>0&&orbL2>0?1:0, tab==='NQ'&&!!I.alnPattern?1:0, !!p9Align?1:0].reduce((a:number,b:number)=>a+b,0)
-    const total  = ib+vwap+orb2+aln2+s9
+    const boxH2 = pf(I.boxHigh), boxL2 = pf(I.boxLow)
+    let box = 0
+    let boxPos: 'BREAKOUT HAUSSIER'|'BREAKOUT BAISSIER'|'ROTATIONNEL'|'' = ''
+    if (lp2>0 && boxH2>0 && boxL2>0) {
+      if (lp2>boxH2)      { box = 1;  boxPos = 'BREAKOUT HAUSSIER' }
+      else if (lp2<boxL2) { box = -1; boxPos = 'BREAKOUT BAISSIER' }
+      else                 { box = 0;  boxPos = 'ROTATIONNEL' }
+    }
+
+    const active = [mid2>0&&ibC2>0?1:0, lp2>0&&vw18_2>0?1:0, lp2>0&&orbH2>0&&orbL2>0?1:0, tab==='NQ'&&!!I.alnPattern?1:0, !!p9Align?1:0, lp2>0&&boxH2>0&&boxL2>0?1:0].reduce((a:number,b:number)=>a+b,0)
+    const total  = ib+vwap+orb2+aln2+s9+box
     const signal = total>0?'LONG':total<0?'SHORT':'NEUTRE'
     const fiab   = active>0 ? Math.round(Math.abs(total)/active*100) : 0
-    return { signal, fiab, ib, ibCls, vwap, orb:orb2, aln:aln2, s9 }
+    return { signal, fiab, ib, ibCls, vwap, orb:orb2, aln:aln2, s9, box, boxPos }
   }, [I, tab, p9Align])
 
   const cLevels = useMemo(() => {
@@ -959,6 +971,14 @@ export default function Calculateur() {
       if (rL > 0) lvs.push({ label:`Excess Low · ${I.rLow}`,   price:rL })
     }
 
+    const boxH = pf(I.boxHigh), boxL = pf(I.boxLow)
+    if (boxH>0) lvs.push({ label:`BOX High · ${I.boxHigh}`, price:boxH })
+    if (boxL>0) lvs.push({ label:`BOX Low · ${I.boxLow}`,   price:boxL })
+    if (boxH>0&&boxL>0) {
+      const bMid = (boxH+boxL)/2
+      lvs.push({ label:`BOX Mid · ${fmt2(bMid)}`, price:bMid })
+    }
+
     const out: { msg:string; col:string }[] = []
     const seen = new Set<string>()
     lvs.forEach(({ label, price }) => {
@@ -979,7 +999,7 @@ export default function Calculateur() {
       }
     })
     return out
-  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rOpen, I.rSettle, I.oClose, I.atr, I.ibHigh, I.ibLow])
+  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rOpen, I.rSettle, I.oClose, I.atr, I.ibHigh, I.ibLow, I.boxHigh, I.boxLow])
 
   const tpoAnalysis = useMemo(() => {
     const letters = tpoLetters[tab]
@@ -1605,6 +1625,16 @@ export default function Calculateur() {
         </Sec>
       </div>
 
+      {/* BOX RTH */}
+      <Sec title="BOX RTH · ZONE BALANCÉE" col="#00d4ff">
+        <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+          <div style={{ flex:1 }}>
+            <G3 ch={<><F l="BOX High" v={I.boxHigh} s={v=>upI(tab,'boxHigh',v)} /><F l="BOX Low" v={I.boxLow} s={v=>upI(tab,'boxLow',v)} /><F l="BOX Mid" ro dv={boxMid||'—'} /></>}/>
+          </div>
+          {cSig.boxPos && <Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'} />}
+        </div>
+      </Sec>
+
       {/* VWAP / SD */}
       <Sec title={`VWAP / SD · ${tab}`} col={col}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8 }}>
@@ -1695,6 +1725,7 @@ export default function Calculateur() {
           {(cSig.orb!==0) && <><span style={jb(8,400,{color:C.muted})}>ORB</span><Pill label={cSig.orb>0?'Bull':'Bear'} col={cSig.orb>0?C.up:C.down}/></>}
           {(cSig.aln!==0) && <><span style={jb(8,400,{color:C.muted})}>ALN</span><Pill label={cSig.aln>0?'Bull':'Bear'} col={cSig.aln>0?C.up:C.down}/></>}
           {(cSig.s9!==0) && <><span style={jb(8,400,{color:C.muted})}>§9</span><Pill label={cSig.s9>0?'+1':'-1'} col={cSig.s9>0?C.up:C.down}/></>}
+          {cSig.boxPos && <><span style={jb(8,400,{color:C.muted})}>BOX</span><Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'}/></>}
           {dayType && <Pill label={dayType} col={dayType.startsWith('TREND DAY')?(dayType.includes('▲')?C.up:C.down):dayType==='ROTATIONNEL'?C.teal:C.amber} />}
         </div>
         {cLevels.invalid && cLevels.invalidReason && (
@@ -1755,6 +1786,33 @@ export default function Calculateur() {
             </div>
           ))}
         </div>
+
+        {/* BOX RTH block */}
+        {(pf(I.boxHigh)>0||pf(I.boxLow)>0) && (() => {
+          const bH = pf(I.boxHigh), bL = pf(I.boxLow)
+          const bM = bH>0&&bL>0 ? (bH+bL)/2 : 0
+          const boxLabel = cSig.boxPos || (lp>0&&bH>0&&bL>0 ? (lp>bH?'BREAKOUT HAUSSIER':lp<bL?'BREAKOUT BAISSIER':'ROTATIONNEL') : '')
+          const posLabel = bH>0&&bL>0&&lp>0 ? (lp>bH ? 'Au-dessus' : lp<bL ? 'En-dessous' : lp>bM ? 'Dans BOX (haut)' : 'Dans BOX (bas)') : '—'
+          const posCol   = lp>bH?C.up:lp<bL?C.down:'#00d4ff'
+          const dH = bH>0&&lp>0 ? Math.abs(lp-bH) : 0
+          const dL = bL>0&&lp>0 ? Math.abs(lp-bL) : 0
+          return (
+            <div style={{ padding:'8px 10px', background:'rgba(0,212,255,0.04)', border:'1px solid rgba(0,212,255,0.18)', borderRadius:3 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
+                <span style={jb(7.5, 600, { color:'#00d4ff', letterSpacing:'0.10em' })}>BOX RTH ACTIF</span>
+                {boxLabel && <Pill label={boxLabel} col={posCol} />}
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:6 }}>
+                {bH>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>BOX HIGH</div><div style={jb(12,700,{color:C.up})}>{I.boxHigh}</div></div>}
+                {bL>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>BOX LOW</div><div style={jb(12,700,{color:C.down})}>{I.boxLow}</div></div>}
+                {bM>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>MILIEU</div><div style={jb(12,700,{color:'#00d4ff'})}>{fmt2(bM)}</div></div>}
+                <div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>POSITION</div><div style={jb(10,700,{color:posCol})}>{posLabel}</div></div>
+                {dH>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>Δ HIGH</div><div style={jb(12,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(dH)}</div></div>}
+                {dL>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>Δ LOW</div><div style={jb(12,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(dL)}</div></div>}
+              </div>
+            </div>
+          )
+        })()}
 
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
           {lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh)     && <Alert msg={`▲ Prix au-dessus de l'IB High (${I.ibHigh})`}    col={C.up} />}
@@ -1973,6 +2031,13 @@ export default function Calculateur() {
       if (h1>0&&h2>0) equalHighStatus = Math.abs(h1-h2)<TICK_SZ[tab]*3?'ok':'no'
     }
 
+    // BOX levels
+    const boxH = pf(I.boxHigh), boxL = pf(I.boxLow)
+    const bMid = boxH>0&&boxL>0 ? (boxH+boxL)/2 : 0
+    const boxPosStatus: Status = !lp||!boxH||!boxL ? 'na' : lp>boxH ? 'ok' : lp>bMid ? 'wait' : 'no'
+    const boxDH = boxH>0&&lp>0 ? Math.abs(lp-boxH) : 0
+    const boxDL = boxL>0&&lp>0 ? Math.abs(lp-boxL) : 0
+
     // 4. TRIGGER
     const vwapStatus: Status = !lp||!vw18?'na':lp>vw18?'ok':lp===vw18?'wait':'no'
 
@@ -2051,6 +2116,15 @@ export default function Calculateur() {
             <Row2 s={p9ES} label={`ES > VAL J-1`} val={esVal>0?fmt2(esVal):''} />
             <Row2 s={p9All} label="§9 Global" val={p9All==='ok'?'CONFIRMÉ':p9All==='wait'?'PARTIEL':p9All==='no'?'DIVERGENT':'—'} />
 
+            {boxH>0&&boxL>0&&(<>
+              {sHdr('BOX RTH · ZONE BALANCÉE')}
+              <Row2 s={boxPosStatus} label="Prix > BOX High (breakout haussier)" val={boxH>0?fmt2(boxH):''} />
+              {boxDH>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Δ BOX High</span><span style={jb(8.5,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDH)}</span></div>}
+              {boxDL>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Δ BOX Low</span><span style={jb(8.5,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDL)}</span></div>}
+              {bMid>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:'#00d4ff'})}>Milieu BOX = pivot</span><span style={jb(8.5,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>{fmt2(bMid)}</span></div>}
+              {cSig.boxPos&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Mode</span><Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'}/></div>}
+            </>)}
+
             {sHdr('3 · STRUCTURE TPO')}
             <Row2 s={otfStatus}      label="OTF Higher (POC montant)"          val={otfStatus==='ok'?'OUI':otfStatus==='no'?'NON':otfStatus==='wait'?'STABLE':'—'} />
             <Row2 s={equalHighStatus} label="Equal High"                        val={equalHighStatus==='ok'?'Détecté':equalHighStatus==='no'?'Non':'—'} />
@@ -2120,16 +2194,18 @@ export default function Calculateur() {
 
                 {/* Levels */}
                 {dir==='LONG'?(<>
-                  {stopL>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>sous VAL J-1  {fmt2(stopL)}</span></div>}
-                  {c1L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+1  {fmt2(c1L)}</span></div>}
+                  {stopL>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`sous VAL J-1  ${fmt2(stopL)}`}</span></div>}
+                  {c1L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`SD+1  ${fmt2(c1L)}`}</span></div>}
                   {c2L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAH J-1  {fmt2(c2L)}</span></div>}
                   {c3L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+2  {fmt2(c3L)}</span></div>}
+                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:'#00d4ff',minWidth:36})}>Pivot</span><span style={jb(9,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
                   {rrL!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrL}</span></div>}
                 </>):(<>
-                  {stopS>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>sur VAH J-1  {fmt2(stopS)}</span></div>}
-                  {c1S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-1  {fmt2(c1S)}</span></div>}
+                  {stopS>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`sur VAH J-1  ${fmt2(stopS)}`}</span></div>}
+                  {c1S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`SD-1  ${fmt2(c1S)}`}</span></div>}
                   {c2S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAL J-1  {fmt2(c2S)}</span></div>}
                   {c3S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-2  {fmt2(c3S)}</span></div>}
+                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:'#00d4ff',minWidth:36})}>Pivot</span><span style={jb(9,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
                   {rrS!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrS}</span></div>}
                 </>)}
               </div>
@@ -2150,6 +2226,8 @@ export default function Calculateur() {
     const ibH    = pf(I.ibHigh),   ibL = pf(I.ibLow)
     const ibMidV = ibH>0&&ibL>0 ? (ibH+ibL)/2 : 0
     const orbH   = pf(I.orbHigh),  orbL = pf(I.orbLow)
+    const bxH    = pf(I.boxHigh),  bxL = pf(I.boxLow)
+    const bxMid  = bxH>0&&bxL>0 ? (bxH+bxL)/2 : 0
     const alnPat = tab==='NQ' ? I.alnPattern : ''
     const alnBiais = alnPat==='P3' ? 'Haussier' : alnPat==='P4' ? 'Baissier' : alnPat ? 'Neutre' : '—'
     const alnCol   = alnPat==='P3' ? C.up : alnPat==='P4' ? C.down : C.muted
@@ -2167,7 +2245,10 @@ export default function Calculateur() {
         if (p9Align === 'Divergent')   add('SORTIR',  '❌', C.down,  'NQ/ES divergent', 9)
         if (lp>0&&vw18>0&&lp<vw18)    add('STOP',    '❌', C.down,  `Prix < VWAP18h (${fmt2(vw18)})`, 8)
         if (lp>0&&sp2>0&&lp>=sp2)     add('SORTIR',  '🎯', C.teal,  `SD+2 atteint (${fmt2(sp2)})`, 7)
+        if (lp>0&&bxH>0&&lp>=bxH)     add('SORTIR',  '🎯', C.teal,  `BOX High atteint (${fmt2(bxH)})`, 6)
         if (lp>0&&sp1>0&&lp>=sp1)     add('ALLÉGER', '⚠️', C.amber, `SD+1 atteint (${fmt2(sp1)})`, 5)
+        if (lp>0&&bxMid>0&&lp<bxMid&&bxL>0&&lp>bxL) add('ALLÉGER','⚠️', C.amber, `Prix sous Milieu BOX (${fmt2(bxMid)})`, 4)
+        if (lp>0&&bxL>0&&lp<bxL)      add('STOP',    '❌', C.down,  `Prix sous BOX Low (${fmt2(bxL)})`, 8)
         if (alnPat==='P3'&&p9Align==='Aligné'&&lp>0&&vw18>0&&lp>vw18)
                                        add('TENIR',   '✅', C.up,    'ALN Haussier + §9 Aligné + Prix > VWAP', 3)
         else if (!verdicts.length)     add('ATTENTE', '⏳', C.muted, 'Conditions partielles', 1)
@@ -2175,8 +2256,11 @@ export default function Calculateur() {
         if (alnPat === 'P3')           add('SORTIR',  '❌', C.down,  'ALN biais Haussier', 10)
         if (p9Align === 'Divergent')   add('SORTIR',  '❌', C.down,  'NQ/ES divergent', 9)
         if (lp>0&&vw18>0&&lp>vw18)    add('STOP',    '❌', C.down,  `Prix > VWAP18h (${fmt2(vw18)})`, 8)
+        if (lp>0&&bxL>0&&lp<=bxL)     add('SORTIR',  '🎯', C.teal,  `BOX Low atteint (${fmt2(bxL)})`, 6)
         if (lp>0&&sm2>0&&lp<=sm2)     add('SORTIR',  '🎯', C.teal,  `SD-2 atteint (${fmt2(sm2)})`, 7)
         if (lp>0&&sm1>0&&lp<=sm1)     add('ALLÉGER', '⚠️', C.amber, `SD-1 atteint (${fmt2(sm1)})`, 5)
+        if (lp>0&&bxMid>0&&lp>bxMid&&bxH>0&&lp<bxH) add('ALLÉGER','⚠️', C.amber, `Prix sur Milieu BOX (${fmt2(bxMid)})`, 4)
+        if (lp>0&&bxH>0&&lp>bxH)      add('STOP',    '❌', C.down,  `Prix sur BOX High (${fmt2(bxH)})`, 8)
         if (alnPat==='P4'&&p9Align==='Aligné'&&lp>0&&vw18>0&&lp<vw18)
                                        add('TENIR',   '✅', C.up,    'ALN Baissier + §9 Aligné + Prix < VWAP', 3)
         else if (!verdicts.length)     add('ATTENTE', '⏳', C.muted, 'Conditions partielles', 1)
