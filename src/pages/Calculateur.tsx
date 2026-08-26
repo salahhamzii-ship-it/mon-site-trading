@@ -80,24 +80,41 @@ const TICK_SZ: Record<Tab, number> = { NQ:0.25, ES:0.25, GC:0.10, CL:0.01 }
 interface TpoLetter { id:string; letter:string; high:string; low:string; poc:string; vah:string; val:string }
 const mkTpoLetters = (): Record<Tab, TpoLetter[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
 
-interface SierraRow { time:string; open:string; high:string; low:string; last:string; tpoPoc:string; tpoVah:string; tpoVal:string }
-function parseSierraCSV(text:string): SierraRow[] {
+interface SierraRow { time:string; open:string; high:string; low:string; last:string; vwap:string; sp1:string; sm1:string; sp2:string; sm2:string; tpoPoc:string; tpoVah:string; tpoVal:string }
+function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
   const lines = text.split(/\r?\n/).filter(l=>l.trim())
-  if (lines.length < 2) return []
-  const headers = lines[0].split(',').map(h=>h.trim().toLowerCase())
-  const idx = (name:string) => headers.findIndex(h=>h===name)
-  const idxTime=idx('time'), idxOpen=idx('open'), idxHigh=idx('high'), idxLow=idx('low'), idxLast=idx('last')
-  const idxPoc=idx('tpo poc'), idxVah=idx('tpo vah'), idxVal=idx('tpo val')
-  if (idxTime<0) return []
+  if (lines.length < 2) return { rows:[], error:'Fichier vide ou trop court.' }
+  const raw = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/\s+/g,' '))
+  // Map normalized header → index, supporting multiple aliases
+  const find = (...names:string[]) => { for (const n of names) { const i=raw.findIndex(h=>h===n||h.replace(/\s/g,'')===n.replace(/\s/g,'')); if (i>=0) return i } return -1 }
+  const idxTime = find('time','heure','date/time','datetime','date time','timestamp')
+  const idxOpen = find('open')
+  const idxHigh = find('high')
+  const idxLow  = find('low')
+  const idxLast = find('last','close','clôture','cloture')
+  const idxVwap = find('vwap')
+  const idxSp1  = find('sd+1','sd +1','vwap sd+1','vwap sd +1','+1sd')
+  const idxSm1  = find('sd-1','sd -1','vwap sd-1','vwap sd -1','-1sd')
+  const idxSp2  = find('sd+2','sd +2','vwap sd+2','vwap sd +2','+2sd')
+  const idxSm2  = find('sd-2','sd -2','vwap sd-2','vwap sd -2','-2sd')
+  const idxPoc  = find('tpo poc')
+  const idxVah  = find('tpo vah')
+  const idxVal  = find('tpo val')
+  if (idxTime < 0) return { rows:[], error:`Colonne horaire introuvable. En-têtes détectés : ${raw.slice(0,8).join(', ')}` }
   const rows:SierraRow[] = []
   for (let i=1;i<lines.length;i++) {
     const cols = lines[i].split(',').map(c=>c.trim())
     const get = (j:number) => j>=0&&j<cols.length ? normNum(cols[j]) : ''
-    const timeRaw = get(idxTime)
+    let timeRaw = get(idxTime)
     if (!timeRaw) continue
-    rows.push({ time:timeRaw.substring(0,5), open:get(idxOpen), high:get(idxHigh), low:get(idxLow), last:get(idxLast), tpoPoc:get(idxPoc), tpoVah:get(idxVah), tpoVal:get(idxVal) })
+    // Handle "YYYY/MM/DD HH:MM:SS" or "YYYY-MM-DD HH:MM:SS" → extract time part
+    if (timeRaw.includes(' ')) timeRaw = timeRaw.split(' ').pop()!
+    const time = timeRaw.substring(0,5)
+    if (!/^\d{2}:\d{2}$/.test(time)) continue
+    rows.push({ time, open:get(idxOpen), high:get(idxHigh), low:get(idxLow), last:get(idxLast), vwap:get(idxVwap), sp1:get(idxSp1), sm1:get(idxSm1), sp2:get(idxSp2), sm2:get(idxSm2), tpoPoc:get(idxPoc), tpoVah:get(idxVah), tpoVal:get(idxVal) })
   }
-  return rows
+  if (!rows.length) return { rows:[], error:'Aucune ligne valide trouvée dans le fichier.' }
+  return { rows }
 }
 
 // Distribution utilisée uniquement pour MGI Module 2 (buying/selling tail, excess, bimodal)
@@ -232,9 +249,11 @@ export default function Calculateur() {
   const [tpoLetters,  setTpoLetters]  = useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLetters??mkTpoLetters() })
   const [tpoLettersJ1,setTpoLettersJ1]= useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLettersJ1??mkTpoLetters() })
   const [showSaved,   setShowSaved]   = useState(false)
+  const [csvMsg,      setCsvMsg]      = useState<{text:string;ok:boolean}|null>(null)
 
-  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const mounted   = useRef(false)
+  const saveTimer  = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const csvTimer   = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const mounted    = useRef(false)
 
   const triggerSaved = useCallback(() => {
     setShowSaved(true)
@@ -291,6 +310,12 @@ export default function Calculateur() {
     csvInputRef.current?.click()
   }
 
+  const showCsvMsg = (text:string, ok:boolean) => {
+    setCsvMsg({text,ok})
+    clearTimeout(csvTimer.current)
+    csvTimer.current = setTimeout(()=>setCsvMsg(null), ok ? 2500 : 5000)
+  }
+
   const handleCsvFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -299,15 +324,25 @@ export default function Calculateur() {
     const t = csvTabRef.current
     reader.onload = ev => {
       const text = ev.target?.result as string
-      if (!text) return
-      const rows = parseSierraCSV(text)
-      if (!rows.length) return
+      if (!text) { showCsvMsg('Fichier illisible.', false); return }
+      const { rows, error } = parseSierraCSV(text)
+      if (error || !rows.length) { showCsvMsg(error ?? 'Aucune ligne valide.', false); return }
       if (section === 'rthJ1') {
         setRthRowsJ1(prev => {
           const updated = prev[t].map(row => {
             const match = rows.find(r=>r.time===row.heure)
             if (!match) return row
-            return { ...row, open:match.open||row.open, high:match.high||row.high, low:match.low||row.low, close:match.last||row.close }
+            return { ...row,
+              open:  match.open  || row.open,
+              high:  match.high  || row.high,
+              low:   match.low   || row.low,
+              close: match.last  || row.close,
+              vwap:  match.vwap  || row.vwap,
+              sp1:   match.sp1   || row.sp1,
+              sm1:   match.sm1   || row.sm1,
+              sp2:   match.sp2   || row.sp2,
+              sm2:   match.sm2   || row.sm2,
+            }
           })
           return {...prev, [t]:updated}
         })
@@ -315,6 +350,7 @@ export default function Calculateur() {
         if (last.tpoPoc) upI(t,'rPoc',last.tpoPoc)
         if (last.tpoVah) upI(t,'rVah',last.tpoVah)
         if (last.tpoVal) upI(t,'rVal',last.tpoVal)
+        showCsvMsg(`✓ ${rows.length} barres importées (RTH J-1 ${t})`, true)
       } else if (section === 'tpoJ1') {
         let cumH=-Infinity, cumL=Infinity
         const letters:TpoLetter[] = rows.slice(0,13).map((r,i)=>{
@@ -324,6 +360,7 @@ export default function Calculateur() {
           return { id:`csv-${Date.now()}-${i}`, letter:TPO_RTH_LETTERS[i]||'?', high:cumH>-Infinity?String(cumH):'', low:cumL<Infinity?String(cumL):'', poc:r.tpoPoc, vah:r.tpoVah, val:r.tpoVal }
         })
         setTpoLettersJ1(prev=>({...prev,[t]:letters}))
+        showCsvMsg(`✓ ${letters.length} lettres TPO importées (${t})`, true)
       } else if (section === 'ovnNQ' || section === 'ovnES' || section === 'ovnGC' || section === 'ovnCL') {
         const t2 = (section === 'ovnNQ' ? 'NQ' : section === 'ovnES' ? 'ES' : section === 'ovnGC' ? 'GC' : 'CL') as Tab
         const isAsia   = (r: SierraRow) => r.time >= '18:00' || r.time < '02:00'
@@ -343,7 +380,12 @@ export default function Calculateur() {
         const oH=aggH(rows);       if (oH) updates.oHigh       = oH
         const oL=aggL(rows);       if (oL) updates.oLow        = oL
         const oC=aggC(rows);       if (oC) updates.oClose      = oC
-        if (Object.keys(updates).length) setII(prev=>({...prev,[t2]:{...prev[t2],...updates}}))
+        if (Object.keys(updates).length) {
+          setII(prev=>({...prev,[t2]:{...prev[t2],...updates}}))
+          showCsvMsg(`✓ ${rows.length} barres OVN importées (${t2})`, true)
+        } else {
+          showCsvMsg('Aucune donnée OVN extraite du fichier.', false)
+        }
       }
     }
     reader.readAsText(file)
@@ -1494,6 +1536,12 @@ export default function Calculateur() {
       )}
 
       <input ref={csvInputRef} type="file" accept=".csv,.txt" style={{ display:'none' }} onChange={handleCsvFile} />
+
+      {csvMsg && (
+        <div style={{ position:'fixed', bottom:16, right:16, zIndex:9999, maxWidth:380, padding:'8px 14px', borderRadius:4, background: csvMsg.ok ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,68,0.12)', border:`1px solid ${csvMsg.ok ? 'rgba(0,255,136,0.4)' : 'rgba(255,68,68,0.4)'}`, backdropFilter:'blur(4px)' }}>
+          <span style={jb(11.5, 600, { color: csvMsg.ok ? C.up : C.down, whiteSpace:'pre-wrap' })}>{csvMsg.text}</span>
+        </div>
+      )}
     </div>
   )
 }
