@@ -70,8 +70,8 @@ interface RthRow { id:string; heure:string; open:string; high:string; low:string
 const RTH_TIMES: Record<Tab, string[]> = {
   NQ: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
   ES: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
-  GC: ['08:20','09:20','10:20','11:20','12:20','13:20','14:20'],
-  CL: ['09:00','10:00','11:00','12:00','13:00','14:00'],
+  GC: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
+  CL: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
 }
 const mkRthRowsForTab = (t:Tab): RthRow[] => RTH_TIMES[t].map(h=>({ id:h, heure:h, open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' }))
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:mkRthRowsForTab('ES'), GC:mkRthRowsForTab('GC'), CL:mkRthRowsForTab('CL') })
@@ -840,7 +840,7 @@ export default function Calculateur() {
   }
 
   const renderRth = () => {
-    const freq = (tab==='NQ'||tab==='ES') ? '30 MIN' : '60 MIN'
+    const freq = '30 MIN'
     const times = RTH_TIMES[tab]
     return (
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
