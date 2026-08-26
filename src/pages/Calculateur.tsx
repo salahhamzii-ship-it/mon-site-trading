@@ -279,10 +279,13 @@ export default function Calculateur() {
   const [tpoLettersJ1,setTpoLettersJ1]= useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLettersJ1??mkTpoLetters() })
   const [showSaved,   setShowSaved]   = useState(false)
   const [csvMsg,      setCsvMsg]      = useState<{text:string;ok:boolean}|null>(null)
+  const [wsSc,        setWsSc]        = useState<'live'|'off'>('off')
 
-  const saveTimer  = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const csvTimer   = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const mounted    = useRef(false)
+  const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const wsRef           = useRef<WebSocket|null>(null)
+  const wsReconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const mounted         = useRef(false)
 
   const triggerSaved = useCallback(() => {
     setShowSaved(true)
@@ -296,6 +299,55 @@ export default function Calculateur() {
     triggerSaved()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
+
+  // SC Bridge — WebSocket vers serveur Python local ws://localhost:8765
+  useEffect(() => {
+    const connect = () => {
+      clearTimeout(wsReconnectTimer.current)
+      try {
+        const ws = new WebSocket('ws://localhost:8765')
+        wsRef.current = ws
+        ws.onopen = () => setWsSc('live')
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data as string)
+            setII(prev => {
+              let changed = false
+              const next = { ...prev }
+              for (const t of TABS) {
+                const d = data[t]
+                if (!d) continue
+                const u: Partial<Instr> = {}
+                if (d.last != null) u.lastPx = String(d.last)
+                if (d.high != null) u.rHigh  = String(d.high)
+                if (d.low  != null) u.rLow   = String(d.low)
+                if (d.poc  != null) u.rPoc   = String(d.poc)
+                if (d.vah  != null) u.rVah   = String(d.vah)
+                if (d.val  != null) u.rVal   = String(d.val)
+                if (d.settle != null) u.rSettle = String(d.settle)
+                if (Object.keys(u).length) { next[t] = { ...next[t], ...u }; changed = true }
+              }
+              return changed ? next : prev
+            })
+          } catch {}
+        }
+        ws.onerror = () => setWsSc('off')
+        ws.onclose = () => {
+          setWsSc('off')
+          wsReconnectTimer.current = setTimeout(connect, 3000)
+        }
+      } catch {
+        setWsSc('off')
+        wsReconnectTimer.current = setTimeout(connect, 3000)
+      }
+    }
+    connect()
+    return () => {
+      clearTimeout(wsReconnectTimer.current)
+      if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close() }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleReset = () => {
     localStorage.removeItem(LS_KEY)
@@ -1381,10 +1433,14 @@ export default function Calculateur() {
       const lv = pf(level); return lp>0 && lv>0 && Math.abs(lp-lv)<0.5
     }
     const items: [string,string,string,number][] = [
-      ['LAST',    I.lastPx||'—',      C.gold, 20],
-      ['OVN MID', oMid,               C.amber,14],
-      ['VWAP 18h',I.vwap18h||'—',    C.teal, 14],
-      ['POC J-1', I.rPoc||'—',       C.gold, 14],
+      ['LAST',    I.lastPx||'—',   C.gold,  20],
+      ['HIGH J-1',I.rHigh||'—',   C.up,    14],
+      ['LOW J-1', I.rLow||'—',    C.down,  14],
+      ['OVN MID', oMid,            C.amber, 14],
+      ['VWAP 18h',I.vwap18h||'—', C.teal,  14],
+      ['POC J-1', I.rPoc||'—',    C.gold,  14],
+      ['VAH J-1', I.rVah||'—',    C.gold,  14],
+      ['VAL J-1', I.rVal||'—',    C.gold,  14],
     ]
     const sdItems: [string,string][] = [
       ['SD +2', sdVals.sp2],
@@ -1542,9 +1598,13 @@ export default function Calculateur() {
       {/* Live Tracker */}
       {trOpen && (
         <div style={{ border:`1px solid rgba(0,255,136,0.18)`, borderRadius:4, overflow:'hidden' }}>
-          <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.up}`, background:'rgba(0,255,136,0.04)', borderBottom:'1px solid rgba(0,255,136,0.14)', display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.up}`, background:'rgba(0,255,136,0.04)', borderBottom:'1px solid rgba(0,255,136,0.14)', display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
             <span style={orb(8.5, 900, { color:C.up, letterSpacing:'0.22em' })}>⊕ LIVE TRACKER · {tab}</span>
-            <span style={{ width:7, height:7, borderRadius:'50%', background:C.up, animation:'pulseDot 1.8s infinite' }} />
+            <span style={{ width:7, height:7, borderRadius:'50%', background:C.up, animation:'pulseDot 1.8s infinite', flexShrink:0 }} />
+            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5 }}>
+              <span style={{ width:6, height:6, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
+              <span style={orb(7.5, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.15em' })}>{wsSc==='live' ? 'SC LIVE' : 'SC OFF'}</span>
+            </div>
           </div>
           <div style={{ padding:'12px 12px', background:C.sur }}>
             {renderTracker()}
