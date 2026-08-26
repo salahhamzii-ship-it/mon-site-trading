@@ -45,8 +45,11 @@ interface Cfg {
 const TABS: Tab[]              = ['NQ', 'ES', 'GC', 'CL']
 const IB_H: Record<Tab,string> = { NQ:'09:30–10:30 EST', ES:'09:30–10:30 EST', GC:'08:20–09:20 EST', CL:'09:00–10:00 EST' }
 const OR_H: Record<Tab,string> = { NQ:'09:30–09:50 EST', ES:'09:30–09:50 EST', GC:'08:20–08:40 EST', CL:'09:00–09:20 EST' }
-const IB_RANGE:  Record<Tab,[string,string]> = { NQ:['09:30','10:30'], ES:['09:30','10:30'], GC:['08:20','09:20'], CL:['09:00','10:00'] }
-const ORB_RANGE: Record<Tab,[string,string]> = { NQ:['09:30','09:50'], ES:['09:30','09:50'], GC:['08:20','08:40'], CL:['09:00','09:20'] }
+const IB_RANGE:    Record<Tab,[string,string]> = { NQ:['09:30','10:30'], ES:['09:30','10:30'], GC:['08:20','09:20'], CL:['09:00','10:00'] }
+const ORB_RANGE:   Record<Tab,[string,string]> = { NQ:['09:30','09:50'], ES:['09:30','09:50'], GC:['08:20','08:40'], CL:['09:00','09:20'] }
+// Two 30-min bars that form the IB; ORB = first bar
+const IB_BAR_TIMES:Record<Tab,[string,string]> = { NQ:['09:30','10:00'], ES:['09:30','10:00'], GC:['08:20','08:50'], CL:['09:00','09:30'] }
+const ORB_BAR_TIME:Record<Tab,string>          = { NQ:'09:30', ES:'09:30', GC:'08:20', CL:'09:00' }
 const TC: Record<Tab,string>   = { NQ:'#c9a84c', ES:'#1eb3bc', GC:'#d4af37', CL:'#ff8c42' }
 const C = { gold:'#c9a84c', goldL:'#f0d070', up:'#00ff88', down:'#ff4444', teal:'#1eb3bc', amber:'#d4af37', muted:'#8899bb', sur:'#141b2d', brd:'rgba(201,168,76,0.14)', pg:'#0b1120' }
 const orb = (sz:number, w=700, ex?:CSSProperties):CSSProperties => ({ fontFamily:'Orbitron,monospace', fontSize:sz, fontWeight:w, ...ex })
@@ -54,6 +57,7 @@ const jb  = (sz:number, w=400, ex?:CSSProperties):CSSProperties => ({ fontFamily
 const normNum = (v:string) => v.replace(/,/g, '.')
 const pf      = (v:string) => parseFloat(normNum(v))||0
 const fmt2    = (v:number) => isNaN(v) ? '—' : v.toFixed(2)
+interface ScBar { time:string; open:string; high:string; low:string; close:string; vwap?:string; sd1h?:string; sd1l?:string; sd2h?:string; sd2l?:string }
 
 const mkI = (): Instr => ({
   lastPx:'', rOpen:'', rHigh:'', rLow:'', rSettle:'', rVah:'', rVal:'', rPoc:'',
@@ -72,8 +76,8 @@ interface RthRow { id:string; heure:string; open:string; high:string; low:string
 const RTH_TIMES: Record<Tab, string[]> = {
   NQ: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
   ES: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
-  GC: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
-  CL: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
+  GC: ['08:20','08:50','09:20','09:50','10:20','10:50','11:20','11:50','12:20','12:50','13:20'],
+  CL: ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00'],
 }
 const mkRthRowsForTab = (t:Tab): RthRow[] => RTH_TIMES[t].map(h=>({ id:h, heure:h, open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' }))
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:mkRthRowsForTab('ES'), GC:mkRthRowsForTab('GC'), CL:mkRthRowsForTab('CL') })
@@ -314,25 +318,122 @@ export default function Calculateur() {
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data as string)
+
+            // --- Instr fields (live prices + IB/ORB + J-1) ---
             setII(prev => {
               let changed = false
               const next = { ...prev }
               for (const t of TABS) {
-                const d = data[t]
-                if (!d) continue
+                const d = data[t]; if (!d) continue
+                const cur = prev[t]
                 const u: Partial<Instr> = {}
-                if (d.last != null) u.lastPx = String(d.last)
-                if (d.high != null) u.rHigh  = String(d.high)
-                if (d.low  != null) u.rLow   = String(d.low)
-                if (d.poc  != null) u.rPoc   = String(d.poc)
-                if (d.vah  != null) u.rVah   = String(d.vah)
-                if (d.val  != null) u.rVal   = String(d.val)
-                if (d.settle != null) u.rSettle = String(d.settle)
-                if (Object.keys(u).length) { next[t] = { ...next[t], ...u }; changed = true }
+                // sv: set field only if empty (force=true always overwrites)
+                const sv = (f: keyof Instr, v: string|number|null|undefined, force=false) => {
+                  if (v == null || v === '') return
+                  const s = String(v)
+                  if (force || !cur[f]) (u as Record<string,string>)[f] = s
+                }
+                sv('lastPx',  d.last,       true) // live price always
+                sv('rHigh',   d.j1_high)
+                sv('rLow',    d.j1_low)
+                sv('rOpen',   d.j1_open)
+                sv('rSettle', d.j1_settle)
+                sv('rPoc',    d.poc)
+                sv('rVah',    d.vah)
+                sv('rVal',    d.val)
+
+                // IB + ORB from bars_today
+                if (Array.isArray(d.bars_today) && d.bars_today.length) {
+                  const bars: ScBar[] = d.bars_today
+                  const [ibTA, ibTB] = IB_BAR_TIMES[t]
+                  const barA = bars.find(b=>b.time===ibTA)
+                  const barB = bars.find(b=>b.time===ibTB)
+                  if (barA || barB) {
+                    const set = ([barA,barB].filter(Boolean)) as ScBar[]
+                    const ibH = Math.max(...set.map(b=>pf(b.high)))
+                    const ibLs = set.map(b=>pf(b.low)).filter(v=>v>0)
+                    const ibL = ibLs.length ? Math.min(...ibLs) : 0
+                    const ibC = barB ? pf(barB.close) : barA ? pf(barA.close) : 0
+                    sv('ibHigh',  ibH>0 ? ibH.toFixed(2) : '')
+                    sv('ibLow',   ibL>0 ? ibL.toFixed(2) : '')
+                    sv('ibClose', ibC>0 ? ibC.toFixed(2) : '')
+                    // IB ordre from first bar direction (open vs midpoint)
+                    if (!cur.ibOrdre && barA) {
+                      const bH=pf(barA.high), bL=pf(barA.low), bO=pf(barA.open)
+                      if (bH>0 && bL>0 && bO>0) u.ibOrdre = bO>=(bH+bL)/2 ? 'HL' : 'LH'
+                    }
+                    // Classification (needs ATR already filled)
+                    if (!cur.ibClass) {
+                      const atr=pf(cur.atr), rng=ibH-ibL
+                      if (atr>0 && rng>0) u.ibClass = rng>2*atr ? 'Wide IB' : rng<0.5*atr ? 'Narrow IB' : 'Normal'
+                    }
+                  }
+                  // ORB = first RTH bar
+                  const orbBar = bars.find(b=>b.time===ORB_BAR_TIME[t])
+                  if (orbBar) {
+                    sv('orbHigh',  pf(orbBar.high)>0  ? pf(orbBar.high).toFixed(2) : '')
+                    sv('orbLow',   pf(orbBar.low)>0   ? pf(orbBar.low).toFixed(2) : '')
+                    sv('orbClose', pf(orbBar.close)>0 ? pf(orbBar.close).toFixed(2) : '')
+                  }
+                  // VWAP session = last bar's vwap
+                  const lastBar = bars[bars.length-1]
+                  if (lastBar?.vwap) sv('vwap18h', lastBar.vwap)
+                }
+
+                // J-1 open/high/low/settle from bars_j1
+                if (Array.isArray(d.bars_j1) && d.bars_j1.length) {
+                  const bj: ScBar[] = d.bars_j1
+                  const firstJ1 = bj[0], lastJ1 = bj[bj.length-1]
+                  sv('rOpen',   firstJ1.open)
+                  sv('rSettle', lastJ1.close)
+                  if (!cur.rHigh) {
+                    const h = Math.max(...bj.map(b=>pf(b.high)))
+                    if (h>0) u.rHigh = String(h)
+                  }
+                  if (!cur.rLow) {
+                    const ls = bj.map(b=>pf(b.low)).filter(v=>v>0)
+                    if (ls.length) u.rLow = String(Math.min(...ls))
+                  }
+                }
+
+                if (Object.keys(u).length) { next[t] = { ...cur, ...u }; changed = true }
               }
               return changed ? next : prev
             })
-          } catch {}
+
+            // --- Fill RTH table rows (don't overwrite non-empty cells) ---
+            const fillRth = (
+              setter: typeof setRthRows,
+              barsKey: 'bars_today'|'bars_j1'
+            ) => {
+              let hasData = false
+              for (const t of TABS) { if (Array.isArray(data[t]?.[barsKey]) && data[t][barsKey].length) { hasData=true; break } }
+              if (!hasData) return
+              setter(prev => {
+                let changed = false
+                const next = { ...prev }
+                for (const t of TABS) {
+                  const bars: ScBar[] | undefined = data[t]?.[barsKey]
+                  if (!Array.isArray(bars) || !bars.length) continue
+                  const updated = prev[t].map(row => {
+                    const bar = bars.find(b=>b.time===row.heure)
+                    if (!bar) return row
+                    const p: Partial<RthRow> = {}
+                    const sc = (k:keyof RthRow, v:string|undefined) => { if (v && !row[k]) (p as Record<string,string>)[k]=v }
+                    sc('open',bar.open); sc('high',bar.high); sc('low',bar.low); sc('close',bar.close)
+                    sc('vwap',bar.vwap); sc('sp1',bar.sd1h); sc('sm1',bar.sd1l); sc('sp2',bar.sd2h); sc('sm2',bar.sd2l)
+                    if (!Object.keys(p).length) return row
+                    changed = true; return { ...row, ...p }
+                  })
+                  next[t] = updated
+                }
+                return changed ? next : prev
+              })
+            }
+            fillRth(setRthRows,    'bars_today')
+            fillRth(setRthRowsJ1,  'bars_j1')
+
+          } catch(e) { console.warn('SC Bridge:', e) }
         }
         ws.onerror = () => setWsSc('off')
         ws.onclose = () => {
