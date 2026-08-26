@@ -48,8 +48,9 @@ const TC: Record<Tab,string>   = { NQ:'#c9a84c', ES:'#1eb3bc', GC:'#d4af37', CL:
 const C = { gold:'#c9a84c', goldL:'#f0d070', up:'#00ff88', down:'#ff4444', teal:'#1eb3bc', amber:'#d4af37', muted:'#8899bb', sur:'#141b2d', brd:'rgba(201,168,76,0.14)', pg:'#0b1120' }
 const orb = (sz:number, w=700, ex?:CSSProperties):CSSProperties => ({ fontFamily:'Orbitron,monospace', fontSize:sz, fontWeight:w, ...ex })
 const jb  = (sz:number, w=400, ex?:CSSProperties):CSSProperties => ({ fontFamily:'"JetBrains Mono",monospace', fontSize:sz, fontWeight:w, ...ex })
-const pf  = (v:string) => parseFloat(v)||0
-const fmt2 = (v:number) => isNaN(v) ? '—' : v.toFixed(2)
+const normNum = (v:string) => v.replace(/,/g, '.')
+const pf      = (v:string) => parseFloat(normNum(v))||0
+const fmt2    = (v:number) => isNaN(v) ? '—' : v.toFixed(2)
 
 const mkI = (): Instr => ({
   lastPx:'', rOpen:'', rHigh:'', rLow:'', rSettle:'', rVah:'', rVal:'', rPoc:'',
@@ -104,7 +105,13 @@ function F({ l, v='', s, t, opts, ro, dv }: { l:string; v?:string; s?:(x:string)
       <span style={jb(12, 500, { color:'#b4c2d9', letterSpacing:'0.02em', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:3, lineHeight:1.1 })}>{l}</span>
       {ro ? <div style={iS(true)}>{dv ?? v ?? '—'}</div>
        : opts ? <select value={v} onChange={e=>s!(e.target.value)} style={{...iS(false),cursor:'pointer'}}><option value="">—</option>{opts.map(o=><option key={o} value={o}>{o}</option>)}</select>
-       : <input type={t||'number'} value={v} onChange={e=>s!(e.target.value)} style={iS(false)} />}
+       : <input
+           type="text"
+           inputMode={(!t || t==='number') ? 'decimal' : 'text'}
+           value={v}
+           onChange={e=>s!((!t||t==='number') ? normNum(e.target.value) : e.target.value)}
+           style={iS(false)}
+         />}
     </div>
   )
 }
@@ -733,7 +740,7 @@ export default function Calculateur() {
                   {t.replace(':','H')}
                 </div>
                 {DATA_COLS.map(k=>(
-                  <input key={k} type="number" value={row[k]} onChange={e=>upRow(row.id,k,e.target.value)} style={rthInStyle} />
+                  <input key={k} type="text" inputMode="decimal" value={row[k]} onChange={e=>upRow(row.id,k,normNum(e.target.value))} style={rthInStyle} />
                 ))}
               </div>
             )
@@ -778,11 +785,11 @@ export default function Calculateur() {
           return (
             <div key={row.id} style={{ display:'grid', gridTemplateColumns:'minmax(52px,auto) 1fr 1fr 1fr 1fr 1fr 26px', gap:3 }}>
               <div style={{...rthInStyle,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,color:colAcc,fontSize:9,letterSpacing:'-0.02em',padding:'2px 4px'}}>{cumLabel}</div>
-              <input type="number" value={row.high} onChange={e=>upLetter(row.id,'high',e.target.value)} style={rthInStyle} />
-              <input type="number" value={row.low}  onChange={e=>upLetter(row.id,'low',e.target.value)}  style={rthInStyle} />
-              <input type="number" value={row.poc}  onChange={e=>upLetter(row.id,'poc',e.target.value)}  style={{...rthInStyle,color:C.gold}} />
-              <input type="number" value={row.vah}  onChange={e=>upLetter(row.id,'vah',e.target.value)}  style={{...rthInStyle,color:C.up}} />
-              <input type="number" value={row.val}  onChange={e=>upLetter(row.id,'val',e.target.value)}  style={{...rthInStyle,color:C.down}} />
+              <input type="text" inputMode="decimal" value={row.high} onChange={e=>upLetter(row.id,'high',normNum(e.target.value))} style={rthInStyle} />
+              <input type="text" inputMode="decimal" value={row.low}  onChange={e=>upLetter(row.id,'low', normNum(e.target.value))} style={rthInStyle} />
+              <input type="text" inputMode="decimal" value={row.poc}  onChange={e=>upLetter(row.id,'poc', normNum(e.target.value))} style={{...rthInStyle,color:C.gold}} />
+              <input type="text" inputMode="decimal" value={row.vah}  onChange={e=>upLetter(row.id,'vah', normNum(e.target.value))} style={{...rthInStyle,color:C.up}} />
+              <input type="text" inputMode="decimal" value={row.val}  onChange={e=>upLetter(row.id,'val', normNum(e.target.value))} style={{...rthInStyle,color:C.down}} />
               <button onClick={()=>delLetter(row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
             </div>
           )
