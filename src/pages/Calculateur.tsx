@@ -396,6 +396,26 @@ export default function Calculateur() {
                   }
                 }
 
+                // Asia + London OVN bars → ALN fields (all instruments, NQ priority)
+                if (Array.isArray(d.bars_asia) && d.bars_asia.length) {
+                  const bars: ScBar[] = d.bars_asia
+                  const hs = bars.map(b=>pf(b.high)).filter(v=>v>0)
+                  const ls = bars.map(b=>pf(b.low)).filter(v=>v>0)
+                  if (hs.length) sv('asiaHigh',  Math.max(...hs).toFixed(2))
+                  if (ls.length) sv('asiaLow',   Math.min(...ls).toFixed(2))
+                  const last = bars[bars.length-1]
+                  if (last?.close) sv('asiaClose', last.close)
+                }
+                if (Array.isArray(d.bars_london) && d.bars_london.length) {
+                  const bars: ScBar[] = d.bars_london
+                  const hs = bars.map(b=>pf(b.high)).filter(v=>v>0)
+                  const ls = bars.map(b=>pf(b.low)).filter(v=>v>0)
+                  if (hs.length) sv('londonHigh',  Math.max(...hs).toFixed(2))
+                  if (ls.length) sv('londonLow',   Math.min(...ls).toFixed(2))
+                  const last = bars[bars.length-1]
+                  if (last?.close) sv('londonClose', last.close)
+                }
+
                 if (Object.keys(u).length) { next[t] = { ...cur, ...u }; changed = true }
               }
               return changed ? next : prev
@@ -460,6 +480,28 @@ export default function Calculateur() {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [])
+
+  // ALN auto-computation NQ — après 08h00 ET uniquement
+  useEffect(() => {
+    const nq  = II['NQ']
+    const aH  = pf(nq.asiaHigh),   aL  = pf(nq.asiaLow)
+    const lH  = pf(nq.londonHigh), lL  = pf(nq.londonLow)
+    if (!aH || !aL || !lH || !lL) return
+    const parts = nyTime.split(':')
+    const totalMin = parseInt(parts[0]||'0')*60 + parseInt(parts[1]||'0')
+    if (totalMin < 8*60) return   // pas avant 08h00 ET
+    let pat: Pat, fiab: string
+    if      (lH > aH && lL < aL)  { pat='P1'; fiab='52' }   // London englobe Asia
+    else if (lH <= aH && lL >= aL) { pat='P2'; fiab='60' }   // London intérieur Asia
+    else if (lH > aH)              { pat='P3'; fiab='65' }   // London casse le haut
+    else                           { pat='P4'; fiab='65' }   // London casse le bas
+    setII(prev => {
+      const cur = prev['NQ']
+      if (cur.alnPattern === pat && cur.alnFiab === fiab) return prev
+      return { ...prev, NQ: { ...cur, alnPattern: pat, alnFiab: fiab } }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [II['NQ'].asiaHigh, II['NQ'].asiaLow, II['NQ'].londonHigh, II['NQ'].londonLow, nyTime])
 
   const handleReset = () => {
     localStorage.removeItem(LS_KEY)
@@ -1432,6 +1474,19 @@ export default function Calculateur() {
                   <F l="Pattern" v={inst.alnPattern} s={v=>upI(t2,'alnPattern',v as Pat)} opts={['P1','P2','P3','P4']} />
                   <F l="Fiabilité %" v={inst.alnFiab} s={v=>upI(t2,'alnFiab',v)} />
                 </>}/>
+                {inst.alnPattern && (() => {
+                  const biais = inst.alnPattern==='P3' ? 'HAUSSIER' : inst.alnPattern==='P4' ? 'BAISSIER' : 'NEUTRE'
+                  const desc  = inst.alnPattern==='P1' ? 'London englobe Asia — volatile' : inst.alnPattern==='P2' ? 'London intérieur Asia — attente RTH' : inst.alnPattern==='P3' ? 'London casse le haut — biais acheteur' : 'London casse le bas — biais vendeur'
+                  const col   = inst.alnPattern==='P3' ? C.up : inst.alnPattern==='P4' ? C.down : C.muted
+                  return (
+                    <div style={{ display:'flex', alignItems:'center', gap:10, paddingTop:2 }}>
+                      <span style={jb(8, 400, { color:C.muted, letterSpacing:'0.08em' })}>BIAIS</span>
+                      <span style={orb(9, 900, { color:col })}>{biais}</span>
+                      <span style={{ flex:1 }} />
+                      <span style={jb(8, 400, { color:'rgba(136,153,187,0.7)', fontStyle:'italic' })}>{desc}</span>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )}

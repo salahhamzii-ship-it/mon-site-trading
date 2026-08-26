@@ -263,9 +263,16 @@ def build_payload(instr: str, all_rows: list) -> dict:
         today_all  = [r for r in all_rows if r['date'] == today]   # OVN + RTH
         today_rows = filter_rth(today_all, instr)                   # RTH only
         j1_rows    = filter_rth([r for r in all_rows if r['date'] == j1_d], instr)
+        # OVN sessions pour ALN : Asia (J-1 18h → today 02h), London (today 02h-08h)
+        asia_j1     = [r for r in all_rows if r['date'] == j1_d and t2m(r['time']) >= t2m('18:00')]
+        asia_today  = [r for r in all_rows if r['date'] == today  and t2m(r['time']) <  t2m('02:00')]
+        bars_asia   = asia_j1 + asia_today
+        bars_london = [r for r in all_rows if r['date'] == today
+                       and t2m('02:00') <= t2m(r['time']) < t2m('08:00')]
     else:
         today_rows, j1_rows = session_split(all_rows, instr)
         today_all = today_rows
+        bars_asia = bars_london = []
 
     last_j1  = j1_rows[-1]  if j1_rows  else {}
     first_j1 = j1_rows[0]   if j1_rows  else {}
@@ -291,8 +298,11 @@ def build_payload(instr: str, all_rows: list) -> dict:
         'vah':       last_j1.get('tpo_vah', ''),
         'val':       last_j1.get('tpo_val', ''),
         # Barres détaillées
-        'bars_today': [bar_dict(r) for r in sorted(today_rows, key=lambda r: t2m(r['time']))],
-        'bars_j1':    [bar_dict(r) for r in sorted(j1_rows,    key=lambda r: t2m(r['time']))],
+        'bars_today':  [bar_dict(r) for r in sorted(today_rows, key=lambda r: t2m(r['time']))],
+        'bars_j1':     [bar_dict(r) for r in sorted(j1_rows,    key=lambda r: t2m(r['time']))],
+        # OVN sessions pour ALN (Asia garde l'ordre chronologique J-1→today)
+        'bars_asia':   [bar_dict(r) for r in bars_asia],
+        'bars_london': [bar_dict(r) for r in bars_london],
     }
 
 def build_message() -> str:
