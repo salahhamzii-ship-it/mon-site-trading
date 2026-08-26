@@ -282,10 +282,10 @@ export default function Calculateur() {
   const delTpoLetterJ1 = (t:Tab, id:string) => setTpoLettersJ1(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
 
   const csvInputRef  = useRef<HTMLInputElement>(null)
-  const csvSectionRef = useRef<'rthJ1'|'tpoJ1'|'ovnNQ'|'ovnES'>('rthJ1')
+  const csvSectionRef = useRef<'rthJ1'|'tpoJ1'|'ovnNQ'|'ovnES'|'ovnGC'|'ovnCL'>('rthJ1')
   const csvTabRef    = useRef<Tab>('NQ')
 
-  const triggerCsvImport = (section:'rthJ1'|'tpoJ1'|'ovnNQ'|'ovnES') => {
+  const triggerCsvImport = (section:'rthJ1'|'tpoJ1'|'ovnNQ'|'ovnES'|'ovnGC'|'ovnCL') => {
     csvSectionRef.current = section
     csvTabRef.current = tab
     csvInputRef.current?.click()
@@ -324,8 +324,8 @@ export default function Calculateur() {
           return { id:`csv-${Date.now()}-${i}`, letter:TPO_RTH_LETTERS[i]||'?', high:cumH>-Infinity?String(cumH):'', low:cumL<Infinity?String(cumL):'', poc:r.tpoPoc, vah:r.tpoVah, val:r.tpoVal }
         })
         setTpoLettersJ1(prev=>({...prev,[t]:letters}))
-      } else if (section === 'ovnNQ' || section === 'ovnES') {
-        const t2 = (section === 'ovnNQ' ? 'NQ' : 'ES') as Tab
+      } else if (section === 'ovnNQ' || section === 'ovnES' || section === 'ovnGC' || section === 'ovnCL') {
+        const t2 = (section === 'ovnNQ' ? 'NQ' : section === 'ovnES' ? 'ES' : section === 'ovnGC' ? 'GC' : 'CL') as Tab
         const isAsia   = (r: SierraRow) => r.time >= '18:00' || r.time < '02:00'
         const isLondon = (r: SierraRow) => r.time >= '02:00' && r.time < '08:00'
         const asiaRows   = rows.filter(isAsia)
@@ -1082,11 +1082,11 @@ export default function Calculateur() {
   }
 
   const renderOVN = () => {
-    if (tab !== 'NQ' && tab !== 'ES') return null
     const isNQ = tab === 'NQ'
-    const t2 = tab as 'NQ'|'ES'
+    const t2 = tab
     const inst = II[t2]
     const ovnCol = TC[t2]
+    const ovnSection = (tab === 'NQ' ? 'ovnNQ' : tab === 'ES' ? 'ovnES' : tab === 'GC' ? 'ovnGC' : 'ovnCL') as 'ovnNQ'|'ovnES'|'ovnGC'|'ovnCL'
     const subHdr = (label: string, c: string) => (
       <div style={{ padding:'3px 10px', borderLeft:`2px solid ${c}`, background:`${c}0a`, borderBottom:`1px solid ${c}18`, marginBottom:8 }}>
         <span style={orb(8,700,{color:c,letterSpacing:'0.14em'})}>{label}</span>
@@ -1098,7 +1098,7 @@ export default function Calculateur() {
         <div style={{ padding:'6px 12px', borderLeft:`3px solid ${ovnCol}`, background:`${ovnCol}0a`, borderBottom:`1px solid ${ovnCol}22`, display:'flex', alignItems:'center', gap:10 }}>
           <span style={orb(10,900,{color:ovnCol,letterSpacing:'0.20em'})}>OVN {t2} · DÉTAIL SESSION</span>
           <span style={{ flex:1 }}/>
-          <button onClick={()=>triggerCsvImport(isNQ?'ovnNQ':'ovnES')} style={{ padding:'4px 10px', border:`1px solid rgba(30,179,188,0.40)`, borderRadius:2, background:'rgba(30,179,188,0.07)', color:C.teal, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>⬆ IMPORTER CSV OVN</button>
+          <button onClick={()=>triggerCsvImport(ovnSection)} style={{ padding:'4px 10px', border:`1px solid rgba(30,179,188,0.40)`, borderRadius:2, background:'rgba(30,179,188,0.07)', color:C.teal, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>⬆ IMPORTER CSV OVN</button>
         </div>
 
         {/* 3 session columns */}
@@ -1177,16 +1177,6 @@ export default function Calculateur() {
           <G4 ch={<><F l="Open" v={I.rOpen} s={v=>upI(tab,'rOpen',v)} /><F l="High" v={I.rHigh} s={v=>upI(tab,'rHigh',v)} /><F l="Low" v={I.rLow} s={v=>upI(tab,'rLow',v)} /><F l="Settle" v={I.rSettle} s={v=>upI(tab,'rSettle',v)} /></>}/>
           <G4 ch={<><F l="VAH" v={I.rVah} s={v=>upI(tab,'rVah',v)} /><F l="VAL" v={I.rVal} s={v=>upI(tab,'rVal',v)} /><F l="POC" v={I.rPoc} s={v=>upI(tab,'rPoc',v)} /><F l="Half Back" ro dv={halfBack} /></>}/>
         </Sec>
-        {tab !== 'NQ' && tab !== 'ES' && (
-          <Sec title="OVN / RTH" col={col}>
-            <G3 ch={<><F l="OVN High" v={I.oHigh} s={v=>upI(tab,'oHigh',v)} /><F l="OVN Low" v={I.oLow} s={v=>upI(tab,'oLow',v)} /><F l="OVN Close" v={I.oClose} s={v=>upI(tab,'oClose',v)} /></>}/>
-            <div style={{ display:'flex', alignItems:'center', gap:8, paddingTop:2 }}>
-              <span style={jb(11, 400, { color:C.muted, lineHeight:1.2, marginTop:4 })}>OVN vs Settle :</span>
-              {ovnVsS ? <Pill label={ovnVsS} col={ovnVsS==='LONG'?C.up:ovnVsS==='SHORT'?C.down:C.muted} />
-                      : <span style={jb(8, 400, { color:'rgba(136,153,187,0.35)' })}>—</span>}
-            </div>
-          </Sec>
-        )}
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
