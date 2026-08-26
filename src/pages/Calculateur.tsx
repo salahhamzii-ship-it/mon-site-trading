@@ -364,6 +364,12 @@ export default function Calculateur() {
   const [btBars,   setBtBars]   = useState<BtBar[]>([])
   const [btTrades, setBtTrades] = useState<BtTrade[]>([])
   const [btFile,   setBtFile]   = useState('')
+  const [posOpen,  setPosOpen]  = useState(false)
+  const [posMode,  setPosMode]  = useState<'OVN'|'RTH'|null>(null)
+  const [posEntry, setPosEntry] = useState('')
+  const [posStop,  setPosStop]  = useState('')
+  const [posSize,  setPosSize]  = useState('1')
+  const [posDir,   setPosDir]   = useState<'LONG'|'SHORT'>('LONG')
 
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -1931,6 +1937,206 @@ export default function Calculateur() {
     )
   }
 
+  const renderPositionActive = () => {
+    const lp     = pf(I.lastPx)
+    const entry  = pf(posEntry)
+    const stop   = pf(posStop)
+    const vw18   = pf(I.vwap18h)
+    const sp1    = pf(sdVals.sp1), sm1 = pf(sdVals.sm1)
+    const sp2    = pf(sdVals.sp2), sm2 = pf(sdVals.sm2)
+    const ibH    = pf(I.ibHigh),   ibL = pf(I.ibLow)
+    const ibMidV = ibH>0&&ibL>0 ? (ibH+ibL)/2 : 0
+    const orbH   = pf(I.orbHigh),  orbL = pf(I.orbLow)
+    const alnPat = tab==='NQ' ? I.alnPattern : ''
+    const alnBiais = alnPat==='P3' ? 'Haussier' : alnPat==='P4' ? 'Baissier' : alnPat ? 'Neutre' : '—'
+    const alnCol   = alnPat==='P3' ? C.up : alnPat==='P4' ? C.down : C.muted
+    const pnlPts   = lp>0&&entry>0 ? (posDir==='LONG' ? lp-entry : entry-lp) : 0
+    const pnlCol   = pnlPts>0 ? C.up : pnlPts<0 ? C.down : C.muted
+
+    interface Verdict { action: 'TENIR'|'ALLÉGER'|'SORTIR'|'STOP'|'RE-ENTRER'|'ATTENTE'; icon: string; col: string; reason: string; priority: number }
+    const verdicts: Verdict[] = []
+    const add = (action: Verdict['action'], icon: string, col: string, reason: string, priority: number) =>
+      verdicts.push({ action, icon, col, reason, priority })
+
+    if (posMode === 'OVN') {
+      if (posDir === 'LONG') {
+        if (alnPat === 'P4')           add('SORTIR',  '❌', C.down,  'ALN biais Baissier', 10)
+        if (p9Align === 'Divergent')   add('SORTIR',  '❌', C.down,  'NQ/ES divergent', 9)
+        if (lp>0&&vw18>0&&lp<vw18)    add('STOP',    '❌', C.down,  `Prix < VWAP18h (${fmt2(vw18)})`, 8)
+        if (lp>0&&sp2>0&&lp>=sp2)     add('SORTIR',  '🎯', C.teal,  `SD+2 atteint (${fmt2(sp2)})`, 7)
+        if (lp>0&&sp1>0&&lp>=sp1)     add('ALLÉGER', '⚠️', C.amber, `SD+1 atteint (${fmt2(sp1)})`, 5)
+        if (alnPat==='P3'&&p9Align==='Aligné'&&lp>0&&vw18>0&&lp>vw18)
+                                       add('TENIR',   '✅', C.up,    'ALN Haussier + §9 Aligné + Prix > VWAP', 3)
+        else if (!verdicts.length)     add('ATTENTE', '⏳', C.muted, 'Conditions partielles', 1)
+      } else {
+        if (alnPat === 'P3')           add('SORTIR',  '❌', C.down,  'ALN biais Haussier', 10)
+        if (p9Align === 'Divergent')   add('SORTIR',  '❌', C.down,  'NQ/ES divergent', 9)
+        if (lp>0&&vw18>0&&lp>vw18)    add('STOP',    '❌', C.down,  `Prix > VWAP18h (${fmt2(vw18)})`, 8)
+        if (lp>0&&sm2>0&&lp<=sm2)     add('SORTIR',  '🎯', C.teal,  `SD-2 atteint (${fmt2(sm2)})`, 7)
+        if (lp>0&&sm1>0&&lp<=sm1)     add('ALLÉGER', '⚠️', C.amber, `SD-1 atteint (${fmt2(sm1)})`, 5)
+        if (alnPat==='P4'&&p9Align==='Aligné'&&lp>0&&vw18>0&&lp<vw18)
+                                       add('TENIR',   '✅', C.up,    'ALN Baissier + §9 Aligné + Prix < VWAP', 3)
+        else if (!verdicts.length)     add('ATTENTE', '⏳', C.muted, 'Conditions partielles', 1)
+      }
+    } else if (posMode === 'RTH') {
+      if (posDir === 'LONG') {
+        const orbConf = lp>0&&orbH>0&&lp>orbH
+        if (ibH>0&&lp>0&&lp<ibH&&orbH>0&&lp>orbL) add('SORTIR', '❌', C.down, 'Prix revient dans IB après cassure', 8)
+        if (ibH>0&&lp>0&&lp>=ibH)                  add('ALLÉGER','⚠️', C.amber,`IB High atteint (${fmt2(ibH)})`, 6)
+        if (ibMidV>0&&lp>0&&lp<ibMidV)             add('ALLÉGER','⚠️', C.amber,`IB Mid perdu (${fmt2(ibMidV)})`, 5)
+        if (I.ibClass==='Wide IB'&&orbConf)         add('RE-ENTRER','🔄',C.teal,'Wide IB + ORB confirmé', 4)
+        if (orbConf)                                add('TENIR',   '✅', C.up,  `ORB cassé haut (${fmt2(orbH)})`, 3)
+        if (!verdicts.length)                       add('ATTENTE', '⏳', C.muted,'ORB non confirmé', 1)
+      } else {
+        const orbConf = lp>0&&orbL>0&&lp<orbL
+        if (ibL>0&&lp>0&&lp>ibL&&orbL>0&&lp<orbH) add('SORTIR', '❌', C.down, 'Prix revient dans IB après cassure', 8)
+        if (ibL>0&&lp>0&&lp<=ibL)                  add('ALLÉGER','⚠️', C.amber,`IB Low atteint (${fmt2(ibL)})`, 6)
+        if (ibMidV>0&&lp>0&&lp>ibMidV)             add('ALLÉGER','⚠️', C.amber,`IB Mid perdu (${fmt2(ibMidV)})`, 5)
+        if (I.ibClass==='Wide IB'&&orbConf)         add('RE-ENTRER','🔄',C.teal,'Wide IB + ORB confirmé', 4)
+        if (orbConf)                                add('TENIR',   '✅', C.up,  `ORB cassé bas (${fmt2(orbL)})`, 3)
+        if (!verdicts.length)                       add('ATTENTE', '⏳', C.muted,'ORB non confirmé', 1)
+      }
+    }
+
+    const sorted  = [...verdicts].sort((a,b)=>b.priority-a.priority)
+    const main    = sorted[0]
+    const others  = sorted.slice(1)
+    const allergerAt = posMode==='OVN' ? (posDir==='LONG' ? sdVals.sp1 : sdVals.sm1) : (posDir==='LONG' ? (ibH>0?fmt2(ibH):'') : (ibL>0?fmt2(ibL):''))
+    const sortirAt   = posMode==='OVN' ? (posDir==='LONG' ? sdVals.sp2 : sdVals.sm2) : ''
+    const hasPos = entry>0 && stop>0
+    const inpS: CSSProperties = { padding:'5px 8px', borderRadius:3, border:'1px solid rgba(201,168,76,0.30)', background:'#1a2236', color:'#fff', fontFamily:'"JetBrains Mono",monospace', fontSize:11, outline:'none', boxSizing:'border-box', width:'100%' }
+
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {/* Mode + Direction */}
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+          <span style={jb(9, 400, { color:C.muted })}>MODE :</span>
+          {(['OVN','RTH'] as const).map(m=>(
+            <button key={m} onClick={()=>setPosMode(p=>p===m?null:m)} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background: posMode===m?'rgba(201,168,76,0.18)':'transparent', outline:`1px solid ${posMode===m?'rgba(201,168,76,0.5)':'rgba(201,168,76,0.14)'}`, color: posMode===m?C.gold:'rgba(136,153,187,0.65)' }}>{m}</button>
+          ))}
+          <span style={{ marginLeft:6, ...jb(9, 400, { color:C.muted }) }}>DIRECTION :</span>
+          {(['LONG','SHORT'] as const).map(d=>(
+            <button key={d} onClick={()=>setPosDir(d)} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background: posDir===d?(d==='LONG'?'rgba(0,255,136,0.12)':'rgba(255,68,68,0.12)'):'transparent', outline:`1px solid ${posDir===d?(d==='LONG'?'rgba(0,255,136,0.4)':'rgba(255,68,68,0.4)'):'rgba(201,168,76,0.14)'}`, color: posDir===d?(d==='LONG'?C.up:C.down):'rgba(136,153,187,0.65)' }}>{d}</button>
+          ))}
+        </div>
+
+        {/* Inputs */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+          {([['ENTRÉE', posEntry, setPosEntry, '29150'],['STOP', posStop, setPosStop, '29066'],['CONTRATS', posSize, setPosSize, '1']] as [string,string,(v:string)=>void,string][]).map(([lbl,val,setter,ph])=>(
+            <div key={lbl}>
+              <div style={jb(8, 400, { color:C.muted, marginBottom:3 })}>{lbl}</div>
+              <input type="text" inputMode="decimal" value={val} onChange={e=>setter(normNum(e.target.value))} placeholder={ph} style={inpS} />
+            </div>
+          ))}
+        </div>
+
+        {/* Position block */}
+        {hasPos && posMode && (
+          <div style={{ border:`2px solid ${posDir==='LONG'?'rgba(0,255,136,0.25)':'rgba(255,68,68,0.25)'}`, borderRadius:4, overflow:'hidden' }}>
+            <div style={{ padding:'8px 12px', background: posDir==='LONG'?'rgba(0,255,136,0.07)':'rgba(255,68,68,0.07)', borderBottom:`1px solid ${posDir==='LONG'?'rgba(0,255,136,0.18)':'rgba(255,68,68,0.18)'}`, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={orb(11, 900, { color: posDir==='LONG'?C.up:C.down, letterSpacing:'0.18em' })}>POSITION ACTIVE — {posDir}</span>
+              <span style={{ flex:1 }} />
+              <span style={jb(9, 400, { color:C.muted })}>{posMode} · {tab}</span>
+            </div>
+            <div style={{ padding:'10px 12px', background:C.sur, display:'flex', flexDirection:'column', gap:8 }}>
+              {/* Metrics */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
+                {([
+                  ['ENTRÉE', fmt2(entry),  C.gold],
+                  ['STOP',   fmt2(stop),   C.down],
+                  ['LAST',   lp>0?fmt2(lp):'—', posDir==='LONG'?(lp>entry?C.up:lp<stop?C.down:C.muted):(lp<entry?C.up:lp>stop?C.down:C.muted)],
+                  ['P&L',    (pnlPts>=0?'+':'')+pnlPts.toFixed(2)+' pts', pnlCol],
+                ] as [string,string,string][]).map(([label,val,c])=>(
+                  <div key={label} style={{ padding:'6px', background:'rgba(0,0,0,0.25)', borderRadius:3, textAlign:'center' }}>
+                    <div style={jb(7, 400, { color:C.muted, marginBottom:2 })}>{label}</div>
+                    <div style={orb(11, 900, { color:c, fontVariantNumeric:'tabular-nums' })}>{val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Main signal */}
+              {main && (
+                <div style={{ padding:'10px 12px', borderRadius:3, background: main.action==='TENIR'?'rgba(0,255,136,0.07)':main.action==='ALLÉGER'?'rgba(212,175,55,0.09)':main.action==='SORTIR'||main.action==='STOP'?'rgba(255,68,68,0.09)':main.action==='RE-ENTRER'?'rgba(30,179,188,0.07)':'rgba(136,153,187,0.05)', border:`1px solid ${main.col}30`, display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontSize:18, lineHeight:1 }}>{main.icon}</span>
+                  <div>
+                    <span style={orb(15, 900, { color:main.col, letterSpacing:'0.14em' })}>{main.action}</span>
+                    <span style={jb(9, 400, { color:'rgba(136,153,187,0.7)', marginLeft:10 })}>{main.reason}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Auto-signals */}
+              <div style={{ display:'flex', flexDirection:'column', gap:4, padding:'6px 0' }}>
+                {posMode==='OVN' && (<>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>ALN</span>
+                    <span style={jb(9, 700, { color:alnCol })}>{alnBiais}</span>
+                    {alnPat && <span style={jb(8, 400, { color:'rgba(136,153,187,0.5)' })}>{alnPat}</span>}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>§9 NQ+ES</span>
+                    <span style={jb(9, 700, { color: p9Align==='Aligné'?C.up:p9Align==='Divergent'?C.down:C.muted })}>{p9Align||'—'}</span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>VWAP18h</span>
+                    <span style={jb(9, 700, { color: lp>0&&vw18>0?(lp>vw18?C.up:C.down):C.muted })}>{lp>0&&vw18>0?(lp>vw18?'Au-dessus ✅':'En-dessous ❌'):'—'}</span>
+                    {vw18>0&&<span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>{fmt2(vw18)}</span>}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>{posDir==='LONG'?'SD+1 / +2':'SD-1 / -2'}</span>
+                    <span style={jb(9, 700, { color:C.amber })}>{posDir==='LONG'?`${sdVals.sp1||'—'} / ${sdVals.sp2||'—'}`:`${sdVals.sm1||'—'} / ${sdVals.sm2||'—'}`}</span>
+                  </div>
+                </>)}
+                {posMode==='RTH' && (<>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>ORB</span>
+                    <span style={jb(9, 700, { color: lp>0&&orbH>0&&orbL>0?(lp>orbH?C.up:lp<orbL?C.up:C.muted):C.muted })}>{lp>0&&orbH>0&&orbL>0?(lp>orbH?`Cassé haut (${fmt2(orbH)}) ✅`:lp<orbL?`Cassé bas (${fmt2(orbL)}) ✅`:'Dans ORB ⚠️'):'—'}</span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>IB</span>
+                    <span style={jb(9, 700, { color: ibH>0&&ibL>0?(lp>ibH?C.up:lp<ibL?C.down:C.muted):C.muted })}>{ibH>0&&ibL>0?(lp>ibH?'Au-dessus IB':lp<ibL?'En-dessous IB':'Dans IB'):'—'}</span>
+                    {I.ibClass&&<span style={jb(8, 400, { color:'rgba(136,153,187,0.5)' })}>{I.ibClass}</span>}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>IB Mid</span>
+                    <span style={jb(9, 700, { color: ibMidV>0&&lp>0?(posDir==='LONG'?lp>ibMidV?C.up:C.down:lp<ibMidV?C.up:C.down):C.muted })}>{ibMidV>0?fmt2(ibMidV):'—'}</span>
+                  </div>
+                </>)}
+              </div>
+
+              {/* Targets */}
+              {(allergerAt||sortirAt) && (
+                <div style={{ display:'flex', gap:16, paddingTop:6, borderTop:'1px solid rgba(201,168,76,0.10)', flexWrap:'wrap' }}>
+                  {allergerAt&&<span><span style={jb(8,400,{color:C.muted})}>ALLÉGER 50% : </span><span style={jb(10,700,{color:C.amber})}>{allergerAt}</span></span>}
+                  {sortirAt&&<span><span style={jb(8,400,{color:C.muted})}>SORTIR TOTAL : </span><span style={jb(10,700,{color:C.teal})}>{sortirAt}</span></span>}
+                </div>
+              )}
+
+              {/* Secondary signals */}
+              {others.length>0&&(
+                <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                  {others.map((v,i)=>(
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:6, padding:'3px 8px', background:'rgba(0,0,0,0.15)', borderRadius:2 }}>
+                      <span style={{ fontSize:10, lineHeight:1 }}>{v.icon}</span>
+                      <span style={jb(8,600,{color:v.col})}>{v.action}</span>
+                      <span style={jb(8,400,{color:'rgba(136,153,187,0.55)'})}>{v.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!hasPos && posMode && (
+          <div style={{ textAlign:'center', padding:14, ...jb(10,400,{color:C.muted}) }}>
+            Saisissez Entrée + Stop pour activer le suivi de position
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ width:'100%', height:'100%', overflowY:'auto', overflowX:'hidden', padding:'10px 14px', display:'flex', flexDirection:'column', gap:10, fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box', background:C.pg }}>
 
@@ -1957,6 +2163,7 @@ export default function Calculateur() {
         <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
         <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
         <Btn label="◈ BACKTEST SD-2"    active={btOpen} col={C.teal}  onClick={()=>setBtOpen(o=>!o)} />
+        <Btn label="⬡ POSITION ACTIVE"  active={posOpen} col='#c77dff' onClick={()=>setPosOpen(o=>!o)} />
         <button onClick={handleReset} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(255,68,68,0.08)', outline:'1px solid rgba(255,68,68,0.25)', color:'rgba(255,100,100,0.75)', transition:'all 0.14s' }}>
           ↺ RESET
         </button>
@@ -2038,6 +2245,18 @@ export default function Calculateur() {
           </div>
           <div style={{ padding:'12px 12px', background:C.sur }}>
             {renderBacktest()}
+          </div>
+        </div>
+      )}
+
+      {/* Position Active */}
+      {posOpen && (
+        <div style={{ border:'1px solid rgba(199,125,255,0.22)', borderRadius:4, overflow:'hidden' }}>
+          <div style={{ padding:'6px 12px', borderLeft:'3px solid #c77dff', background:'rgba(199,125,255,0.04)', borderBottom:'1px solid rgba(199,125,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
+            <span style={orb(8.5, 900, { color:'#c77dff', letterSpacing:'0.22em' })}>⬡ GESTION POSITION ACTIVE · {tab}</span>
+          </div>
+          <div style={{ padding:'12px 12px', background:C.sur }}>
+            {renderPositionActive()}
           </div>
         </div>
       )}
