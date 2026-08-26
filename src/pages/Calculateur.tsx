@@ -777,7 +777,9 @@ export default function Calculateur() {
       <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
         {letters.length > 0 && (
           <div style={{ display:'grid', gridTemplateColumns:'minmax(52px,auto) 1fr 1fr 1fr 1fr 1fr 26px', gap:3, marginBottom:2 }}>
-            {['Lettres','High','Low','POC','VAH','VAL',''].map((h,i)=><div key={i} style={jb(7,600,{color:C.muted})}>{h}</div>)}
+            {(['Lettres','High','Low','POC','VAH','VAL',''] as string[]).map((h,i)=>(
+              <div key={i} title={h==='High'||h==='Low' ? 'Borne cumulée depuis le début de la session (ex: AB = max/min des lettres A+B)' : undefined} style={jb(7,600,{color:C.muted,cursor:h==='High'||h==='Low'?'help':undefined,textDecoration:h==='High'||h==='Low'?'underline dotted':'none',textUnderlineOffset:2})}>{h}</div>
+            ))}
           </div>
         )}
         {letters.map((row,idx)=>{
@@ -799,6 +801,11 @@ export default function Calculateur() {
           ? <span style={jb(8,600,{color:C.amber,marginTop:4})}>Fin de session RTH · 13 lettres (A–M) atteintes</span>
           : <button onClick={addLetter} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${colAcc}50`, borderRadius:2, background:`${colAcc}0d`, color:colAcc, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', marginTop:4 }}>+ AJOUTER LETTRE</button>
         }
+        <div style={{ marginTop:6, padding:'5px 10px', background:'rgba(136,153,187,0.05)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:2 }}>
+          <span style={jb(7.5,400,{color:C.muted,lineHeight:1.5})}>
+            <span style={{color:C.amber,fontWeight:600}}>High / Low</span> = bornes cumulées depuis le début de la session (A, AB, ABC…).
+          </span>
+        </div>
       </div>
     )
   }
