@@ -34,15 +34,8 @@ except ImportError:
     print("Manque : pip install websockets")
     sys.exit(1)
 
-try:
-    import pytz
-    ET = pytz.timezone('America/New_York')
-    from datetime import datetime
-    def now_et(): return datetime.now(ET)
-except ImportError:
-    from datetime import datetime, timezone, timedelta as td2
-    ET_OFFSET = timezone(timedelta(hours=-5))
-    def now_et(): return datetime.now(ET_OFFSET)
+from datetime import datetime
+def now_et(): return datetime.now()   # PC déjà en heure New York
 
 # ─── CONFIG — CHEMINS DES FICHIERS CSV ────────────────────────────────────────
 FILES = {
