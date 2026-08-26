@@ -116,10 +116,14 @@ function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
   // Extract HH:MM from any time string: HH:MM[:SS], H:MM[:SS], HHMM, HH:MM AM/PM
   const extractTime = (s:string): string => {
     s = s.trim()
-    if (s.includes(' ')) s = s.split(' ').slice(-1)[0] // take last part after space (removes date prefix)
+    if (s.includes(' ')) s = s.split(' ').slice(-1)[0] // remove date prefix
+    // HH:MM or H:MM (with optional :SS suffix)
     const m = s.match(/^(\d{1,2}):(\d{2})/)
     if (m) return m[1].padStart(2,'0') + ':' + m[2]
-    // HHMM with no colon (e.g. "0930")
+    // French format 09H30 or 09h30
+    const mH = s.match(/^(\d{1,2})[Hh](\d{2})/)
+    if (mH) return mH[1].padStart(2,'0') + ':' + mH[2]
+    // HHMM with no separator (e.g. "0930")
     const m2 = s.match(/^(\d{2})(\d{2})$/)
     if (m2) return m2[1] + ':' + m2[2]
     return ''
