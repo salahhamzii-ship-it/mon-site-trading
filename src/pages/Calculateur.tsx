@@ -23,7 +23,8 @@ interface Instr {
   ibHigh: string; ibLow: string; ibClose: string; ibOrdre: string; ibClass: string
   orbHigh: string; orbLow: string; orbClose: string
   vwap18h: string; atr: string
-  asiaHigh: string; asiaLow: string; londonHigh: string; londonLow: string
+  asiaHigh: string; asiaLow: string; asiaClose: string
+  londonHigh: string; londonLow: string; londonClose: string
   alnPattern: Pat; alnFiab: string
   rSignal: string; rFiab: string; rEntry: string; rStop: string; rC1: string; rC2: string
 }
@@ -58,7 +59,7 @@ const mkI = (): Instr => ({
   ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'', ibClass:'',
   orbHigh:'', orbLow:'', orbClose:'',
   vwap18h:'', atr:'',
-  asiaHigh:'', asiaLow:'', londonHigh:'', londonLow:'',
+  asiaHigh:'', asiaLow:'', asiaClose:'', londonHigh:'', londonLow:'', londonClose:'',
   alnPattern:'', alnFiab:'',
   rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:''
 })
@@ -281,10 +282,10 @@ export default function Calculateur() {
   const delTpoLetterJ1 = (t:Tab, id:string) => setTpoLettersJ1(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
 
   const csvInputRef  = useRef<HTMLInputElement>(null)
-  const csvSectionRef = useRef<'rthJ1'|'tpoJ1'>('rthJ1')
+  const csvSectionRef = useRef<'rthJ1'|'tpoJ1'|'ovnNQ'|'ovnES'>('rthJ1')
   const csvTabRef    = useRef<Tab>('NQ')
 
-  const triggerCsvImport = (section:'rthJ1'|'tpoJ1') => {
+  const triggerCsvImport = (section:'rthJ1'|'tpoJ1'|'ovnNQ'|'ovnES') => {
     csvSectionRef.current = section
     csvTabRef.current = tab
     csvInputRef.current?.click()
@@ -314,7 +315,7 @@ export default function Calculateur() {
         if (last.tpoPoc) upI(t,'rPoc',last.tpoPoc)
         if (last.tpoVah) upI(t,'rVah',last.tpoVah)
         if (last.tpoVal) upI(t,'rVal',last.tpoVal)
-      } else {
+      } else if (section === 'tpoJ1') {
         let cumH=-Infinity, cumL=Infinity
         const letters:TpoLetter[] = rows.slice(0,13).map((r,i)=>{
           const h=parseFloat(r.high)||0, l=parseFloat(r.low)||0
@@ -323,6 +324,26 @@ export default function Calculateur() {
           return { id:`csv-${Date.now()}-${i}`, letter:TPO_RTH_LETTERS[i]||'?', high:cumH>-Infinity?String(cumH):'', low:cumL<Infinity?String(cumL):'', poc:r.tpoPoc, vah:r.tpoVah, val:r.tpoVal }
         })
         setTpoLettersJ1(prev=>({...prev,[t]:letters}))
+      } else if (section === 'ovnNQ' || section === 'ovnES') {
+        const t2 = (section === 'ovnNQ' ? 'NQ' : 'ES') as Tab
+        const isAsia   = (r: SierraRow) => r.time >= '18:00' || r.time < '02:00'
+        const isLondon = (r: SierraRow) => r.time >= '02:00' && r.time < '08:00'
+        const asiaRows   = rows.filter(isAsia)
+        const londonRows = rows.filter(isLondon)
+        const aggH = (rs: SierraRow[]) => { const v=Math.max(...rs.map(r=>parseFloat(r.high)||0)); return v>0?String(v):'' }
+        const aggL = (rs: SierraRow[]) => { const vs=rs.map(r=>parseFloat(r.low)||Infinity).filter(v=>v<1e9); const v=Math.min(...vs); return vs.length&&v>0?String(v):'' }
+        const aggC = (rs: SierraRow[]) => rs.length>0 ? rs[rs.length-1].last : ''
+        const updates: Partial<Instr> = {}
+        const aH=aggH(asiaRows);   if (aH) updates.asiaHigh   = aH
+        const aL=aggL(asiaRows);   if (aL) updates.asiaLow    = aL
+        const aC=aggC(asiaRows);   if (aC) updates.asiaClose   = aC
+        const lH=aggH(londonRows); if (lH) updates.londonHigh  = lH
+        const lL=aggL(londonRows); if (lL) updates.londonLow   = lL
+        const lC=aggC(londonRows); if (lC) updates.londonClose  = lC
+        const oH=aggH(rows);       if (oH) updates.oHigh       = oH
+        const oL=aggL(rows);       if (oL) updates.oLow        = oL
+        const oC=aggC(rows);       if (oC) updates.oClose      = oC
+        if (Object.keys(updates).length) setII(prev=>({...prev,[t2]:{...prev[t2],...updates}}))
       }
     }
     reader.readAsText(file)
@@ -727,7 +748,6 @@ export default function Calculateur() {
   const vw18  = pf(I.vwap18h)
   const oMid  = td.tpoOvnH&&td.tpoOvnL ? fmt2((pf(td.tpoOvnH)+pf(td.tpoOvnL))/2) : '—'
 
-  const hasALN = tab === 'NQ'
   const hasP9  = tab === 'NQ' || tab === 'ES'
 
   const renderTD = () => (
@@ -1061,6 +1081,95 @@ export default function Calculateur() {
     )
   }
 
+  const renderOVN = () => {
+    if (tab !== 'NQ' && tab !== 'ES') return null
+    const isNQ = tab === 'NQ'
+    const t2 = tab as 'NQ'|'ES'
+    const inst = II[t2]
+    const ovnCol = TC[t2]
+    const subHdr = (label: string, c: string) => (
+      <div style={{ padding:'3px 10px', borderLeft:`2px solid ${c}`, background:`${c}0a`, borderBottom:`1px solid ${c}18`, marginBottom:8 }}>
+        <span style={orb(8,700,{color:c,letterSpacing:'0.14em'})}>{label}</span>
+      </div>
+    )
+    return (
+      <div style={{ border:`1px solid rgba(136,153,187,0.18)`, borderRadius:4, overflow:'hidden', display:'flex', flexDirection:'column', gap:0 }}>
+        {/* Header */}
+        <div style={{ padding:'6px 12px', borderLeft:`3px solid ${ovnCol}`, background:`${ovnCol}0a`, borderBottom:`1px solid ${ovnCol}22`, display:'flex', alignItems:'center', gap:10 }}>
+          <span style={orb(10,900,{color:ovnCol,letterSpacing:'0.20em'})}>OVN {t2} · DÉTAIL SESSION</span>
+          <span style={{ flex:1 }}/>
+          <button onClick={()=>triggerCsvImport(isNQ?'ovnNQ':'ovnES')} style={{ padding:'4px 10px', border:`1px solid rgba(30,179,188,0.40)`, borderRadius:2, background:'rgba(30,179,188,0.07)', color:C.teal, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>⬆ IMPORTER CSV OVN</button>
+        </div>
+
+        {/* 3 session columns */}
+        <div style={{ padding:'10px 12px', background:C.sur, display:'flex', flexDirection:'column', gap:10 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:8 }}>
+
+            {/* Asia */}
+            <div style={{ border:`1px solid rgba(30,179,188,0.20)`, borderRadius:3, overflow:'hidden' }}>
+              {subHdr('ASIE 18H–02H', C.teal)}
+              <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:6, background:C.sur }}>
+                <G3 ch={<>
+                  <F l="High"  v={inst.asiaHigh}  s={v=>upI(t2,'asiaHigh',v)} />
+                  <F l="Low"   v={inst.asiaLow}   s={v=>upI(t2,'asiaLow',v)} />
+                  <F l="Close" v={inst.asiaClose} s={v=>upI(t2,'asiaClose',v)} />
+                </>}/>
+              </div>
+            </div>
+
+            {/* London */}
+            <div style={{ border:`1px solid rgba(212,175,55,0.20)`, borderRadius:3, overflow:'hidden' }}>
+              {subHdr('LONDON 02H–08H', C.amber)}
+              <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:6, background:C.sur }}>
+                <G3 ch={<>
+                  <F l="High"  v={inst.londonHigh}  s={v=>upI(t2,'londonHigh',v)} />
+                  <F l="Low"   v={inst.londonLow}   s={v=>upI(t2,'londonLow',v)} />
+                  <F l="Close" v={inst.londonClose} s={v=>upI(t2,'londonClose',v)} />
+                </>}/>
+              </div>
+            </div>
+
+            {/* OVN aggregate */}
+            <div style={{ border:`1px solid ${ovnCol}22`, borderRadius:3, overflow:'hidden' }}>
+              {subHdr('OVN 18H–08H', ovnCol)}
+              <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:6, background:C.sur }}>
+                <G3 ch={<>
+                  <F l="High"  v={inst.oHigh}  s={v=>upI(t2,'oHigh',v)} />
+                  <F l="Low"   v={inst.oLow}   s={v=>upI(t2,'oLow',v)} />
+                  <F l="Close" v={inst.oClose} s={v=>upI(t2,'oClose',v)} />
+                </>}/>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                  <span style={jb(8,400,{color:C.muted})}>vs Settle :</span>
+                  {ovnVsS ? <Pill label={ovnVsS} col={ovnVsS==='LONG'?C.up:ovnVsS==='SHORT'?C.down:C.muted} />
+                           : <span style={jb(8,400,{color:'rgba(136,153,187,0.35)'})}>—</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ALN + Pattern — NQ only */}
+          {isNQ && (
+            <div style={{ border:`1px solid rgba(212,175,55,0.20)`, borderRadius:3, overflow:'hidden' }}>
+              {subHdr('ALN · ASIA / LONDON', C.amber)}
+              <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:6, background:C.sur }}>
+                <G4 ch={<>
+                  <F l="Asia High"   v={inst.asiaHigh}   s={v=>upI(t2,'asiaHigh',v)} />
+                  <F l="Asia Low"    v={inst.asiaLow}    s={v=>upI(t2,'asiaLow',v)} />
+                  <F l="London High" v={inst.londonHigh} s={v=>upI(t2,'londonHigh',v)} />
+                  <F l="London Low"  v={inst.londonLow}  s={v=>upI(t2,'londonLow',v)} />
+                </>}/>
+                <G2 ch={<>
+                  <F l="Pattern" v={inst.alnPattern} s={v=>upI(t2,'alnPattern',v as Pat)} opts={['P1','P2','P3','P4']} />
+                  <F l="Fiabilité %" v={inst.alnFiab} s={v=>upI(t2,'alnFiab',v)} />
+                </>}/>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   const renderInstr = () => (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
@@ -1068,14 +1177,16 @@ export default function Calculateur() {
           <G4 ch={<><F l="Open" v={I.rOpen} s={v=>upI(tab,'rOpen',v)} /><F l="High" v={I.rHigh} s={v=>upI(tab,'rHigh',v)} /><F l="Low" v={I.rLow} s={v=>upI(tab,'rLow',v)} /><F l="Settle" v={I.rSettle} s={v=>upI(tab,'rSettle',v)} /></>}/>
           <G4 ch={<><F l="VAH" v={I.rVah} s={v=>upI(tab,'rVah',v)} /><F l="VAL" v={I.rVal} s={v=>upI(tab,'rVal',v)} /><F l="POC" v={I.rPoc} s={v=>upI(tab,'rPoc',v)} /><F l="Half Back" ro dv={halfBack} /></>}/>
         </Sec>
-        <Sec title="OVN / RTH" col={col}>
-          <G3 ch={<><F l="OVN High" v={I.oHigh} s={v=>upI(tab,'oHigh',v)} /><F l="OVN Low" v={I.oLow} s={v=>upI(tab,'oLow',v)} /><F l="OVN Close" v={I.oClose} s={v=>upI(tab,'oClose',v)} /></>}/>
-          <div style={{ display:'flex', alignItems:'center', gap:8, paddingTop:2 }}>
-            <span style={jb(11, 400, { color:C.muted, lineHeight:1.2, marginTop:4 })}>OVN vs Settle :</span>
-            {ovnVsS ? <Pill label={ovnVsS} col={ovnVsS==='LONG'?C.up:ovnVsS==='SHORT'?C.down:C.muted} />
-                    : <span style={jb(8, 400, { color:'rgba(136,153,187,0.35)' })}>—</span>}
-          </div>
-        </Sec>
+        {tab !== 'NQ' && tab !== 'ES' && (
+          <Sec title="OVN / RTH" col={col}>
+            <G3 ch={<><F l="OVN High" v={I.oHigh} s={v=>upI(tab,'oHigh',v)} /><F l="OVN Low" v={I.oLow} s={v=>upI(tab,'oLow',v)} /><F l="OVN Close" v={I.oClose} s={v=>upI(tab,'oClose',v)} /></>}/>
+            <div style={{ display:'flex', alignItems:'center', gap:8, paddingTop:2 }}>
+              <span style={jb(11, 400, { color:C.muted, lineHeight:1.2, marginTop:4 })}>OVN vs Settle :</span>
+              {ovnVsS ? <Pill label={ovnVsS} col={ovnVsS==='LONG'?C.up:ovnVsS==='SHORT'?C.down:C.muted} />
+                      : <span style={jb(8, 400, { color:'rgba(136,153,187,0.35)' })}>—</span>}
+            </div>
+          </Sec>
+        )}
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
@@ -1116,21 +1227,8 @@ export default function Calculateur() {
         </div>
       </Sec>
 
-      {/* ALN — NQ uniquement */}
-      {hasALN && (
-        <Sec title="ALN · ASIA / LONDON (NQ uniquement)" col={C.amber}>
-          <G4 ch={<>
-            <F l="Asia High"   v={I.asiaHigh}   s={v=>upI(tab,'asiaHigh',v)} />
-            <F l="Asia Low"    v={I.asiaLow}    s={v=>upI(tab,'asiaLow',v)} />
-            <F l="London High" v={I.londonHigh} s={v=>upI(tab,'londonHigh',v)} />
-            <F l="London Low"  v={I.londonLow}  s={v=>upI(tab,'londonLow',v)} />
-          </>}/>
-          <G2 ch={<>
-            <F l="Pattern" v={I.alnPattern} s={v=>upI(tab,'alnPattern',v as Pat)} opts={['P1','P2','P3','P4']} />
-            <F l="Fiabilité %" v={I.alnFiab} s={v=>upI(tab,'alnFiab',v)} />
-          </>}/>
-        </Sec>
-      )}
+      {/* OVN dédié NQ/ES */}
+      {renderOVN()}
 
       {/* §9 — NQ / ES */}
       {hasP9 && (
