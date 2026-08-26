@@ -296,12 +296,28 @@ def build_payload(instr: str, all_rows: list) -> dict:
     }
 
 def build_message() -> str:
+    from datetime import date as _date
+    now    = now_et()
+    today  = now.date()
+    delta  = 3 if today.weekday() == 0 else 1
+    j1_d   = today - __import__('datetime').timedelta(days=delta)
+    print(f"\n  today = {today.year}-{today.month}-{today.day}  (j1 = {j1_d.year}-{j1_d.month}-{j1_d.day})")
+
     data = {}
     for instr, filepath in FILES.items():
         rows = parse_csv(filepath)
         if not rows:
             # fichier absent ou vide → instrument omis du JSON
             continue
+
+        # Debug : dernière date lue dans le CSV
+        dated = [r['date'] for r in rows if r['date'] is not None]
+        if dated:
+            last_csv_date = max(dated)
+            print(f"  {instr}: dernière date CSV = {last_csv_date.year}-{last_csv_date.month}-{last_csv_date.day}  match={last_csv_date == today}")
+        else:
+            print(f"  {instr}: aucune date parsée dans le CSV (vérifier format colonne Date)")
+
         data[instr] = build_payload(instr, rows)
         bt = data[instr]['bars_today']
         bj = data[instr]['bars_j1']
