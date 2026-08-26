@@ -65,7 +65,14 @@ const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'',
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'02:00', londonMode:'Auto', londonStart:'02:00', londonEnd:'08:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
 
 interface RthRow { id:string; heure:string; open:string; high:string; low:string; close:string; vwap:string; sp1:string; sm1:string; sp2:string; sm2:string }
-const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
+const RTH_TIMES: Record<Tab, string[]> = {
+  NQ: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
+  ES: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'],
+  GC: ['08:20','09:20','10:20','11:20','12:20','13:20','14:20'],
+  CL: ['09:00','10:00','11:00','12:00','13:00','14:00'],
+}
+const mkRthRowsForTab = (t:Tab): RthRow[] => RTH_TIMES[t].map(h=>({ id:h, heure:h, open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' }))
+const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:mkRthRowsForTab('ES'), GC:mkRthRowsForTab('GC'), CL:mkRthRowsForTab('CL') })
 
 const TICK_SZ: Record<Tab, number> = { NQ:0.25, ES:0.25, GC:0.10, CL:0.01 }
 interface TpoLetter { id:string; letter:string; high:string; low:string; poc:string; vah:string; val:string }
@@ -147,12 +154,13 @@ function TA({ v, s, ph }: { v:string; s:(x:string)=>void; ph:string }) {
 }
 
 function Result({ signal, fiab, entry, stop, c1, c2, rr, col }: { signal:string; fiab:string; entry:string; stop:string; c1:string; c2:string; rr:string; col:string }) {
-  const sc = (signal==='ACHAT'||signal==='LONG') ? C.up : (signal==='VENTE'||signal==='SHORT') ? C.down : C.muted
+  const sc = (signal==='LONG') ? C.up : (signal==='SHORT') ? C.down : signal==='ATTENTE' ? C.amber : signal==='SETUP INCOMPLET' ? '#ff9966' : C.muted
+  const pulsing = signal==='LONG' || signal==='SHORT'
   return (
     <div style={{ padding:'10px 12px', borderRadius:3, marginTop:2, background:`${col}08`, border:`1px solid ${col}28` }}>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
-        {signal && <span style={{ width:8, height:8, borderRadius:'50%', background:sc, flexShrink:0, animation: (signal==='ACHAT'||signal==='LONG') ? 'pulseDot 1.8s infinite' : (signal==='VENTE'||signal==='SHORT') ? 'pulseDotRed 1.8s infinite' : 'none' }} />}
-        <span style={orb(22, 900, { color:sc, lineHeight:1, textShadow:`0 0 14px ${sc}` })}>{signal||'—'}</span>
+        {signal && <span style={{ width:8, height:8, borderRadius:'50%', background:sc, flexShrink:0, animation: pulsing ? (signal==='LONG' ? 'pulseDot 1.8s infinite' : 'pulseDotRed 1.8s infinite') : 'none' }} />}
+        <span style={orb(signal==='ATTENTE'||signal==='SETUP INCOMPLET'?14:22, 900, { color:sc, lineHeight:1, textShadow:`0 0 14px ${sc}` })}>{signal||'—'}</span>
         {fiab && <Pill label={`FIAB ${fiab}%`} col={sc} />}
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(5,minmax(0,1fr))', gap:6 }}>
@@ -223,13 +231,8 @@ export default function Calculateur() {
   const upI  = (t:Tab, k:keyof Instr, v:string)   => setII(p=>({...p,[t]:{...p[t],[k]:v}}))
   const upC  = <K extends keyof Cfg>(k:K, v:Cfg[K]) => setCfg(p=>({...p,[k]:v}))
 
-  const mkRthRowEntry = () => ({ id:Date.now().toString(), heure:'', open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' })
-  const addRthRow    = (t:Tab) => setRthRows(p=>({...p,[t]:[...p[t],mkRthRowEntry()]}))
-  const upRthRow     = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRows(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
-  const delRthRow    = (t:Tab, id:string) => setRthRows(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
-  const addRthRowJ1  = (t:Tab) => setRthRowsJ1(p=>({...p,[t]:[...p[t],{...mkRthRowEntry(),id:(Date.now()+1).toString()}]}))
-  const upRthRowJ1   = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRowsJ1(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
-  const delRthRowJ1  = (t:Tab, id:string) => setRthRowsJ1(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
+  const upRthRow  = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRows(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
+  const upRthRowJ1= (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRowsJ1(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
 
   const TPO_RTH_LETTERS = 'ABCDEFGHIJKLM'
   const addTpoLetter = (t:Tab) => {
@@ -344,6 +347,9 @@ export default function Calculateur() {
     const ibH2 = pf(I.ibHigh), ibL2 = pf(I.ibLow)
     const mid2 = ibH2>0&&ibL2>0 ? (ibH2+ibL2)/2 : 0
     const orbH2 = pf(I.orbHigh), orbL2 = pf(I.orbLow)
+    // Fallbacks pré-RTH : J-1 VAH/VAL/POC pour Asie / Londres
+    const rVah2 = pf(I.rVah), rVal2 = pf(I.rVal), rPoc2 = pf(I.rPoc)
+    const vw18_2 = pf(I.vwap18h)
 
     const pickEntry = (a:number, b:number): number => {
       if (!a && !b) return 0
@@ -352,39 +358,49 @@ export default function Calculateur() {
       const chosen = Math.abs(lp2-a) <= Math.abs(lp2-b) ? a : b
       return Math.abs(lp2-chosen) < 2 ? lp2 : chosen
     }
-    const ok  = (e:string,s:string,c1:string,c2:string,rr:string) => ({ entry:e, stop:s, c1, c2, rr, invalid:false, invalidReason:'', effectiveSignal:cSig.signal, effectiveFiab:cSig.fiab })
-    const bad = (reason:string,e='',s='',c1='',c2='',rr='') => ({ entry:e, stop:s, c1, c2, rr, invalid:true, invalidReason:reason, effectiveSignal:'NEUTRE', effectiveFiab:0 })
-    const none = () => ok('','','','','')
+    const ok  = (e:string,s:string,c1:string,c2:string,rr:string) => ({ entry:e, stop:s, c1, c2, rr, invalid:false, invalidReason:'', effectiveSignal:e&&s ? cSig.signal : 'ATTENTE', effectiveFiab:e&&s ? cSig.fiab : 0 })
+    const bad = (reason:string,e='',s='',c1='',c2='',rr='') => ({ entry:e, stop:s, c1, c2, rr, invalid:true, invalidReason:reason, effectiveSignal:'SETUP INCOMPLET', effectiveFiab:0 })
+    const none = () => ({ entry:'', stop:'', c1:'', c2:'', rr:'', invalid:false, invalidReason:'', effectiveSignal: cSig.signal !== 'NEUTRE' ? 'ATTENTE' : 'NEUTRE', effectiveFiab:0 })
 
     if (cSig.signal === 'LONG') {
-      const entry = pickEntry(mid2, orbH2)
-      const stop  = ibL2 > 0 ? ibL2 : 0
-      const c1n   = pf(sdVals.sp1)
+      // Entrée : IB mid ou ORB High; sinon pré-RTH → VWAP18h ou POC J-1 ou VAH J-1
+      const entry = pickEntry(mid2, orbH2) || pickEntry(vw18_2, rPoc2) || rVah2
+      // Stop : IB Low; sinon VAL J-1
+      const stop  = ibL2 > 0 ? ibL2 : rVal2
+      // Cible : SD+1 ou VAH J-1
+      const c1n   = pf(sdVals.sp1) || rVah2
+      const c1s   = sdVals.sp1 || (rVah2 > 0 ? fmt2(rVah2) : '')
+      const c2s   = sdVals.sp2
       if (!entry || !stop || !c1n) return none()
       if (entry <= stop) return bad('Entrée sous le stop')
       if (c1n <= entry)  return bad('C1 sous l\'entrée · SD+1 trop bas')
       const rrN = (c1n - entry) / (entry - stop)
-      const [e,s,c1s,c2s,rrS] = [fmt2(entry), fmt2(stop), sdVals.sp1, sdVals.sp2, `1 : ${rrN.toFixed(1)}`]
+      const [e,s,rrS] = [fmt2(entry), fmt2(stop), `1 : ${rrN.toFixed(1)}`]
       if (rrN < 1) return bad('R:R < 1 · Setup invalide', e, s, c1s, c2s, rrS)
       return ok(e, s, c1s, c2s, rrS)
     }
 
     if (cSig.signal === 'SHORT') {
-      const entry = pickEntry(mid2, orbL2)
-      const stop  = ibH2 > 0 ? ibH2 : 0
-      const c1n   = pf(sdVals.sm1)
+      // Entrée : IB mid ou ORB Low; sinon VWAP18h ou POC J-1 ou VAL J-1
+      const entry = pickEntry(mid2, orbL2) || pickEntry(vw18_2, rPoc2) || rVal2
+      // Stop : IB High; sinon VAH J-1
+      const stop  = ibH2 > 0 ? ibH2 : rVah2
+      // Cible : SD-1 ou VAL J-1
+      const c1n   = pf(sdVals.sm1) || rVal2
+      const c1s   = sdVals.sm1 || (rVal2 > 0 ? fmt2(rVal2) : '')
+      const c2s   = sdVals.sm2
       if (!entry || !stop || !c1n) return none()
       if (stop <= entry) return bad('Stop sous l\'entrée · IB High trop bas')
       if (c1n >= entry)  return bad('C1 au-dessus de l\'entrée · SD-1 trop haut')
       if (lp2 > 0 && lp2 < entry) return bad('Prix déjà sous l\'entrée · Setup manqué')
       const rrN = (entry - c1n) / (stop - entry)
-      const [e,s,c1s,c2s,rrS] = [fmt2(entry), fmt2(stop), sdVals.sm1, sdVals.sm2, `1 : ${rrN.toFixed(1)}`]
+      const [e,s,rrS] = [fmt2(entry), fmt2(stop), `1 : ${rrN.toFixed(1)}`]
       if (rrN < 1) return bad('R:R < 1 · Setup invalide', e, s, c1s, c2s, rrS)
       return ok(e, s, c1s, c2s, rrS)
     }
 
     return none()
-  }, [cSig.signal, cSig.fiab, I.lastPx, I.ibHigh, I.ibLow, I.orbHigh, I.orbLow, sdVals])
+  }, [cSig.signal, cSig.fiab, I.lastPx, I.ibHigh, I.ibLow, I.orbHigh, I.orbLow, I.rVah, I.rVal, I.rPoc, I.vwap18h, sdVals])
 
   const dayType = useMemo(() => {
     if (!pf(I.ibClose)) return '' // IB non terminé → pas d'affichage avant 10h30
@@ -689,45 +705,54 @@ export default function Calculateur() {
     </div>
   )
 
-  const RTH_COLS: [keyof RthRow, string][] = [['heure','Heure'],['open','Open'],['high','High'],['low','Low'],['close','Close'],['vwap','VWAP'],['sp1','SD+1'],['sm1','SD-1'],['sp2','SD+2'],['sm2','SD-2']]
   const rthInStyle: CSSProperties = { width:'100%', background:'#1a2236', border:'1px solid rgba(201,168,76,0.22)', borderRadius:2, padding:'3px 6px', height:26, fontSize:11, color:'#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box' }
 
   const rthTableBlock = (
     rows: RthRow[],
-    addRow: ()=>void,
+    times: string[],
     upRow: (id:string, k:keyof RthRow, v:string)=>void,
-    delRow: (id:string)=>void,
-    colAcc: string
-  ) => (
-    <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-      <div style={{ overflowX:'auto' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'90px repeat(9,minmax(72px,1fr)) 26px', gap:3, minWidth:760, marginBottom:4 }}>
-          {RTH_COLS.map(([,lbl])=><div key={lbl} style={jb(7,600,{color:C.muted,letterSpacing:'0.05em'})}>{lbl}</div>)}
-          <div />
-        </div>
-        {rows.map(row=>(
-          <div key={row.id} style={{ display:'grid', gridTemplateColumns:'90px repeat(9,minmax(72px,1fr)) 26px', gap:3, minWidth:760, marginBottom:3 }}>
-            {RTH_COLS.map(([k])=>(
-              <input key={k} type={k==='heure'?'text':'number'} value={row[k]} onChange={e=>upRow(row.id,k,e.target.value)} placeholder={k==='heure'?'09:30':''} style={rthInStyle} />
-            ))}
-            <button onClick={()=>delRow(row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
+  ) => {
+    const DATA_COLS: (keyof RthRow)[] = ['open','high','low','close','vwap','sp1','sm1','sp2','sm2']
+    const DATA_HDRS = ['Open','High','Low','Close','VWAP','SD+1','SD-1','SD+2','SD-2']
+    // index rows by time slot; existing rows matched by heure, then by index
+    const rowByTime: Record<string, RthRow> = {}
+    rows.forEach(r => { rowByTime[r.heure] = r })
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+        <div style={{ overflowX:'auto' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'78px repeat(9,minmax(68px,1fr))', gap:3, minWidth:720, marginBottom:4 }}>
+            <div style={jb(7,600,{color:C.muted,letterSpacing:'0.05em'})}>Heure</div>
+            {DATA_HDRS.map(h=><div key={h} style={jb(7,600,{color:C.muted,letterSpacing:'0.05em'})}>{h}</div>)}
           </div>
-        ))}
-        {rows.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune ligne — cliquez sur &quot;+ AJOUTER&quot; pour commencer.</span>}
+          {times.map((t,i)=>{
+            const row = rowByTime[t] ?? rows[i]
+            if (!row) return null
+            return (
+              <div key={t} style={{ display:'grid', gridTemplateColumns:'78px repeat(9,minmax(68px,1fr))', gap:3, minWidth:720, marginBottom:3 }}>
+                <div style={{...rthInStyle, display:'flex', alignItems:'center', fontWeight:700, color:C.amber, fontSize:11, background:'rgba(201,168,76,0.07)', borderColor:'rgba(201,168,76,0.25)'}}>
+                  {t.replace(':','H')}
+                </div>
+                {DATA_COLS.map(k=>(
+                  <input key={k} type="number" value={row[k]} onChange={e=>upRow(row.id,k,e.target.value)} style={rthInStyle} />
+                ))}
+              </div>
+            )
+          })}
+        </div>
       </div>
-      <button onClick={addRow} style={{ alignSelf:'flex-start', padding:'5px 12px', border:`1px solid ${colAcc}50`, borderRadius:2, background:`${colAcc}0d`, color:colAcc, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>+ AJOUTER UNE LIGNE</button>
-    </div>
-  )
+    )
+  }
 
   const renderRth = () => {
     const freq = (tab==='NQ'||tab==='ES') ? '30 MIN' : '60 MIN'
+    const times = RTH_TIMES[tab]
     return (
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
         <Sec title={`SUIVI RTH J-1 · ${tab} · ${freq}`} col={col}>
-          {rthTableBlock(rthRowsJ1[tab], ()=>addRthRowJ1(tab), (id,k,v)=>upRthRowJ1(tab,id,k,v), id=>delRthRowJ1(tab,id), col)}
+          {rthTableBlock(rthRowsJ1[tab], times, (id,k,v)=>upRthRowJ1(tab,id,k,v))}
         </Sec>
         <Sec title={`SUIVI RTH DU JOUR · ${tab} · ${freq}`} col={col}>
-          {rthTableBlock(rthRows[tab], ()=>addRthRow(tab), (id,k,v)=>upRthRow(tab,id,k,v), id=>delRthRow(tab,id), col)}
+          {rthTableBlock(rthRows[tab], times, (id,k,v)=>upRthRow(tab,id,k,v))}
         </Sec>
       </div>
     )
@@ -744,21 +769,24 @@ export default function Calculateur() {
     return (
       <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
         {letters.length > 0 && (
-          <div style={{ display:'grid', gridTemplateColumns:'36px 1fr 1fr 1fr 1fr 1fr 26px', gap:3, marginBottom:2 }}>
-            {['','High','Low','POC','VAH','VAL',''].map((h,i)=><div key={i} style={jb(7,600,{color:C.muted})}>{h}</div>)}
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(52px,auto) 1fr 1fr 1fr 1fr 1fr 26px', gap:3, marginBottom:2 }}>
+            {['Lettres','High','Low','POC','VAH','VAL',''].map((h,i)=><div key={i} style={jb(7,600,{color:C.muted})}>{h}</div>)}
           </div>
         )}
-        {letters.map(row=>(
-          <div key={row.id} style={{ display:'grid', gridTemplateColumns:'36px 1fr 1fr 1fr 1fr 1fr 26px', gap:3 }}>
-            <div style={{...rthInStyle,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,color:colAcc,fontSize:11}}>{row.letter}</div>
-            <input type="number" value={row.high} onChange={e=>upLetter(row.id,'high',e.target.value)} style={rthInStyle} />
-            <input type="number" value={row.low}  onChange={e=>upLetter(row.id,'low',e.target.value)}  style={rthInStyle} />
-            <input type="number" value={row.poc}  onChange={e=>upLetter(row.id,'poc',e.target.value)}  style={{...rthInStyle,color:C.gold}} />
-            <input type="number" value={row.vah}  onChange={e=>upLetter(row.id,'vah',e.target.value)}  style={{...rthInStyle,color:C.up}} />
-            <input type="number" value={row.val}  onChange={e=>upLetter(row.id,'val',e.target.value)}  style={{...rthInStyle,color:C.down}} />
-            <button onClick={()=>delLetter(row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
-          </div>
-        ))}
+        {letters.map((row,idx)=>{
+          const cumLabel = letters.slice(0,idx+1).map(l=>l.letter).join('')
+          return (
+            <div key={row.id} style={{ display:'grid', gridTemplateColumns:'minmax(52px,auto) 1fr 1fr 1fr 1fr 1fr 26px', gap:3 }}>
+              <div style={{...rthInStyle,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,color:colAcc,fontSize:9,letterSpacing:'-0.02em',padding:'2px 4px'}}>{cumLabel}</div>
+              <input type="number" value={row.high} onChange={e=>upLetter(row.id,'high',e.target.value)} style={rthInStyle} />
+              <input type="number" value={row.low}  onChange={e=>upLetter(row.id,'low',e.target.value)}  style={rthInStyle} />
+              <input type="number" value={row.poc}  onChange={e=>upLetter(row.id,'poc',e.target.value)}  style={{...rthInStyle,color:C.gold}} />
+              <input type="number" value={row.vah}  onChange={e=>upLetter(row.id,'vah',e.target.value)}  style={{...rthInStyle,color:C.up}} />
+              <input type="number" value={row.val}  onChange={e=>upLetter(row.id,'val',e.target.value)}  style={{...rthInStyle,color:C.down}} />
+              <button onClick={()=>delLetter(row.id)} style={{ background:'rgba(255,68,68,0.08)', border:'1px solid rgba(255,68,68,0.18)', borderRadius:2, color:'rgba(255,100,100,0.7)', cursor:'pointer', fontSize:9, padding:'0 4px' }}>✕</button>
+            </div>
+          )
+        })}
         {letters.length===0 && <span style={jb(8,400,{color:'rgba(136,153,187,0.4)'})}>Aucune lettre — cliquez &quot;+ AJOUTER&quot; (A→M, 13 lettres max = session RTH complète).</span>}
         {atLimit
           ? <span style={jb(8,600,{color:C.amber,marginTop:4})}>Fin de session RTH · 13 lettres (A–M) atteintes</span>
