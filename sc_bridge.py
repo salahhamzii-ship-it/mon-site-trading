@@ -126,27 +126,43 @@ def parse_csv(filepath: str, diag: bool = False) -> list:
         print(f"  [DIAG] Headers normalisés : {hdrs}")
 
     def find(*names):
+        """Cherche par nom exact (insensible casse + espaces) ou sous-chaîne partielle."""
         for n in names:
-            nc = n.replace(' ', '')
+            nc = n.replace(' ', '').lower()
+            # 1) correspondance exacte
             for i, h in enumerate(hdrs):
-                if h == n or h.replace(' ', '') == nc:
+                if h == n.lower() or h.replace(' ', '') == nc:
+                    return i
+            # 2) correspondance partielle (le header contient le terme)
+            for i, h in enumerate(hdrs):
+                if nc in h.replace(' ', ''):
                     return i
         return -1
 
     idx_date = find('date')
-    idx_time = find('time', 'heure', 'date/time', 'datetime', 'timestamp')
-    idx_open = find('open')
-    idx_high = find('high')
-    idx_low  = find('low')
-    idx_last = find('last', 'close', 'clôture', 'cloture')
-    idx_vwap = find('vwap')
-    idx_sp1  = find('sd+1', 'sd +1', 'vwap sd+1', '+1sd')
-    idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd')
-    idx_sp2  = find('sd+2', 'sd +2', 'vwap sd+2', '+2sd')
-    idx_sm2  = find('sd-2', 'sd -2', 'vwap sd-2', '-2sd')
-    idx_poc  = find('tpo poc')
-    idx_vah  = find('tpo vah')
-    idx_val  = find('tpo val')
+    idx_time = find('time', 'heure', 'date/time', 'datetime', 'timestamp', 'dateheure')
+    idx_open = find('open', 'ouverture', 'ouvr')
+    idx_high = find('high', 'haut', 'plus haut')
+    idx_low  = find('low', 'bas', 'plus bas')
+    idx_last = find('last', 'close', 'clôture', 'cloture', 'dernier', 'cloture')
+    idx_vwap = find('vwap', 'vwap(daily)', 'dailyvwap', 'vwap daily')
+    idx_sp1  = find('sd+1', 'sd +1', 'vwap sd+1', '+1sd', 'upper1', 'upper band 1', 'upperband1', 'bande+1', 'bande +1')
+    idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd', 'lower1', 'lower band 1', 'lowerband1', 'bande-1', 'bande -1')
+    idx_sp2  = find('sd+2', 'sd +2', 'vwap sd+2', '+2sd', 'upper2', 'upper band 2', 'upperband2', 'bande+2', 'bande +2')
+    idx_sm2  = find('sd-2', 'sd -2', 'vwap sd-2', '-2sd', 'lower2', 'lower band 2', 'lowerband2', 'bande-2', 'bande -2')
+    idx_poc  = find('tpo poc', 'poc', 'pointofcontrol', 'point of control')
+    idx_vah  = find('tpo vah', 'vah', 'valuearehigh', 'value area high')
+    idx_val  = find('tpo val', 'val', 'valuearealow', 'value area low')
+
+    # Fallback positionnel Sierra Chart standard : Date,Time,Open,High,Low,Last,...
+    # Si OHLC non trouvés par nom mais que date+time sont col 0+1, tenter positions fixes
+    _sc_std = (idx_date == 0 and idx_time == 1
+               and idx_open < 0 and idx_high < 0 and idx_low < 0 and idx_last < 0
+               and len(hdrs) >= 6)
+    if _sc_std:
+        idx_open = 2; idx_high = 3; idx_low = 4; idx_last = 5
+        if diag:
+            print("  [DIAG] OHLC non trouvés par nom → fallback positionnel SC (col 2-5)")
 
     if diag:
         print(f"  [DIAG] idx_date={idx_date}  idx_time={idx_time}  "
