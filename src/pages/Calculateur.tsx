@@ -1544,6 +1544,11 @@ export default function Calculateur() {
         {showSaved && (
           <span style={jb(9, 600, { color:C.up, letterSpacing:'0.12em', opacity:0.9, animation:'fadeIn 0.15s ease-out' })}>✓ SAUVEGARDÉ</span>
         )}
+        {/* SC Bridge status — always visible */}
+        <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background: wsSc==='live' ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.06)', outline:`1px solid ${wsSc==='live' ? 'rgba(0,255,136,0.30)' : 'rgba(255,68,68,0.20)'}` }}>
+          <span style={{ width:5, height:5, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
+          <span style={orb(7, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.14em' })}>{wsSc==='live' ? 'SC LIVE' : 'SC OFF'}</span>
+        </div>
         <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
         <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
         <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
@@ -1598,13 +1603,9 @@ export default function Calculateur() {
       {/* Live Tracker */}
       {trOpen && (
         <div style={{ border:`1px solid rgba(0,255,136,0.18)`, borderRadius:4, overflow:'hidden' }}>
-          <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.up}`, background:'rgba(0,255,136,0.04)', borderBottom:'1px solid rgba(0,255,136,0.14)', display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+          <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.up}`, background:'rgba(0,255,136,0.04)', borderBottom:'1px solid rgba(0,255,136,0.14)', display:'flex', alignItems:'center', gap:8 }}>
             <span style={orb(8.5, 900, { color:C.up, letterSpacing:'0.22em' })}>⊕ LIVE TRACKER · {tab}</span>
             <span style={{ width:7, height:7, borderRadius:'50%', background:C.up, animation:'pulseDot 1.8s infinite', flexShrink:0 }} />
-            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5 }}>
-              <span style={{ width:6, height:6, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
-              <span style={orb(7.5, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.15em' })}>{wsSc==='live' ? 'SC LIVE' : 'SC OFF'}</span>
-            </div>
           </div>
           <div style={{ padding:'12px 12px', background:C.sur }}>
             {renderTracker()}
