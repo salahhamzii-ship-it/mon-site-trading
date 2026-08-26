@@ -282,6 +282,7 @@ export default function Calculateur() {
   const [showSaved,   setShowSaved]   = useState(false)
   const [csvMsg,      setCsvMsg]      = useState<{text:string;ok:boolean}|null>(null)
   const [wsSc,        setWsSc]        = useState<'live'|'off'>('off')
+  const [nyTime,      setNyTime]      = useState('')
 
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -351,6 +352,14 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })
+    const tick = () => setNyTime(fmt.format(new Date()))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+
   const handleReset = () => {
     localStorage.removeItem(LS_KEY)
     setTab('NQ'); setTdOpen(true); setTrOpen(false); setStOpen(false)
@@ -396,7 +405,7 @@ export default function Calculateur() {
   const showCsvMsg = (text:string, ok:boolean) => {
     setCsvMsg({text,ok})
     clearTimeout(csvTimer.current)
-    csvTimer.current = setTimeout(()=>setCsvMsg(null), ok ? 2500 : 5000)
+    csvTimer.current = setTimeout(()=>setCsvMsg(null), ok ? 5000 : 9000)
   }
 
   const handleCsvFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -1006,7 +1015,7 @@ export default function Calculateur() {
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
         <Sec title={`SUIVI RTH J-1 · ${tab} · ${freq}`} col={col}>
           <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:4 }}>
-            <button onClick={()=>triggerCsvImport('rthJ1')} style={{ padding:'4px 10px', border:`1px solid rgba(30,179,188,0.40)`, borderRadius:2, background:'rgba(30,179,188,0.07)', color:C.teal, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em' }}>⬆ IMPORTER CSV</button>
+            <button onClick={()=>triggerCsvImport('rthJ1')} style={{ padding:'5px 14px', border:`1px solid rgba(201,168,76,0.55)`, borderRadius:2, background:'rgba(201,168,76,0.10)', color:C.gold, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:700, letterSpacing:'0.14em', boxShadow:'0 0 8px rgba(201,168,76,0.10)' }}>⬆ IMPORTER CSV RTH J-1</button>
           </div>
           {rthTableBlock(rthRowsJ1[tab], times, (id,k,v)=>upRthRowJ1(tab,id,k,v))}
         </Sec>
@@ -1580,6 +1589,13 @@ export default function Calculateur() {
         <span style={{ flex:1 }} />
         {showSaved && (
           <span style={jb(9, 600, { color:C.up, letterSpacing:'0.12em', opacity:0.9, animation:'fadeIn 0.15s ease-out' })}>✓ SAUVEGARDÉ</span>
+        )}
+        {/* NY real-time clock */}
+        {nyTime && (
+          <div style={{ display:'flex', alignItems:'center', gap:5, padding:'3px 9px', borderRadius:2, background:'rgba(201,168,76,0.06)', outline:'1px solid rgba(201,168,76,0.22)' }}>
+            <span style={orb(7, 400, { color:C.muted, letterSpacing:'0.10em' })}>NY</span>
+            <span style={orb(10, 900, { color:C.gold, letterSpacing:'0.14em', fontVariantNumeric:'tabular-nums' })}>{nyTime}</span>
+          </div>
         )}
         {/* SC Bridge status — always visible */}
         <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background: wsSc==='live' ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.06)', outline:`1px solid ${wsSc==='live' ? 'rgba(0,255,136,0.30)' : 'rgba(255,68,68,0.20)'}` }}>
