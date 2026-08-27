@@ -15,14 +15,13 @@ jobs:
           host: 2.29.3.199
           username: root
           password: ${{ secrets.VPS_SSH_PASS }}
-          timeout: 60s
+          timeout: 90s
           script: |
             pkill -f sc_bridge.py 2>/dev/null || true
             rm -rf /root/mon-site-trading
             git clone https://github.com/salahhamzii-ship-it/mon-site-trading /root/mon-site-trading
             mkdir -p /tmp/sc-bridge
-            cd /root/mon-site-trading
-            pip3 install websockets -q
-            nohup python3 sc_bridge.py > /tmp/bridge.log 2>&1 &
-            sleep 3
+            apt-get install -y python3-websockets -qq 2>/dev/null || pip3 install websockets --break-system-packages -q
+            nohup python3 /root/mon-site-trading/sc_bridge.py > /tmp/bridge.log 2>&1 &
+            sleep 5
             curl -s http://localhost:8766/health && echo " sc_bridge OK" || cat /tmp/bridge.log
