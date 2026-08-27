@@ -21,6 +21,7 @@ interface Instr {
   rOpen: string; rHigh: string; rLow: string; rSettle: string; rVah: string; rVal: string; rPoc: string
   oHigh: string; oLow: string; oClose: string
   ovnPoc: string; ovnVah: string; ovnVal: string
+  ovnSd1h: string; ovnSd1l: string; ovnSd2h: string; ovnSd2l: string
   ibHigh: string; ibLow: string; ibClose: string; ibOrdre: string; ibClass: string
   orbHigh: string; orbLow: string; orbClose: string
   vwap18h: string; atr: string
@@ -66,6 +67,7 @@ const mkI = (): Instr => ({
   lastPx:'', rOpen:'', rHigh:'', rLow:'', rSettle:'', rVah:'', rVal:'', rPoc:'',
   oHigh:'', oLow:'', oClose:'',
   ovnPoc:'', ovnVah:'', ovnVal:'',
+  ovnSd1h:'', ovnSd1l:'', ovnSd2h:'', ovnSd2l:'',
   ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'', ibClass:'',
   orbHigh:'', orbLow:'', orbClose:'',
   vwap18h:'', atr:'',
@@ -579,6 +581,11 @@ export default function Calculateur() {
                 if (d.ovn_poc)   sv('ovnPoc',  String(d.ovn_poc),   isNewDay)
                 if (d.ovn_vah)   sv('ovnVah',  String(d.ovn_vah),   isNewDay)
                 if (d.ovn_val)   sv('ovnVal',  String(d.ovn_val),   isNewDay)
+                // OVN SD bands (Sierra Chart col 15-18)
+                if (d.ovn_sd1h)  sv('ovnSd1h', String(d.ovn_sd1h),  true)
+                if (d.ovn_sd1l)  sv('ovnSd1l', String(d.ovn_sd1l),  true)
+                if (d.ovn_sd2h)  sv('ovnSd2h', String(d.ovn_sd2h),  true)
+                if (d.ovn_sd2l)  sv('ovnSd2l', String(d.ovn_sd2l),  true)
 
                 if (Object.keys(u).length) { next[t] = { ...cur, ...u }; changed = true }
               }
@@ -1671,6 +1678,32 @@ export default function Calculateur() {
                   {ovnBias ? <Pill label={ovnBias} col={ovnBias==='HAUSSIER'?C.up:ovnBias==='BAISSIER'?C.down:C.muted} />
                            : <span style={jb(8,400,{color:'rgba(136,153,187,0.35)'})}>—</span>}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* VWAP 18h + SD bands */}
+          <div style={{ border:`1px solid rgba(201,168,76,0.18)`, borderRadius:3, overflow:'hidden' }}>
+            {subHdr('VWAP 18H · BANDES SD', C.gold)}
+            <div style={{ padding:'8px 10px', background:C.sur }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:4 }}>
+                {[
+                  { l:'VWAP 18H', k:'vwap18h', c:C.gold },
+                  { l:'SD +1',    k:'ovnSd1h', c:C.up },
+                  { l:'SD −1',    k:'ovnSd1l', c:C.down },
+                  { l:'SD +2',    k:'ovnSd2h', c:'#00cc66' },
+                  { l:'SD −2',    k:'ovnSd2l', c:'#ff6666' },
+                ].map(({l,k,c})=>(
+                  <div key={k} style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center', padding:'6px 4px', background:'rgba(10,14,24,0.6)', borderRadius:3, border:`1px solid ${c}22` }}>
+                    <span style={jb(7,400,{color:C.muted,letterSpacing:'0.08em'})}>{l}</span>
+                    <input
+                      value={(inst as unknown as Record<string,string>)[k]||''}
+                      onChange={e=>upI(t2,k as keyof Instr,e.target.value)}
+                      style={{ width:'100%', background:'transparent', border:'none', outline:'none', textAlign:'center', fontFamily:'"JetBrains Mono",monospace', fontSize:10, fontWeight:600, color:c, padding:0 }}
+                      placeholder="—"
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           </div>

@@ -423,9 +423,13 @@ def build_payload(instr: str, all_rows: list) -> dict:
                 pass
         return ''
 
-    ovn_poc = _last_nonempty(all_ovn, 'tpo_poc')
-    ovn_vah = _last_nonempty(all_ovn, 'tpo_vah')
-    ovn_val = _last_nonempty(all_ovn, 'tpo_val')
+    ovn_poc  = _last_nonempty(all_ovn, 'tpo_poc')
+    ovn_vah  = _last_nonempty(all_ovn, 'tpo_vah')
+    ovn_val  = _last_nonempty(all_ovn, 'tpo_val')
+    ovn_sd1h = _last_nonempty(all_ovn, 'sd1h')
+    ovn_sd1l = _last_nonempty(all_ovn, 'sd1l')
+    ovn_sd2h = _last_nonempty(all_ovn, 'sd2h')
+    ovn_sd2l = _last_nonempty(all_ovn, 'sd2l')
 
     return {
         'last':       last_val,
@@ -453,6 +457,10 @@ def build_payload(instr: str, all_rows: list) -> dict:
         'ovn_poc':    ovn_poc,
         'ovn_vah':    ovn_vah,
         'ovn_val':    ovn_val,
+        'ovn_sd1h':   ovn_sd1h,
+        'ovn_sd1l':   ovn_sd1l,
+        'ovn_sd2h':   ovn_sd2h,
+        'ovn_sd2l':   ovn_sd2l,
         # Barres détaillées
         'bars_today':  [bar_dict(r) for r in sorted(today_rows, key=lambda r: t2m(r['time']))],
         'bars_j1':     [bar_dict(r) for r in sorted(j1_rows,    key=lambda r: t2m(r['time']))],
