@@ -1,0 +1,43 @@
+{
+  "date": "2026-08-27",
+  "NQ": {
+    "asiaHigh":  "29654.75",
+    "asiaLow":   "29401.75",
+    "asiaClose": "29450.75",
+    "londonHigh":  "29549.75",
+    "londonLow":   "29401.75",
+    "londonClose": "29517.25",
+    "oHigh":  "29654.75",
+    "oLow":   "29401.75",
+    "oClose": "29517.25",
+    "ovnPoc": "29525",
+    "ovnVah": "29581",
+    "ovnVal": "29412",
+    "vwap18h":  "29228",
+    "ovnSd1h":  "29539",
+    "ovnSd1l":  "29228",
+    "ovnSd2h":  "29850",
+    "ovnSd2l":  "28606"
+  },
+  "ES": {
+    "asiaHigh":  "7741.25",
+    "asiaLow":   "7707.00",
+    "asiaClose": "7712.75",
+    "londonHigh":  "7722.00",
+    "londonLow":   "7707.00",
+    "londonClose": "7717.00",
+    "oHigh":  "7741.25",
+    "oLow":   "7707.00",
+    "oClose": "7717.00",
+    "ovnPoc": "7717",
+    "ovnVah": "7731",
+    "ovnVal": "7710",
+    "vwap18h":  "7717",
+    "ovnSd1h":  "7724",
+    "ovnSd1l":  "7710",
+    "ovnSd2h":  "7731",
+    "ovnSd2l":  "7703"
+  },
+  "GC": {},
+  "CL": {}
+}

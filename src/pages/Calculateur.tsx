@@ -438,6 +438,34 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
+  // Chargement automatique des données OVN/session du jour depuis /session-data.json
+  useEffect(() => {
+    fetch('/session-data.json')
+      .then(r => r.json())
+      .then((sd: { date: string } & Partial<Record<Tab, Partial<Record<keyof Instr, string>>>>) => {
+        const today = new Date().toISOString().slice(0, 10)
+        if (sd.date !== today) return
+        setII(prev => {
+          const next = { ...prev }
+          let changed = false
+          for (const t of ['NQ','ES','GC','CL'] as Tab[]) {
+            const patch = sd[t]
+            if (!patch) continue
+            const cur = next[t]
+            const u: Partial<Record<keyof Instr, string>> = {}
+            for (const [k, v] of Object.entries(patch)) {
+              const key = k as keyof Instr
+              if (!cur[key]) (u as Record<string,string>)[k] = v
+            }
+            if (Object.keys(u).length) { next[t] = { ...cur, ...(u as Partial<Instr>) }; changed = true }
+          }
+          return changed ? next : prev
+        })
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // SC Bridge — WebSocket vers serveur Python local ws://localhost:8765
   useEffect(() => {
     const connect = () => {
