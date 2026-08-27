@@ -479,12 +479,16 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // SC Bridge — WebSocket vers serveur Python local ws://localhost:8765
+  // SC Bridge — WebSocket : localhost en dev, VPS en prod
   useEffect(() => {
     const connect = () => {
       clearTimeout(wsReconnectTimer.current)
       try {
-        const ws = new WebSocket('ws://localhost:8765')
+        const h = window.location.hostname
+        const wsUrl = (h === 'localhost' || h === '127.0.0.1')
+          ? 'ws://localhost:8765'
+          : `ws://${h}:8765`
+        const ws = new WebSocket(wsUrl)
         wsRef.current = ws
         ws.onopen = () => setWsSc('live')
         ws.onmessage = (event) => {
