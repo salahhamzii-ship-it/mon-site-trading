@@ -942,19 +942,39 @@ export default function Calculateur() {
   }, [I.oClose, I.ovnPoc])
 
   // ── Détection setups OVN en temps réel ──────────────────────────────────────
-  type OvnAlert = { type: string; dir: 'LONG'|'SHORT'; entry: string; stop: string; c1: string; c2: string; desc: string; col: string }
+  type OvnAlert = {
+    type: string; dir: 'LONG'|'SHORT'
+    entry: string; stop: string; c1: string; c2: string
+    desc: string; col: string; sdConfirm: boolean; confirmLabels: string[]
+  }
   const ovnAlerts = useMemo((): OvnAlert[] => {
-    const px   = pf(I.lastPx)
-    const oL   = pf(I.oLow),    oH   = pf(I.oHigh)
-    const vval = pf(I.ovnVal),  vvah = pf(I.ovnVah), vpoc = pf(I.ovnPoc)
-    const atr  = pf(I.atr)
+    const px    = pf(I.lastPx)
+    const oL    = pf(I.oLow),       oH    = pf(I.oHigh),   oC = pf(I.oClose)
+    const aL    = pf(I.asiaLow),    aH    = pf(I.asiaHigh)
+    const lonL  = pf(I.londonLow),  lonC  = pf(I.londonClose)
+    const vval  = pf(I.ovnVal),     vvah  = pf(I.ovnVah),  vpoc = pf(I.ovnPoc)
+    const atr   = pf(I.atr)
+    const vw = pf(I.vwap18h), at = pf(I.atr)
+    const sd1l  = pf(I.ovnSd1l) || (vw>0&&at>0 ? vw-at   : 0)
+    const sd2l  = pf(I.ovnSd2l) || (vw>0&&at>0 ? vw-2*at : 0)
+    const sd1h  = pf(I.ovnSd1h) || (vw>0&&at>0 ? vw+at   : 0)
+    const sd2h  = pf(I.ovnSd2h) || (vw>0&&at>0 ? vw+2*at : 0)
     if (!px || !oL || !oH || !vpoc) return []
     const thr = atr > 0 ? atr * 0.15 : (tab==='NQ'?20 : tab==='ES'?3 : tab==='GC'?8 : 2)
     const alerts: OvnAlert[] = []
 
-    // 1. OVN Low bounce / VAL retest → LONG
-    const valRef = vval > 0 ? vval : oL
-    if (px <= valRef + thr && px >= oL - thr * 2) {
+    // ── 1. OVN LOW BOUNCE / VAL RETEST ───────────────────────────────────────
+    // Conditions : London Low ≈ Asia Low (±15 pts) + faux break sous VAL + Close > VAL
+    const valRef  = vval > 0 ? vval : oL
+    const londonRejectsAsiaLow = aL > 0 && lonL > 0 && Math.abs(lonL - aL) <= 15
+    const fauxBreakLow = oL > 0 && vval > 0 && oL < vval          // OVN Low < VAL = faux break
+    const closeAboveVal = (lonC > 0 ? lonC : oC) > valRef         // Close revenu > VAL
+    // Confirmation SD : OVN Low dans zone SD-1 ou SD-2
+    const sdLowConfirm: string[] = []
+    if (sd1l > 0 && oL >= sd1l - thr && oL <= sd1l + thr) sdLowConfirm.push('SD −1')
+    if (sd2l > 0 && oL >= sd2l - thr && oL <= sd2l + thr) sdLowConfirm.push('SD −2')
+    const pxNearLow = px <= valRef + thr * 3 && px >= oL - thr * 2
+    if (pxNearLow && (londonRejectsAsiaLow || fauxBreakLow || closeAboveVal)) {
       alerts.push({
         type:'OVN LOW BOUNCE',
         dir:'LONG',
@@ -962,14 +982,26 @@ export default function Calculateur() {
         stop:  fmt2(oL - thr * 2),
         c1:    vpoc > 0 ? fmt2(vpoc) : '',
         c2:    vvah > 0 ? fmt2(vvah) : '',
-        desc:  'Prix sur VAL OVN / bas session — faux break possible',
+        desc:  londonRejectsAsiaLow
+          ? 'London Low = Asia Low — faux break VAL + rebond'
+          : fauxBreakLow && closeAboveVal
+            ? 'Cassure sous VAL OVN absorbée — retour structure'
+            : 'Prix sur VAL OVN / bas session OVN',
         col:   C.up,
+        sdConfirm: sdLowConfirm.length > 0,
+        confirmLabels: sdLowConfirm,
       })
     }
 
-    // 2. OVN High fade / VAH retest → SHORT
+    // ── 2. OVN HIGH FADE / VAH RETEST ────────────────────────────────────────
     const vahRef = vvah > 0 ? vvah : oH
-    if (px >= vahRef - thr && px <= oH + thr * 2) {
+    const londonRejectsAsiaHigh = aH > 0 && pf(I.londonHigh) > 0 && Math.abs(pf(I.londonHigh) - aH) <= 15
+    const fauxBreakHigh = oH > 0 && vvah > 0 && oH > vvah
+    const sdHighConfirm: string[] = []
+    if (sd1h > 0 && oH >= sd1h - thr && oH <= sd1h + thr) sdHighConfirm.push('SD +1')
+    if (sd2h > 0 && oH >= sd2h - thr && oH <= sd2h + thr) sdHighConfirm.push('SD +2')
+    const pxNearHigh = px >= vahRef - thr * 3 && px <= oH + thr * 2
+    if (pxNearHigh && (londonRejectsAsiaHigh || fauxBreakHigh)) {
       alerts.push({
         type:'OVN HIGH FADE',
         dir:'SHORT',
@@ -977,43 +1009,47 @@ export default function Calculateur() {
         stop:  fmt2(oH + thr * 2),
         c1:    vpoc > 0 ? fmt2(vpoc) : '',
         c2:    vval > 0 ? fmt2(vval) : '',
-        desc:  'Prix sur VAH OVN / haut session — rejet possible',
+        desc:  londonRejectsAsiaHigh ? 'London High = Asia High — rejet VAH OVN' : 'Faux break VAH OVN — retour structure',
         col:   C.down,
+        sdConfirm: sdHighConfirm.length > 0,
+        confirmLabels: sdHighConfirm,
       })
     }
 
-    // 3. POC retest depuis le bas → LONG
-    if (px > valRef + thr && px >= vpoc - thr && px <= vpoc + thr && oL > 0) {
-      const biasOk = pf(I.oClose) >= vpoc
-      if (biasOk) alerts.push({
+    // ── 3. POC RETEST BULL ────────────────────────────────────────────────────
+    if (px >= vpoc - thr && px <= vpoc + thr && oC >= vpoc) {
+      alerts.push({
         type:'POC RETEST BULL',
         dir:'LONG',
         entry: fmt2(vpoc),
         stop:  fmt2(vpoc - thr * 2),
-        c1:    vvah > 0 ? fmt2(vvah) : '',
+        c1:    vvah > 0 ? fmt2(vvah) : fmt2(oH),
         c2:    fmt2(oH),
-        desc:  'Retour sur POC OVN avec biais haussier',
+        desc:  'Retour sur POC OVN — biais haussier confirmé',
         col:   C.up,
+        sdConfirm: false,
+        confirmLabels: [],
       })
     }
 
-    // 4. POC retest depuis le haut → SHORT
-    if (px < vahRef - thr && px >= vpoc - thr && px <= vpoc + thr && oH > 0) {
-      const biasOk = pf(I.oClose) <= vpoc
-      if (biasOk) alerts.push({
+    // ── 4. POC RETEST BEAR ────────────────────────────────────────────────────
+    if (px >= vpoc - thr && px <= vpoc + thr && oC <= vpoc) {
+      alerts.push({
         type:'POC RETEST BEAR',
         dir:'SHORT',
         entry: fmt2(vpoc),
         stop:  fmt2(vpoc + thr * 2),
-        c1:    vval > 0 ? fmt2(vval) : '',
+        c1:    vval > 0 ? fmt2(vval) : fmt2(oL),
         c2:    fmt2(oL),
-        desc:  'Retour sur POC OVN avec biais baissier',
+        desc:  'Retour sur POC OVN — biais baissier confirmé',
         col:   C.down,
+        sdConfirm: false,
+        confirmLabels: [],
       })
     }
 
     return alerts
-  }, [I.lastPx, I.oLow, I.oHigh, I.ovnVal, I.ovnVah, I.ovnPoc, I.oClose, I.atr, tab])
+  }, [I.lastPx, I.oLow, I.oHigh, I.oClose, I.asiaLow, I.asiaHigh, I.londonLow, I.londonHigh, I.londonClose, I.ovnVal, I.ovnVah, I.ovnPoc, I.ovnSd1l, I.ovnSd2l, I.ovnSd1h, I.ovnSd2h, I.atr, I.vwap18h, tab])
   // ─────────────────────────────────────────────────────────────────────────────
 
   const orbPos = useMemo(() => {
@@ -2072,6 +2108,34 @@ export default function Calculateur() {
             </div>
           ))}
         </div>
+
+        {/* ── Alertes OVN dans Live Tracker ── */}
+        {ovnAlerts.length > 0 && ovnAlerts.map((a, i) => (
+          <div key={i} style={{ border:`2px solid ${a.col}`, borderRadius:4, overflow:'hidden', animation:'pulseBorder 1.4s infinite' }}>
+            {/* Header alerte */}
+            <div style={{ padding:'6px 12px', background:`${a.col}18`, borderBottom:`1px solid ${a.col}30`, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+              <span style={{ width:9, height:9, borderRadius:'50%', background:a.col, flexShrink:0, boxShadow:`0 0 8px ${a.col}`, animation:'pulseDot 1s infinite' }}/>
+              <span style={orb(10,900,{color:a.col,letterSpacing:'0.20em'})}>⚡ {a.type}</span>
+              <Pill label={a.dir} col={a.col} />
+              {a.sdConfirm && a.confirmLabels.map(l=>(
+                <span key={l} style={{ padding:'1px 6px', borderRadius:2, background:'rgba(201,168,76,0.18)', border:'1px solid rgba(201,168,76,0.50)', fontFamily:'Orbitron,monospace', fontSize:7, fontWeight:700, color:C.gold, letterSpacing:'0.14em' }}>
+                  ✓ {l} CONFIRMÉ
+                </span>
+              ))}
+              <span style={{ flex:1 }}/>
+              <span style={jb(8,400,{color:'rgba(136,153,187,0.85)',fontStyle:'italic'})}>{a.desc}</span>
+            </div>
+            {/* Niveaux */}
+            <div style={{ padding:'10px 12px', background:C.sur, display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+              {([['ENTRÉE', a.entry, a.col],['STOP', a.stop, C.down],['C1', a.c1, C.up],['C2', a.c2, '#00cc66']] as [string,string,string][]).map(([l,v,c])=>(
+                <div key={l} style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center', padding:'7px 4px', background:'rgba(10,14,24,0.75)', borderRadius:3, border:`1px solid ${c}28` }}>
+                  <span style={jb(7,400,{color:C.muted,letterSpacing:'0.08em'})}>{l}</span>
+                  <span style={orb(12,900,{color:c})}>{v||'—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
 
         {/* BOX RTH block */}
         {(pf(I.boxHigh)>0||pf(I.boxLow)>0) && (() => {
