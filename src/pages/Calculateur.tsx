@@ -86,13 +86,23 @@ const RTH_TIMES: Record<Tab, string[]> = {
 const mkRthRowsForTab = (t:Tab): RthRow[] => RTH_TIMES[t].map(h=>({ id:h, heure:h, open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' }))
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:mkRthRowsForTab('ES'), GC:mkRthRowsForTab('GC'), CL:mkRthRowsForTab('CL') })
 
-// Clear IB/ORB fields if values are in wrong price scale (stale cross-instrument data)
+// Clear session-specific fields on new day or cross-instrument scale mismatch
 function sanitizeInstr(instr: Instr): Instr {
+  const todayISO = new Date().toISOString().slice(0, 10)
+  const isNewDay = !instr._liveDay || instr._liveDay !== todayISO
   const lp = pf(instr.lastPx)
-  if (!lp) return instr
-  const bad = (v: string) => { const n = pf(v); return n > 0 && (n < lp * 0.5 || n > lp * 2) }
-  if (bad(instr.ibHigh) || bad(instr.ibLow) || bad(instr.orbHigh) || bad(instr.orbLow)) {
-    return { ...instr, ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'' as never, ibClass:'', orbHigh:'', orbLow:'', orbClose:'' }
+  const badScale = lp > 0 && (
+    (pf(instr.ibHigh) > 0 && (pf(instr.ibHigh) < lp * 0.5 || pf(instr.ibHigh) > lp * 2)) ||
+    (pf(instr.ibLow)  > 0 && (pf(instr.ibLow)  < lp * 0.5 || pf(instr.ibLow)  > lp * 2)) ||
+    (pf(instr.orbHigh)> 0 && (pf(instr.orbHigh)< lp * 0.5 || pf(instr.orbHigh)> lp * 2)) ||
+    (pf(instr.orbLow) > 0 && (pf(instr.orbLow) < lp * 0.5 || pf(instr.orbLow) > lp * 2))
+  )
+  if (isNewDay || badScale) {
+    return { ...instr,
+      ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'' as never, ibClass:'',
+      orbHigh:'', orbLow:'', orbClose:'',
+      rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'',
+    }
   }
   return instr
 }
