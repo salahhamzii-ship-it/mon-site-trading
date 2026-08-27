@@ -14,11 +14,11 @@ echo "════════════════════════�
 # Paquets
 echo "[1/4] Paquets..."
 apt-get update -qq
-apt-get install -y -qq git python3 python3-pip curl
+apt-get install -y -qq git python3 python3-websockets curl
 
 # Dépendances Python
 echo "[2/4] websockets..."
-pip3 install -q websockets
+echo "       → python3-websockets via apt"
 
 # Repo
 echo "[3/4] Dépôt..."
