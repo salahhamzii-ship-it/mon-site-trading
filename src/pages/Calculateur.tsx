@@ -86,10 +86,24 @@ const RTH_TIMES: Record<Tab, string[]> = {
 const mkRthRowsForTab = (t:Tab): RthRow[] => RTH_TIMES[t].map(h=>({ id:h, heure:h, open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' }))
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:mkRthRowsForTab('ES'), GC:mkRthRowsForTab('GC'), CL:mkRthRowsForTab('CL') })
 
-// Clear session-specific fields on new day or cross-instrument scale mismatch
+// Clear IB/ORB/signal only when a NEW RTH session starts (09:30 ET).
+// During OVN phases (Asie 18h-02h, Londres 02h-08h, pré-RTH 08h-09h30) the
+// previous session's levels stay visible as reference.
 function sanitizeInstr(instr: Instr): Instr {
-  const todayISO = new Date().toISOString().slice(0, 10)
-  const isNewDay = !instr._liveDay || instr._liveDay !== todayISO
+  // Current time in ET
+  const etParts = new Intl.DateTimeFormat('en-US', {
+    timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hour12:false
+  }).formatToParts(new Date())
+  const gp = (t:string) => Number(etParts.find(p=>p.type===t)?.value??'0')
+  const etMins   = gp('hour') * 60 + gp('minute')
+  const rthStarted = etMins >= 9 * 60 + 30  // 09:30 ET = début RTH
+  const etToday  = `${gp('year')}-${String(gp('month')).padStart(2,'0')}-${String(gp('day')).padStart(2,'0')}`
+
+  // Only clear if RTH has started AND stored _liveDay is from a different trading date
+  const isNewRTHDay = rthStarted && !!instr._liveDay && instr._liveDay !== etToday
+
+  // Also clear on cross-instrument scale mismatch (ES prices in NQ state, etc.)
   const lp = pf(instr.lastPx)
   const badScale = lp > 0 && (
     (pf(instr.ibHigh) > 0 && (pf(instr.ibHigh) < lp * 0.5 || pf(instr.ibHigh) > lp * 2)) ||
@@ -97,7 +111,8 @@ function sanitizeInstr(instr: Instr): Instr {
     (pf(instr.orbHigh)> 0 && (pf(instr.orbHigh)< lp * 0.5 || pf(instr.orbHigh)> lp * 2)) ||
     (pf(instr.orbLow) > 0 && (pf(instr.orbLow) < lp * 0.5 || pf(instr.orbLow) > lp * 2))
   )
-  if (isNewDay || badScale) {
+
+  if (isNewRTHDay || badScale) {
     return { ...instr,
       ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'' as never, ibClass:'',
       orbHigh:'', orbLow:'', orbClose:'',
