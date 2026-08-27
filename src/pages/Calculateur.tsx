@@ -574,6 +574,23 @@ export default function Calculateur() {
     return () => clearInterval(id)
   }, [])
 
+  // Auto-reload silencieux quand une nouvelle version est déployée
+  useEffect(() => {
+    let currentV = ''
+    const check = async () => {
+      try {
+        const r = await fetch(`/version.json?_=${Date.now()}`)
+        if (!r.ok) return
+        const { v } = await r.json() as { v: string }
+        if (!currentV) { currentV = v; return }
+        if (v !== currentV) window.location.reload()
+      } catch { /* offline ou dev */ }
+    }
+    check()
+    const id = setInterval(check, 5 * 60 * 1000) // toutes les 5 min
+    return () => clearInterval(id)
+  }, [])
+
   // ALN auto-computation NQ — après 08h00 ET uniquement
   useEffect(() => {
     const nq  = II['NQ']
