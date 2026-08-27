@@ -410,6 +410,9 @@ export default function Calculateur() {
   const [tpoLettersJ1,setTpoLettersJ1]= useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLettersJ1??mkTpoLetters() })
   const [showSaved,   setShowSaved]   = useState(false)
   const [csvMsg,      setCsvMsg]      = useState<{text:string;ok:boolean}|null>(null)
+  const [jsonModal,   setJsonModal]   = useState(false)
+  const [jsonText,    setJsonText]    = useState('')
+  const [jsonAnalyse, setJsonAnalyse] = useState<{direction:string;setup:string;alertes:string[]}|null>(null)
   const [wsSc,        setWsSc]        = useState<'live'|'off'>('off')
   const [nyTime,      setNyTime]      = useState('')
   const [btOpen,   setBtOpen]   = useState(false)
@@ -770,6 +773,33 @@ export default function Calculateur() {
   const upTD = <K extends keyof TD>(k:K, v:TD[K]) => setTd(p=>({...p,[k]:v}))
   const upI  = (t:Tab, k:keyof Instr, v:string)   => setII(p=>({...p,[t]:{...p[t],[k]:v}}))
   const upC  = <K extends keyof Cfg>(k:K, v:Cfg[K]) => setCfg(p=>({...p,[k]:v}))
+
+  const loadJsonClaude = () => {
+    try {
+      const data = JSON.parse(jsonText)
+      const t: Tab = (['NQ','ES','GC','CL'].includes(data.tab) ? data.tab : tab) as Tab
+      const fields: (keyof Instr)[] = ['lastPx','rOpen','rHigh','rLow','rSettle','rVah','rVal','rPoc',
+        'ovnSd1h','ovnSd1l','ovnSd2h','ovnSd2l','vwap18h','atr',
+        'ibHigh','ibLow','orbHigh','orbLow','gapHigh','gapLow',
+        'ibrExt1H','ibrExt1L','box3','box4','box5','box6',
+        'oHigh','oLow','asiaHigh','asiaLow','londonHigh','londonLow',
+        'ovnVah','ovnVal','ovnPoc']
+      setII(prev => {
+        const updated = { ...prev[t] }
+        fields.forEach(f => { if (data[f] !== undefined) (updated as Record<string,string>)[f] = String(data[f]) })
+        return { ...prev, [t]: updated }
+      })
+      if (t !== tab) setTab(t)
+      if (data._analyse) setJsonAnalyse(data._analyse)
+      setJsonModal(false)
+      setJsonText('')
+      setCsvMsg({ text: `✓ JSON Claude chargé sur ${t} — ${data._analyse?.direction||''}`, ok: true })
+      setTimeout(() => setCsvMsg(null), 4000)
+    } catch {
+      setCsvMsg({ text: 'JSON invalide — vérifie le format', ok: false })
+      setTimeout(() => setCsvMsg(null), 3000)
+    }
+  }
 
   const upRthRow  = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRows(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
   const upRthRowJ1= (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRowsJ1(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
@@ -2919,6 +2949,11 @@ export default function Calculateur() {
           title="Charger les données J-1 + OVN + VWAP/SD du jour"
           style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.50)', color:'#c9a84c', transition:'all 0.14s' }}
         >⬇ CHARGER SESSION</button>}
+        <button
+          onClick={()=>setJsonModal(true)}
+          title="Coller le JSON généré par Claude"
+          style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(0,212,255,0.12)', outline:'1px solid rgba(0,212,255,0.50)', color:'#00d4ff', transition:'all 0.14s' }}
+        >📋 JSON CLAUDE</button>
         {!isSimple && <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />}
         {!isSimple && <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />}
         {!isSimple && <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />}
@@ -3046,6 +3081,44 @@ export default function Calculateur() {
       {csvMsg && (
         <div style={{ position:'fixed', bottom:16, right:16, zIndex:9999, maxWidth:380, padding:'8px 14px', borderRadius:4, background: csvMsg.ok ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,68,0.12)', border:`1px solid ${csvMsg.ok ? 'rgba(0,255,136,0.4)' : 'rgba(255,68,68,0.4)'}`, backdropFilter:'blur(4px)' }}>
           <span style={jb(11.5, 600, { color: csvMsg.ok ? C.up : C.down, whiteSpace:'pre-wrap' })}>{csvMsg.text}</span>
+        </div>
+      )}
+
+      {/* Analyse Claude banner */}
+      {jsonAnalyse && (
+        <div style={{ position:'fixed', bottom: csvMsg ? 70 : 16, left:16, zIndex:9998, maxWidth:420, padding:'10px 14px', borderRadius:4, background:'rgba(0,10,30,0.95)', border:'1px solid rgba(0,212,255,0.40)', backdropFilter:'blur(6px)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+            <span style={orb(8, 900, { color:'#00d4ff', letterSpacing:'0.16em' })}>📋 ANALYSE CLAUDE</span>
+            <span style={{ padding:'1px 7px', borderRadius:2, background: jsonAnalyse.direction==='LONG'?'rgba(0,255,136,0.18)':jsonAnalyse.direction==='SHORT'?'rgba(255,68,68,0.18)':'rgba(201,168,76,0.18)', border:`1px solid ${jsonAnalyse.direction==='LONG'?C.up:jsonAnalyse.direction==='SHORT'?C.down:C.amber}`, fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:900, color: jsonAnalyse.direction==='LONG'?C.up:jsonAnalyse.direction==='SHORT'?C.down:C.amber }}>{jsonAnalyse.direction}</span>
+            <button onClick={()=>setJsonAnalyse(null)} style={{ marginLeft:'auto', background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:14, lineHeight:1 }}>×</button>
+          </div>
+          <div style={jb(11, 500, { color:'#cdd6f4', marginBottom:6, lineHeight:1.4 })}>{jsonAnalyse.setup}</div>
+          {jsonAnalyse.alertes?.map((a,i)=>(
+            <div key={i} style={jb(10, 400, { color:C.amber, marginTop:2 })}>⚠ {a}</div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal JSON Claude */}
+      {jsonModal && (
+        <div style={{ position:'fixed', inset:0, zIndex:10000, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={e=>{ if(e.target===e.currentTarget) setJsonModal(false) }}>
+          <div style={{ background:'#0d1526', border:'1px solid rgba(0,212,255,0.40)', borderRadius:6, padding:20, width:'100%', maxWidth:560 }}>
+            <div style={{ display:'flex', alignItems:'center', marginBottom:12 }}>
+              <span style={orb(10, 900, { color:'#00d4ff', letterSpacing:'0.18em', flex:1 })}>📋 CHARGER JSON CLAUDE</span>
+              <button onClick={()=>setJsonModal(false)} style={{ background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:18, lineHeight:1 }}>×</button>
+            </div>
+            <textarea
+              value={jsonText}
+              onChange={e=>setJsonText(e.target.value)}
+              placeholder='Colle ici le JSON généré par Claude...'
+              rows={12}
+              style={{ width:'100%', background:'#111827', border:'1px solid rgba(0,212,255,0.25)', borderRadius:3, padding:'8px 10px', fontSize:11, color:'#cdd6f4', fontFamily:'"JetBrains Mono",monospace', outline:'none', resize:'vertical', boxSizing:'border-box' }}
+            />
+            <div style={{ display:'flex', gap:8, marginTop:10, justifyContent:'flex-end' }}>
+              <button onClick={()=>setJsonModal(false)} style={{ padding:'6px 16px', background:'transparent', border:'1px solid rgba(136,153,187,0.30)', borderRadius:3, color:C.muted, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700 }}>ANNULER</button>
+              <button onClick={loadJsonClaude} style={{ padding:'6px 20px', background:'rgba(0,212,255,0.15)', border:'1px solid rgba(0,212,255,0.60)', borderRadius:3, color:'#00d4ff', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:900, letterSpacing:'0.14em' }}>⚡ CHARGER</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
