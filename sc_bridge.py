@@ -162,10 +162,27 @@ def parse_csv(filepath: str, diag: bool = False) -> list:
                and len(hdrs) >= 6)
     if _sc_std:
         idx_open = 2; idx_high = 3; idx_low = 4; idx_last = 5
-        if idx_vol < 0 and len(hdrs) >= 7:
-            idx_vol = 6   # Sierra Chart standard: col 6 = Volume
         if diag:
             print("  [DIAG] OHLC non trouvés par nom → fallback positionnel SC (col 2-5)")
+
+    # Volume : fallback positionnel même quand OHLC trouvé par nom (col 6 = Volume en SC standard)
+    if idx_vol < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 7:
+        idx_vol = 6
+
+    # VWAP/SD positional fallback pour exports Sierra Chart multi-études (40+ colonnes)
+    # Sierra Chart : col 14 = VWAP session cumulatif 18h, cols 15-18 = SD ±1/±2
+    if idx_vwap < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 15:
+        idx_vwap = 14
+        if diag:
+            print("  [DIAG] VWAP non trouvé par nom → fallback positionnel col 14")
+    if idx_sp1 < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 16:
+        idx_sp1 = 15
+    if idx_sm1 < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 17:
+        idx_sm1 = 16
+    if idx_sp2 < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 18:
+        idx_sp2 = 17
+    if idx_sm2 < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 19:
+        idx_sm2 = 18
 
     if diag:
         print(f"  [DIAG] idx_date={idx_date}  idx_time={idx_time}  "
@@ -389,6 +406,27 @@ def build_payload(instr: str, all_rows: list) -> dict:
     lon_low   = f"{min(lon_ls):.2f}" if lon_ls else ''
     lon_close = bars_london[-1]['close'] if bars_london else ''
 
+    # OVN agrégat (Asia + London + Pré-RTH)
+    ovn_hs  = [float(r['high']) for r in all_ovn if r.get('high')]
+    ovn_ls  = [float(r['low'])  for r in all_ovn if r.get('low') and float(r['low']) > 0]
+    ovn_high  = f"{max(ovn_hs):.2f}"  if ovn_hs  else ''
+    ovn_low   = f"{min(ovn_ls):.2f}"  if ovn_ls  else ''
+    ovn_close = all_ovn[-1]['close']   if all_ovn else ''
+
+    # OVN POC/VAH/VAL : dernière barre OVN avec valeur non nulle
+    def _last_nonempty(bars, key):
+        for r in reversed(bars):
+            v = (r.get(key) or '').strip()
+            try:
+                if v and float(v) > 0: return f"{float(v):.2f}"
+            except (ValueError, TypeError):
+                pass
+        return ''
+
+    ovn_poc = _last_nonempty(all_ovn, 'tpo_poc')
+    ovn_vah = _last_nonempty(all_ovn, 'tpo_vah')
+    ovn_val = _last_nonempty(all_ovn, 'tpo_val')
+
     return {
         'last':       last_val,
         # J-1 aggregates
@@ -408,6 +446,13 @@ def build_payload(instr: str, all_rows: list) -> dict:
         'lon_high':   lon_high,
         'lon_low':    lon_low,
         'lon_close':  lon_close,
+        # OVN agrégat
+        'ovn_high':   ovn_high,
+        'ovn_low':    ovn_low,
+        'ovn_close':  ovn_close,
+        'ovn_poc':    ovn_poc,
+        'ovn_vah':    ovn_vah,
+        'ovn_val':    ovn_val,
         # Barres détaillées
         'bars_today':  [bar_dict(r) for r in sorted(today_rows, key=lambda r: t2m(r['time']))],
         'bars_j1':     [bar_dict(r) for r in sorted(j1_rows,    key=lambda r: t2m(r['time']))],

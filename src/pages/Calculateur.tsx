@@ -20,6 +20,7 @@ interface Instr {
   lastPx: string
   rOpen: string; rHigh: string; rLow: string; rSettle: string; rVah: string; rVal: string; rPoc: string
   oHigh: string; oLow: string; oClose: string
+  ovnPoc: string; ovnVah: string; ovnVal: string
   ibHigh: string; ibLow: string; ibClose: string; ibOrdre: string; ibClass: string
   orbHigh: string; orbLow: string; orbClose: string
   vwap18h: string; atr: string
@@ -64,6 +65,7 @@ interface ScBar { time:string; open:string; high:string; low:string; close:strin
 const mkI = (): Instr => ({
   lastPx:'', rOpen:'', rHigh:'', rLow:'', rSettle:'', rVah:'', rVal:'', rPoc:'',
   oHigh:'', oLow:'', oClose:'',
+  ovnPoc:'', ovnVah:'', ovnVal:'',
   ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'', ibClass:'',
   orbHigh:'', orbLow:'', orbClose:'',
   vwap18h:'', atr:'',
@@ -569,6 +571,15 @@ export default function Calculateur() {
                   if (last?.close) sv('londonClose', last.close, isNewDay)
                 }
 
+                // OVN agrégat (Asia + London + Pré-RTH) depuis le bridge
+                if (d.ovn_high)  sv('oHigh',   String(d.ovn_high),  isNewDay)
+                if (d.ovn_low)   sv('oLow',    String(d.ovn_low),   isNewDay)
+                if (d.ovn_close) sv('oClose',  String(d.ovn_close), isNewDay)
+                // OVN POC/VAH/VAL (Profile de volume OVN)
+                if (d.ovn_poc)   sv('ovnPoc',  String(d.ovn_poc),   isNewDay)
+                if (d.ovn_vah)   sv('ovnVah',  String(d.ovn_vah),   isNewDay)
+                if (d.ovn_val)   sv('ovnVal',  String(d.ovn_val),   isNewDay)
+
                 if (Object.keys(u).length) { next[t] = { ...cur, ...u }; changed = true }
               }
               return changed ? next : prev
@@ -873,6 +884,14 @@ export default function Calculateur() {
     const d=oc-se; if (Math.abs(d)<1) return 'BALANCE'
     return d>0 ? 'LONG' : 'SHORT'
   }, [I.oClose, I.rSettle])
+
+  const ovnBias = useMemo(() => {
+    const oc=pf(I.oClose), poc=pf(I.ovnPoc)
+    if (!oc||!poc) return ''
+    const diff = oc - poc
+    if (Math.abs(diff) < 2) return 'NEUTRE'
+    return diff > 0 ? 'HAUSSIER' : 'BAISSIER'
+  }, [I.oClose, I.ovnPoc])
 
   const orbPos = useMemo(() => {
     const px=pf(I.lastPx), oh=pf(I.orbHigh), ol=pf(I.orbLow)
@@ -1631,16 +1650,25 @@ export default function Calculateur() {
 
             {/* OVN aggregate */}
             <div style={{ border:`1px solid ${ovnCol}22`, borderRadius:3, overflow:'hidden' }}>
-              {subHdr('OVN 18H–08H', ovnCol)}
+              {subHdr('OVN 18H–09H30', ovnCol)}
               <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:6, background:C.sur }}>
                 <G3 ch={<>
                   <F l="High"  v={inst.oHigh}  s={v=>upI(t2,'oHigh',v)} />
                   <F l="Low"   v={inst.oLow}   s={v=>upI(t2,'oLow',v)} />
                   <F l="Close" v={inst.oClose} s={v=>upI(t2,'oClose',v)} />
                 </>}/>
-                <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                <G3 ch={<>
+                  <F l="POC OVN" v={inst.ovnPoc} s={v=>upI(t2,'ovnPoc',v)} />
+                  <F l="VAH OVN" v={inst.ovnVah} s={v=>upI(t2,'ovnVah',v)} />
+                  <F l="VAL OVN" v={inst.ovnVal} s={v=>upI(t2,'ovnVal',v)} />
+                </>}/>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:2 }}>
                   <span style={jb(8,400,{color:C.muted})}>vs Settle :</span>
                   {ovnVsS ? <Pill label={ovnVsS} col={ovnVsS==='LONG'?C.up:ovnVsS==='SHORT'?C.down:C.muted} />
+                           : <span style={jb(8,400,{color:'rgba(136,153,187,0.35)'})}>—</span>}
+                  <span style={{ flex:1 }}/>
+                  <span style={jb(8,400,{color:C.muted})}>Biais OVN :</span>
+                  {ovnBias ? <Pill label={ovnBias} col={ovnBias==='HAUSSIER'?C.up:ovnBias==='BAISSIER'?C.down:C.muted} />
                            : <span style={jb(8,400,{color:'rgba(136,153,187,0.35)'})}>—</span>}
                 </div>
               </div>
