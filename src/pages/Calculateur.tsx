@@ -941,6 +941,81 @@ export default function Calculateur() {
     return diff > 0 ? 'HAUSSIER' : 'BAISSIER'
   }, [I.oClose, I.ovnPoc])
 
+  // ── Détection setups OVN en temps réel ──────────────────────────────────────
+  type OvnAlert = { type: string; dir: 'LONG'|'SHORT'; entry: string; stop: string; c1: string; c2: string; desc: string; col: string }
+  const ovnAlerts = useMemo((): OvnAlert[] => {
+    const px   = pf(I.lastPx)
+    const oL   = pf(I.oLow),    oH   = pf(I.oHigh)
+    const vval = pf(I.ovnVal),  vvah = pf(I.ovnVah), vpoc = pf(I.ovnPoc)
+    const atr  = pf(I.atr)
+    if (!px || !oL || !oH || !vpoc) return []
+    const thr = atr > 0 ? atr * 0.15 : (tab==='NQ'?20 : tab==='ES'?3 : tab==='GC'?8 : 2)
+    const alerts: OvnAlert[] = []
+
+    // 1. OVN Low bounce / VAL retest → LONG
+    const valRef = vval > 0 ? vval : oL
+    if (px <= valRef + thr && px >= oL - thr * 2) {
+      alerts.push({
+        type:'OVN LOW BOUNCE',
+        dir:'LONG',
+        entry: fmt2(valRef),
+        stop:  fmt2(oL - thr * 2),
+        c1:    vpoc > 0 ? fmt2(vpoc) : '',
+        c2:    vvah > 0 ? fmt2(vvah) : '',
+        desc:  'Prix sur VAL OVN / bas session — faux break possible',
+        col:   C.up,
+      })
+    }
+
+    // 2. OVN High fade / VAH retest → SHORT
+    const vahRef = vvah > 0 ? vvah : oH
+    if (px >= vahRef - thr && px <= oH + thr * 2) {
+      alerts.push({
+        type:'OVN HIGH FADE',
+        dir:'SHORT',
+        entry: fmt2(vahRef),
+        stop:  fmt2(oH + thr * 2),
+        c1:    vpoc > 0 ? fmt2(vpoc) : '',
+        c2:    vval > 0 ? fmt2(vval) : '',
+        desc:  'Prix sur VAH OVN / haut session — rejet possible',
+        col:   C.down,
+      })
+    }
+
+    // 3. POC retest depuis le bas → LONG
+    if (px > valRef + thr && px >= vpoc - thr && px <= vpoc + thr && oL > 0) {
+      const biasOk = pf(I.oClose) >= vpoc
+      if (biasOk) alerts.push({
+        type:'POC RETEST BULL',
+        dir:'LONG',
+        entry: fmt2(vpoc),
+        stop:  fmt2(vpoc - thr * 2),
+        c1:    vvah > 0 ? fmt2(vvah) : '',
+        c2:    fmt2(oH),
+        desc:  'Retour sur POC OVN avec biais haussier',
+        col:   C.up,
+      })
+    }
+
+    // 4. POC retest depuis le haut → SHORT
+    if (px < vahRef - thr && px >= vpoc - thr && px <= vpoc + thr && oH > 0) {
+      const biasOk = pf(I.oClose) <= vpoc
+      if (biasOk) alerts.push({
+        type:'POC RETEST BEAR',
+        dir:'SHORT',
+        entry: fmt2(vpoc),
+        stop:  fmt2(vpoc + thr * 2),
+        c1:    vval > 0 ? fmt2(vval) : '',
+        c2:    fmt2(oL),
+        desc:  'Retour sur POC OVN avec biais baissier',
+        col:   C.down,
+      })
+    }
+
+    return alerts
+  }, [I.lastPx, I.oLow, I.oHigh, I.ovnVal, I.ovnVah, I.ovnPoc, I.oClose, I.atr, tab])
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const orbPos = useMemo(() => {
     const px=pf(I.lastPx), oh=pf(I.orbHigh), ol=pf(I.orbLow)
     if (!px||!oh||!ol) return ''
@@ -1722,6 +1797,32 @@ export default function Calculateur() {
               </div>
             </div>
           </div>
+
+          {/* ── Alertes setups OVN ─────────────────────────────────── */}
+          {ovnAlerts.map((a, i) => (
+            <div key={i} style={{ border:`2px solid ${a.col}`, borderRadius:3, overflow:'hidden', animation:'pulseBorder 1.4s infinite' }}>
+              <div style={{ padding:'6px 12px', background:`${a.col}14`, borderBottom:`1px solid ${a.col}30`, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ width:8, height:8, borderRadius:'50%', background:a.col, flexShrink:0, animation:'pulseDot 1.2s infinite' }}/>
+                <span style={orb(9,900,{color:a.col,letterSpacing:'0.20em'})}>{a.type}</span>
+                <Pill label={a.dir} col={a.col} />
+                <span style={{ flex:1 }}/>
+                <span style={jb(8,400,{color:'rgba(136,153,187,0.80)',fontStyle:'italic'})}>{a.desc}</span>
+              </div>
+              <div style={{ padding:'8px 12px', background:C.sur, display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
+                {[
+                  { l:'ENTRÉE', v:a.entry, c:a.col },
+                  { l:'STOP',   v:a.stop,  c:C.down },
+                  { l:'C1',     v:a.c1,    c:C.up },
+                  { l:'C2',     v:a.c2,    c:'#00cc66' },
+                ].map(({l,v,c})=>(
+                  <div key={l} style={{ display:'flex', flexDirection:'column', gap:2, alignItems:'center', padding:'5px 4px', background:'rgba(10,14,24,0.7)', borderRadius:3, border:`1px solid ${c}25` }}>
+                    <span style={jb(7,400,{color:C.muted,letterSpacing:'0.08em'})}>{l}</span>
+                    <span style={orb(10,900,{color:c})}>{v||'—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
 
           {/* VWAP 18h + SD bands */}
           <div style={{ border:`1px solid rgba(201,168,76,0.18)`, borderRadius:3, overflow:'hidden' }}>
