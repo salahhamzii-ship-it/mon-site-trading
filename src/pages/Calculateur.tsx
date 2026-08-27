@@ -798,9 +798,13 @@ export default function Calculateur() {
   const upI  = (t:Tab, k:keyof Instr, v:string)   => setII(p=>({...p,[t]:{...p[t],[k]:v}}))
   const upC  = <K extends keyof Cfg>(k:K, v:Cfg[K]) => setCfg(p=>({...p,[k]:v}))
 
+  const [jsonError, setJsonError] = useState('')
   const loadJsonClaude = () => {
+    setJsonError('')
     try {
-      const data = JSON.parse(jsonText)
+      const trimmed = jsonText.trim()
+      if (!trimmed) { setJsonError('Colle le JSON avant de charger'); return }
+      const data = JSON.parse(trimmed)
       const t: Tab = (['NQ','ES','GC','CL'].includes(data.tab) ? data.tab : tab) as Tab
       const fields: (keyof Instr)[] = ['lastPx','rOpen','rHigh','rLow','rSettle','rVah','rVal','rPoc',
         'ovnSd1h','ovnSd1l','ovnSd2h','ovnSd2l','vwap18h','atr',
@@ -819,10 +823,10 @@ export default function Calculateur() {
       setJsonModal(false)
       setJsonText('')
       setCsvMsg({ text: `✓ JSON Claude chargé sur ${t} — ${data._analyse?.direction||''}`, ok: true })
-      setTimeout(() => setCsvMsg(null), 4000)
-    } catch {
-      setCsvMsg({ text: 'JSON invalide — vérifie le format', ok: false })
-      setTimeout(() => setCsvMsg(null), 3000)
+      setTimeout(() => setCsvMsg(null), 8000)
+    } catch(e) {
+      const msg = e instanceof SyntaxError ? `JSON invalide : ${e.message}` : String(e)
+      setJsonError(msg)
     }
   }
 
@@ -3147,8 +3151,13 @@ export default function Calculateur() {
               rows={12}
               style={{ width:'100%', background:'#111827', border:'1px solid rgba(0,212,255,0.25)', borderRadius:3, padding:'8px 10px', fontSize:11, color:'#cdd6f4', fontFamily:'"JetBrains Mono",monospace', outline:'none', resize:'vertical', boxSizing:'border-box' }}
             />
+            {jsonError && (
+              <div style={{ marginTop:8, padding:'6px 10px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.50)', borderRadius:3, color:'#f87171', fontSize:11, fontFamily:'"JetBrains Mono",monospace', whiteSpace:'pre-wrap', wordBreak:'break-all' }}>
+                ⚠ {jsonError}
+              </div>
+            )}
             <div style={{ display:'flex', gap:8, marginTop:10, justifyContent:'flex-end' }}>
-              <button onClick={()=>setJsonModal(false)} style={{ padding:'6px 16px', background:'transparent', border:'1px solid rgba(136,153,187,0.30)', borderRadius:3, color:C.muted, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700 }}>ANNULER</button>
+              <button onClick={()=>{ setJsonModal(false); setJsonError('') }} style={{ padding:'6px 16px', background:'transparent', border:'1px solid rgba(136,153,187,0.30)', borderRadius:3, color:C.muted, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700 }}>ANNULER</button>
               <button onClick={loadJsonClaude} style={{ padding:'6px 20px', background:'rgba(0,212,255,0.15)', border:'1px solid rgba(0,212,255,0.60)', borderRadius:3, color:'#00d4ff', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:900, letterSpacing:'0.14em' }}>⚡ CHARGER</button>
             </div>
           </div>
