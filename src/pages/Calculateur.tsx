@@ -198,8 +198,10 @@ function runBacktest(bars: BtBar[]): BtTrade[] {
   for (let i = 0; i < sorted.length - 1; i++) {
     if (usedAsRej.has(i)) continue
     const bar = sorted[i]
-    // OVN window 18:00-22:00
-    if (bar.time < '18:00' || bar.time > '22:00') continue
+    // OVN window complète 18:00→09:30 (Globex open → RTH open)
+    // Timings typiques : 2-3h post-Globex, 05:30-07:00 London, post-10:30 IB extension
+    const isOVN = bar.time >= '18:00' || bar.time < '09:30'
+    if (!isOVN) continue
     // Condition 1 — touche ou passe sous SD-2
     if (bar.sm2 <= 0 || bar.low > bar.sm2) continue
     // Condition 2 — bougie suivante ferme au-dessus du low excess
