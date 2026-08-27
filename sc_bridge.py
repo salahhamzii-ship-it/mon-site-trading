@@ -51,10 +51,11 @@ FILES = {
 RTH_START = {'NQ': '09:30', 'ES': '09:30', 'GC': '08:20', 'CL': '09:00'}
 RTH_END   = {'NQ': '16:00', 'ES': '16:00', 'GC': '13:30', 'CL': '14:30'}
 
-WS_HOST   = '0.0.0.0'
-WS_PORT   = 8765
-HTTP_PORT = 8766        # HTTP REST endpoint pour proxy Vercel
-REFRESH_S = 10          # rafraîchissement CSV (secondes)
+WS_HOST      = '0.0.0.0'
+WS_PORT      = 8765
+HTTP_PORT    = 8766        # HTTP REST endpoint local
+REFRESH_S    = 10          # rafraîchissement CSV (secondes)
+VPS_PUSH_URL = 'http://2.29.3.199:8767/update'  # '' pour désactiver
 
 CLIENTS: set = set()
 LAST_MSG: str = '{}'    # dernier payload JSON (partagé WS + HTTP)
@@ -548,6 +549,28 @@ async def handler(ws: WebSocketServerProtocol) -> None:
         CLIENTS.discard(ws)
         print(f"[-] Client déconnecté ({len(CLIENTS)} actif(s))")
 
+async def push_to_vps(msg: str) -> None:
+    """Pousse les données vers bridge_receiver.py sur VPS via HTTP POST."""
+    if not VPS_PUSH_URL:
+        return
+    import urllib.request
+    loop = asyncio.get_event_loop()
+    def _push():
+        try:
+            req = urllib.request.Request(
+                VPS_PUSH_URL,
+                data=msg.encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=5):
+                pass
+            print(f"  [VPS] Push OK")
+        except Exception as e:
+            print(f"  [VPS] Push failed: {e}")
+    await loop.run_in_executor(None, _push)
+
+
 async def broadcast_loop() -> None:
     global LAST_MSG
     while True:
@@ -556,6 +579,7 @@ async def broadcast_loop() -> None:
         try:
             msg = build_message()
             LAST_MSG = msg
+            await push_to_vps(msg)
             if not CLIENTS:
                 continue
             results = await asyncio.gather(
