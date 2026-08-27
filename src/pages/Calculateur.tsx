@@ -484,7 +484,7 @@ export default function Calculateur() {
     const connect = () => {
       clearTimeout(wsReconnectTimer.current)
       try {
-        const ws = new WebSocket('wss://2-29-3-199.nip.io/ws')
+        const ws = new WebSocket('ws://2.29.3.199:8765')
         wsRef.current = ws
         ws.onopen = () => setWsSc('live')
         ws.onmessage = (event) => {
