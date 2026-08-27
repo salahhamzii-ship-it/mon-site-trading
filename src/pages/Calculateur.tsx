@@ -484,11 +484,7 @@ export default function Calculateur() {
     const connect = () => {
       clearTimeout(wsReconnectTimer.current)
       try {
-        const h = window.location.hostname
-        const wsUrl = (h === 'localhost' || h === '127.0.0.1')
-          ? 'ws://localhost:8765'
-          : `ws://${h}:8765`
-        const ws = new WebSocket(wsUrl)
+        const ws = new WebSocket('ws://2.29.3.199:8765')
         wsRef.current = ws
         ws.onopen = () => setWsSc('live')
         ws.onmessage = (event) => {
