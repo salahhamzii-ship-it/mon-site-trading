@@ -418,7 +418,7 @@ export default function Calculateur() {
   const [posSize,  setPosSize]  = useState('1')
   const [posDir,   setPosDir]   = useState<'LONG'|'SHORT'>('LONG')
 
-  const [sdReject, setSdReject] = useState<{sp2:boolean;sm2:boolean}>({sp2:false,sm2:false})
+  const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
   const sdTouchRef = useRef<Record<Tab,{sp2:boolean;sm2:boolean}>>({NQ:{sp2:false,sm2:false},ES:{sp2:false,sm2:false},GC:{sp2:false,sm2:false},CL:{sp2:false,sm2:false}})
 
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -697,7 +697,7 @@ export default function Calculateur() {
     return () => clearInterval(id)
   }, [])
 
-  // SD+2 / SD-2 touch → reject detection
+  // SD+2 / SD-2 touch → reject detection (alerte persistante 3 min)
   useEffect(() => {
     const lp = pf(II[tab].lastPx)
     if (!lp) return
@@ -705,16 +705,15 @@ export default function Calculateur() {
     const sp2n = pf(II[tab].ovnSd2h) || (vw>0&&at>0 ? vw+2*at : 0)
     const sm2n = pf(II[tab].ovnSd2l) || (vw>0&&at>0 ? vw-2*at : 0)
     if (!sp2n && !sm2n) return
-    const tch = tab==='NQ' ? 5 : tab==='ES' ? 2 : tab==='GC' ? 3 : 1.5
-    const rej = tch * 2.5
+    const tch = tab==='NQ' ? 6 : tab==='ES' ? 2.5 : tab==='GC' ? 4 : 2
+    const rej = tch * 2
     const cur = sdTouchRef.current[tab]
-    if (sp2n > 0 && Math.abs(lp - sp2n) <= tch) { cur.sp2 = true; cur.sm2 = false }
-    if (sm2n > 0 && Math.abs(lp - sm2n) <= tch) { cur.sm2 = true; cur.sp2 = false }
+    if (sp2n > 0 && Math.abs(lp - sp2n) <= tch) { cur.sp2 = true }
+    if (sm2n > 0 && Math.abs(lp - sm2n) <= tch) { cur.sm2 = true }
     const sp2Rej = cur.sp2 && sp2n > 0 && (sp2n - lp) >= rej
     const sm2Rej = cur.sm2 && sm2n > 0 && (lp - sm2n) >= rej
-    if (sp2Rej) cur.sp2 = false
-    if (sm2Rej) cur.sm2 = false
-    setSdReject({ sp2: sp2Rej, sm2: sm2Rej })
+    if (sp2Rej) { cur.sp2 = false; setSdReject(p => ({ ...p, sp2: Date.now() })) }
+    if (sm2Rej) { cur.sm2 = false; setSdReject(p => ({ ...p, sm2: Date.now() })) }
   }, [II[tab].lastPx, II[tab].vwap18h, II[tab].atr, II[tab].ovnSd2h, II[tab].ovnSd2l, tab])
 
   // Auto-reload silencieux quand une nouvelle version est déployée
@@ -2112,9 +2111,13 @@ export default function Calculateur() {
   )}
 
   const renderTracker = () => {
+    const sdThr = tab==='NQ' ? 6 : tab==='ES' ? 2.5 : tab==='GC' ? 4 : 2
     const sdHit = (level:string) => {
-      const lv = pf(level); return lp>0 && lv>0 && Math.abs(lp-lv)<0.5
+      const lv = pf(level); return lp>0 && lv>0 && Math.abs(lp-lv)<=sdThr
     }
+    const ALERT_TTL = 3 * 60 * 1000
+    const sp2Alert = sdReject.sp2 > 0 && (Date.now() - sdReject.sp2) < ALERT_TTL
+    const sm2Alert = sdReject.sm2 > 0 && (Date.now() - sdReject.sm2) < ALERT_TTL
     const items: [string,string,string,number][] = [
       ['LAST',    I.lastPx||'—',   C.gold,  20],
       ['HIGH J-1',I.rHigh||'—',   C.up,    14],
@@ -2218,9 +2221,9 @@ export default function Calculateur() {
           {sdVals.sp1&&sdHit(sdVals.sp1)               && <Alert msg={`⚡ SD +1 touché (${sdVals.sp1})`}              col={C.amber} />}
           {sdVals.sm1&&sdHit(sdVals.sm1)               && <Alert msg={`⚡ SD -1 touché (${sdVals.sm1})`}              col={C.amber} />}
           {sdVals.sp2&&sdHit(sdVals.sp2)               && <Alert msg={`⚡ SD +2 touché (${sdVals.sp2})`}              col={C.down} />}
-          {sdVals.sm2&&sdHit(sdVals.sm2)               && <Alert msg={`⚡ SD -2 touché (${sdVals.sm2})`}              col={C.down} />}
-          {sdReject.sp2 && <Alert msg={`🔴 ALERTE VENTE — SD +2 rejeté (${sdVals.sp2})`} col={C.down} />}
-          {sdReject.sm2 && <Alert msg={`🟢 ALERTE ACHAT — SD -2 rejeté (${sdVals.sm2})`} col={C.up} />}
+          {sdVals.sm2&&sdHit(sdVals.sm2)               && <Alert msg={`⚡ SD -2 touché (${sdVals.sm2})`}              col={C.up} />}
+          {sp2Alert && <Alert msg={`🔴 ALERTE VENTE — SD +2 rejeté (${sdVals.sp2})`} col={C.down} />}
+          {sm2Alert && <Alert msg={`🟢 ALERTE ACHAT — SD -2 rejeté (${sdVals.sm2})`} col={C.up} />}
           {(!lp || (!pf(I.ibHigh)&&!pf(I.ibLow)&&!vw18)) && (
             <span style={jb(8, 400, { color:'rgba(136,153,187,0.4)' })}>Saisir un dernier prix + IB / VWAP pour activer les alertes.</span>
           )}
