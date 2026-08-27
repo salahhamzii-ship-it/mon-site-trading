@@ -86,6 +86,17 @@ const RTH_TIMES: Record<Tab, string[]> = {
 const mkRthRowsForTab = (t:Tab): RthRow[] => RTH_TIMES[t].map(h=>({ id:h, heure:h, open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' }))
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:mkRthRowsForTab('ES'), GC:mkRthRowsForTab('GC'), CL:mkRthRowsForTab('CL') })
 
+// Clear IB/ORB fields if values are in wrong price scale (stale cross-instrument data)
+function sanitizeInstr(instr: Instr): Instr {
+  const lp = pf(instr.lastPx)
+  if (!lp) return instr
+  const bad = (v: string) => { const n = pf(v); return n > 0 && (n < lp * 0.5 || n > lp * 2) }
+  if (bad(instr.ibHigh) || bad(instr.ibLow) || bad(instr.orbHigh) || bad(instr.orbLow)) {
+    return { ...instr, ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'' as never, ibClass:'', orbHigh:'', orbLow:'', orbClose:'' }
+  }
+  return instr
+}
+
 const TICK_SZ: Record<Tab, number> = { NQ:0.25, ES:0.25, GC:0.10, CL:0.01 }
 interface TpoLetter { id:string; letter:string; high:string; low:string; poc:string; vah:string; val:string }
 const mkTpoLetters = (): Record<Tab, TpoLetter[]> => ({ NQ:[], ES:[], GC:[], CL:[] })
@@ -356,7 +367,7 @@ export default function Calculateur() {
   const [trOpen,   setTrOpen]    = useState<boolean>(()=>{ const s=loadLS(); return s?.trOpen??false })
   const [stOpen,   setStOpen]    = useState<boolean>(()=>{ const s=loadLS(); return s?.stOpen??false })
   const [td,       setTd]        = useState<TD>(()=>{ const s=loadLS(); return s?.td?{...mkTD(),...s.td}:mkTD() })
-  const [II,       setII]        = useState<Record<Tab,Instr>>(()=>{ const s=loadLS(); if(!s?.II) return {NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}; return {NQ:{...mkI(),...s.II.NQ},ES:{...mkI(),...s.II.ES},GC:{...mkI(),...s.II.GC},CL:{...mkI(),...s.II.CL}} })
+  const [II,       setII]        = useState<Record<Tab,Instr>>(()=>{ const s=loadLS(); if(!s?.II) return {NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}; return {NQ:sanitizeInstr({...mkI(),...s.II.NQ}),ES:sanitizeInstr({...mkI(),...s.II.ES}),GC:sanitizeInstr({...mkI(),...s.II.GC}),CL:sanitizeInstr({...mkI(),...s.II.CL})} })
   const [cfg,      setCfg]       = useState<Cfg>(()=>{ const s=loadLS(); return s?.cfg?{...mkC(),...s.cfg}:mkC() })
   const [rthRows,      setRthRows]      = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRows??mkRthRows() })
   const [rthRowsJ1,   setRthRowsJ1]   = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRowsJ1??mkRthRows() })
