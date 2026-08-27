@@ -1426,7 +1426,8 @@ export default function Calculateur() {
   const vw18  = pf(I.vwap18h)
   const oMid  = td.tpoOvnH&&td.tpoOvnL ? fmt2((pf(td.tpoOvnH)+pf(td.tpoOvnL))/2) : '—'
 
-  const hasP9  = tab === 'NQ' || tab === 'ES'
+  const hasP9    = tab === 'NQ' || tab === 'ES'
+  const isSimple = tab === 'GC' || tab === 'CL'
 
   const renderTD = () => (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -1922,7 +1923,25 @@ export default function Calculateur() {
     )
   }
 
-  const renderInstr = () => (
+  const renderSimpleInstr = () => (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      <Sec title={`DAILY OHLC · ${tab}`} col={col}>
+        <G4 ch={<>
+          <F l="Open"  v={I.rOpen}   s={v=>upI(tab,'rOpen',v)}   />
+          <F l="High"  v={I.rHigh}   s={v=>upI(tab,'rHigh',v)}   />
+          <F l="Low"   v={I.rLow}    s={v=>upI(tab,'rLow',v)}    />
+          <F l="Close" v={I.rSettle} s={v=>upI(tab,'rSettle',v)} />
+        </>}/>
+        <div style={{ marginTop:4 }}>
+          <F l="Dernier prix" v={I.lastPx} s={v=>upI(tab,'lastPx',v)} />
+        </div>
+      </Sec>
+    </div>
+  )
+
+  const renderInstr = () => {
+    if (isSimple) return renderSimpleInstr()
+    return (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title="RTH J-1" col={col}>
@@ -2066,7 +2085,7 @@ export default function Calculateur() {
       {renderRth()}
       {renderTPO()}
     </div>
-  )
+  )}
 
   const renderTracker = () => {
     const sdHit = (level:string) => {
@@ -2802,24 +2821,24 @@ export default function Calculateur() {
             {wsSc==='live' ? 'SC LIVE' : '⚡ LANCER BRIDGE'}
           </span>
         </button>
-        <button
+        {!isSimple && <button
           onClick={applySessionData}
           title="Charger les données J-1 + OVN + VWAP/SD du jour"
           style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.50)', color:'#c9a84c', transition:'all 0.14s' }}
-        >⬇ CHARGER SESSION</button>
-        <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />
-        <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
-        <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
-        <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
-        <Btn label="◈ BACKTEST SD-2"    active={btOpen} col={C.teal}  onClick={()=>setBtOpen(o=>!o)} />
-        <Btn label="⬡ POSITION ACTIVE"  active={posOpen} col='#c77dff' onClick={()=>setPosOpen(o=>!o)} />
+        >⬇ CHARGER SESSION</button>}
+        {!isSimple && <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />}
+        {!isSimple && <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />}
+        {!isSimple && <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />}
+        {!isSimple && <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />}
+        {!isSimple && <Btn label="◈ BACKTEST SD-2"    active={btOpen} col={C.teal}  onClick={()=>setBtOpen(o=>!o)} />}
+        {!isSimple && <Btn label="⬡ POSITION ACTIVE"  active={posOpen} col='#c77dff' onClick={()=>setPosOpen(o=>!o)} />}
         <button onClick={handleReset} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(255,68,68,0.08)', outline:'1px solid rgba(255,68,68,0.25)', color:'rgba(255,100,100,0.75)', transition:'all 0.14s' }}>
           ↺ RESET
         </button>
       </div>
 
-      {/* Score bar */}
-      <div style={{ padding:'8px 14px', border:`1px solid ${C.brd}`, borderRadius:3, background:C.sur, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+      {/* Score bar — NQ/ES only */}
+      {!isSimple && <div style={{ padding:'8px 14px', border:`1px solid ${C.brd}`, borderRadius:3, background:C.sur, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
         <span style={orb(8, 700, { color:C.muted, letterSpacing:'0.16em' })}>SCORE TOP-DOWN</span>
         <span style={orb(24, 900, { color:scCol, lineHeight:1, textShadow:`0 0 12px ${scCol}` })}>{sc>0?'+':''}{sc}<span style={orb(9, 700, { color:`${scCol}80` })}>/9</span></span>
         <div style={{ flex:1, minWidth:80, height:5, background:'rgba(255,255,255,0.06)', borderRadius:3, overflow:'hidden', position:'relative' }}>
@@ -2833,10 +2852,10 @@ export default function Calculateur() {
           {td.pocMig && <Pill label={`POC: ${td.pocMig}`}       col={td.pocMig==='Ascendant'?C.up:td.pocMig==='Descendant'?C.down:C.muted} />}
           {td.mOtf   && <Pill label={`MONTHLY: ${td.mOtf}`}    col={td.mOtf==='Higher'?C.up:td.mOtf==='Lower'?C.down:C.muted} />}
         </div>
-      </div>
+      </div>}
 
       {/* Setup Launcher */}
-      {slOpen && (
+      {!isSimple && slOpen && (
         <div style={{ border:'1px solid rgba(0,212,255,0.22)', borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:'3px solid #00d4ff', background:'rgba(0,212,255,0.04)', borderBottom:'1px solid rgba(0,212,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
             <span style={orb(12, 900, { color:'#00d4ff', letterSpacing:'0.22em' })}>◉ SETUP LAUNCHER · {tab}</span>
@@ -2849,7 +2868,7 @@ export default function Calculateur() {
       )}
 
       {/* Top-Down Dalton */}
-      {tdOpen && (
+      {!isSimple && tdOpen && (
         <div style={{ border:`1px solid ${C.brd}`, borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.gold}`, background:'rgba(201,168,76,0.05)', borderBottom:`1px solid ${C.brd}` }}>
             <span style={orb(8.5, 900, { color:C.gold, letterSpacing:'0.22em' })}>◈ TOP-DOWN DALTON · CONTEXTE MARCHÉ</span>
@@ -2875,7 +2894,7 @@ export default function Calculateur() {
       </div>
 
       {/* Live Tracker */}
-      {trOpen && (
+      {!isSimple && trOpen && (
         <div style={{ border:`1px solid rgba(0,255,136,0.18)`, borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.up}`, background:'rgba(0,255,136,0.04)', borderBottom:'1px solid rgba(0,255,136,0.14)', display:'flex', alignItems:'center', gap:8 }}>
             <span style={orb(8.5, 900, { color:C.up, letterSpacing:'0.22em' })}>⊕ LIVE TRACKER · {tab}</span>
@@ -2888,7 +2907,7 @@ export default function Calculateur() {
       )}
 
       {/* Settings */}
-      {stOpen && (
+      {!isSimple && stOpen && (
         <div style={{ border:'1px solid rgba(136,153,187,0.18)', borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.muted}`, background:'rgba(136,153,187,0.04)', borderBottom:'1px solid rgba(136,153,187,0.14)' }}>
             <span style={orb(8.5, 900, { color:C.muted, letterSpacing:'0.22em' })}>⚙ RÉGLAGES IB / OR / SESSIONS</span>
@@ -2900,7 +2919,7 @@ export default function Calculateur() {
       )}
 
       {/* Backtest SD-2 Bounce OVN */}
-      {btOpen && (
+      {!isSimple && btOpen && (
         <div style={{ border:`1px solid rgba(30,179,188,0.22)`, borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.teal}`, background:'rgba(30,179,188,0.04)', borderBottom:'1px solid rgba(30,179,188,0.14)', display:'flex', alignItems:'center', gap:8 }}>
             <span style={orb(8.5, 900, { color:C.teal, letterSpacing:'0.22em' })}>◈ BACKTEST — SD-2 BOUNCE OVN · NQ</span>
@@ -2912,7 +2931,7 @@ export default function Calculateur() {
       )}
 
       {/* Position Active */}
-      {posOpen && (
+      {!isSimple && posOpen && (
         <div style={{ border:'1px solid rgba(199,125,255,0.22)', borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:'3px solid #c77dff', background:'rgba(199,125,255,0.04)', borderBottom:'1px solid rgba(199,125,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
             <span style={orb(8.5, 900, { color:'#c77dff', letterSpacing:'0.22em' })}>⬡ GESTION POSITION ACTIVE · {tab}</span>
