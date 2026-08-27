@@ -469,13 +469,14 @@ export default function Calculateur() {
                 sv('rVah',    d.vah)
                 sv('rVal',    d.val)
 
+                // Day-reset detection (scoped to whole instrument block)
+                const todayISO = new Date().toISOString().slice(0, 10)
+                const isNewDay = cur._liveDay !== todayISO
+                if (isNewDay) u._liveDay = todayISO
+
                 // IB + ORB from bars_today
                 if (Array.isArray(d.bars_today) && d.bars_today.length) {
                   const bars: ScBar[] = d.bars_today
-                  // Day-reset: if bars are from a new day, force-update all intraday fields
-                  const todayISO = new Date().toISOString().slice(0, 10)
-                  const isNewDay = cur._liveDay !== todayISO
-                  if (isNewDay) u._liveDay = todayISO
                   const [ibTA, ibTB] = IB_BAR_TIMES[t]
                   const barA = bars.find(b=>b.time===ibTA)
                   const barB = bars.find(b=>b.time===ibTB)
@@ -512,10 +513,16 @@ export default function Calculateur() {
                     sv('orbLow',   pf(orbBar.low)>0   ? pf(orbBar.low).toFixed(2) : '', isNewDay)
                     sv('orbClose', pf(orbBar.close)>0 ? pf(orbBar.close).toFixed(2) : '', isNewDay)
                   }
-                  // VWAP session = last bar's vwap
+                  // VWAP session RTH = last bar's vwap (fallback si pas d'OVN vwap)
                   const lastBar = bars[bars.length-1]
-                  if (lastBar?.vwap) sv('vwap18h', lastBar.vwap, isNewDay)
+                  if (lastBar?.vwap && !d.ovn_vwap) sv('vwap18h', lastBar.vwap, isNewDay)
                 }
+
+                // OVN VWAP calculé par le bridge (18h→maintenant)
+                if (d.ovn_vwap) sv('vwap18h', String(d.ovn_vwap), isNewDay)
+
+                // ATR auto calculé par le bridge (moyenne ranges RTH 10 sessions)
+                if (d.atr_auto) sv('atr', String(d.atr_auto), false) // ne pas écraser saisie manuelle
 
                 // J-1 open/high/low/settle from bars_j1
                 if (Array.isArray(d.bars_j1) && d.bars_j1.length) {
@@ -533,24 +540,33 @@ export default function Calculateur() {
                   }
                 }
 
-                // Asia + London OVN bars → ALN fields (all instruments, NQ priority)
-                if (Array.isArray(d.bars_asia) && d.bars_asia.length) {
+                // Asia High/Low/Close directs depuis le bridge (force sur nouveau jour)
+                if (d.asia_high) sv('asiaHigh',  String(d.asia_high),  isNewDay)
+                if (d.asia_low)  sv('asiaLow',   String(d.asia_low),   isNewDay)
+                if (d.asia_close)sv('asiaClose', String(d.asia_close), isNewDay)
+                // Fallback bars_asia si les champs directs ne sont pas dispo
+                if (!d.asia_high && Array.isArray(d.bars_asia) && d.bars_asia.length) {
                   const bars: ScBar[] = d.bars_asia
                   const hs = bars.map(b=>pf(b.high)).filter(v=>v>0)
                   const ls = bars.map(b=>pf(b.low)).filter(v=>v>0)
-                  if (hs.length) sv('asiaHigh',  Math.max(...hs).toFixed(2))
-                  if (ls.length) sv('asiaLow',   Math.min(...ls).toFixed(2))
+                  if (hs.length) sv('asiaHigh',  Math.max(...hs).toFixed(2), isNewDay)
+                  if (ls.length) sv('asiaLow',   Math.min(...ls).toFixed(2), isNewDay)
                   const last = bars[bars.length-1]
-                  if (last?.close) sv('asiaClose', last.close)
+                  if (last?.close) sv('asiaClose', last.close, isNewDay)
                 }
-                if (Array.isArray(d.bars_london) && d.bars_london.length) {
+
+                // London High/Low/Close directs depuis le bridge
+                if (d.lon_high) sv('londonHigh',  String(d.lon_high),  isNewDay)
+                if (d.lon_low)  sv('londonLow',   String(d.lon_low),   isNewDay)
+                if (d.lon_close)sv('londonClose', String(d.lon_close), isNewDay)
+                if (!d.lon_high && Array.isArray(d.bars_london) && d.bars_london.length) {
                   const bars: ScBar[] = d.bars_london
                   const hs = bars.map(b=>pf(b.high)).filter(v=>v>0)
                   const ls = bars.map(b=>pf(b.low)).filter(v=>v>0)
-                  if (hs.length) sv('londonHigh',  Math.max(...hs).toFixed(2))
-                  if (ls.length) sv('londonLow',   Math.min(...ls).toFixed(2))
+                  if (hs.length) sv('londonHigh',  Math.max(...hs).toFixed(2), isNewDay)
+                  if (ls.length) sv('londonLow',   Math.min(...ls).toFixed(2), isNewDay)
                   const last = bars[bars.length-1]
-                  if (last?.close) sv('londonClose', last.close)
+                  if (last?.close) sv('londonClose', last.close, isNewDay)
                 }
 
                 if (Object.keys(u).length) { next[t] = { ...cur, ...u }; changed = true }

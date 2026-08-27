@@ -281,6 +281,25 @@ def session_split(rows: list, instr: str) -> tuple:
     j1    = sessions[-2] if len(sessions) >= 2 else []
     return today, j1
 
+def atr_auto(all_rows: list, instr: str, n: int = 10) -> str:
+    """Moyenne des ranges RTH des n dernières sessions (High - Low)."""
+    dates = sorted({r['date'] for r in all_rows if r['date'] is not None}, reverse=True)
+    ranges = []
+    for d in dates:
+        rth = filter_rth([r for r in all_rows if r['date'] == d], instr)
+        if not rth:
+            continue
+        try:
+            h = max(float(r['high']) for r in rth if r.get('high'))
+            l = min(float(r['low'])  for r in rth if r.get('low') and float(r['low']) > 0)
+            if h > l:
+                ranges.append(h - l)
+        except (ValueError, TypeError):
+            pass
+        if len(ranges) >= n:
+            break
+    return f"{sum(ranges)/len(ranges):.2f}" if ranges else ''
+
 def build_payload(instr: str, all_rows: list) -> dict:
     now    = now_et()
     today  = now.date()
@@ -294,16 +313,19 @@ def build_payload(instr: str, all_rows: list) -> dict:
         today_all  = [r for r in all_rows if r['date'] == today]   # OVN + RTH
         today_rows = filter_rth(today_all, instr)                   # RTH only
         j1_rows    = filter_rth([r for r in all_rows if r['date'] == j1_d], instr)
-        # OVN sessions pour ALN : Asia (J-1 18h → today 02h), London (today 02h-08h)
+        # OVN : Asie (J-1 18h→today 02h) + Londres (today 02h→08h)
         asia_j1     = [r for r in all_rows if r['date'] == j1_d and t2m(r['time']) >= t2m('18:00')]
         asia_today  = [r for r in all_rows if r['date'] == today  and t2m(r['time']) <  t2m('02:00')]
         bars_asia   = asia_j1 + asia_today
         bars_london = [r for r in all_rows if r['date'] == today
                        and t2m('02:00') <= t2m(r['time']) < t2m('08:00')]
+        # Pré-RTH : 08h→09h30 (NQ/ES)
+        bars_pre    = [r for r in all_rows if r['date'] == today
+                       and t2m('08:00') <= t2m(r['time']) < t2m(RTH_START[instr])]
     else:
         today_rows, j1_rows = session_split(all_rows, instr)
         today_all = today_rows
-        bars_asia = bars_london = []
+        bars_asia = bars_london = bars_pre = []
 
     last_j1  = j1_rows[-1]  if j1_rows  else {}
     first_j1 = j1_rows[0]   if j1_rows  else {}
@@ -318,20 +340,52 @@ def build_payload(instr: str, all_rows: list) -> dict:
     else:
         last_val = all_rows[-1]['close'] if all_rows else ''
 
+    # OVN VWAP (18h→maintenant) : VWAP de la dernière barre OVN disponible
+    all_ovn = bars_asia + bars_london + bars_pre
+    ovn_vwap = ''
+    if all_ovn:
+        last_ovn = all_ovn[-1]
+        ovn_vwap = last_ovn.get('vwap', '') or ''
+    # Si pas d'OVN bars, utiliser la dernière barre today disponible
+    if not ovn_vwap and today_all:
+        ovn_vwap = today_all[-1].get('vwap', '') or ''
+
+    # Asia High/Low pour envoi direct
+    asia_hs = [float(r['high']) for r in bars_asia if r.get('high')]
+    asia_ls = [float(r['low'])  for r in bars_asia if r.get('low') and float(r['low'])>0]
+    asia_high  = f"{max(asia_hs):.2f}" if asia_hs else ''
+    asia_low   = f"{min(asia_ls):.2f}" if asia_ls else ''
+    asia_close = bars_asia[-1]['close'] if bars_asia else ''
+
+    # London High/Low
+    lon_hs = [float(r['high']) for r in bars_london if r.get('high')]
+    lon_ls = [float(r['low'])  for r in bars_london if r.get('low') and float(r['low'])>0]
+    lon_high  = f"{max(lon_hs):.2f}" if lon_hs else ''
+    lon_low   = f"{min(lon_ls):.2f}" if lon_ls else ''
+    lon_close = bars_london[-1]['close'] if bars_london else ''
+
     return {
-        'last':      last_val,
+        'last':       last_val,
         # J-1 aggregates
-        'j1_high':   agg_high(j1_rows),
-        'j1_low':    agg_low(j1_rows),
-        'j1_open':   first_j1.get('open', ''),
-        'j1_settle': last_j1.get('close', ''),
-        'poc':       last_j1.get('tpo_poc', ''),
-        'vah':       last_j1.get('tpo_vah', ''),
-        'val':       last_j1.get('tpo_val', ''),
+        'j1_high':    agg_high(j1_rows),
+        'j1_low':     agg_low(j1_rows),
+        'j1_open':    first_j1.get('open', ''),
+        'j1_settle':  last_j1.get('close', ''),
+        'poc':        last_j1.get('tpo_poc', ''),
+        'vah':        last_j1.get('tpo_vah', ''),
+        'val':        last_j1.get('tpo_val', ''),
+        # OVN calculés
+        'ovn_vwap':   ovn_vwap,
+        'atr_auto':   atr_auto(all_rows, instr),
+        'asia_high':  asia_high,
+        'asia_low':   asia_low,
+        'asia_close': asia_close,
+        'lon_high':   lon_high,
+        'lon_low':    lon_low,
+        'lon_close':  lon_close,
         # Barres détaillées
         'bars_today':  [bar_dict(r) for r in sorted(today_rows, key=lambda r: t2m(r['time']))],
         'bars_j1':     [bar_dict(r) for r in sorted(j1_rows,    key=lambda r: t2m(r['time']))],
-        # OVN sessions pour ALN (Asia garde l'ordre chronologique J-1→today)
         'bars_asia':   [bar_dict(r) for r in bars_asia],
         'bars_london': [bar_dict(r) for r in bars_london],
     }
