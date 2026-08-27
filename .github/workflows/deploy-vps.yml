@@ -1,0 +1,27 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy sc_bridge.py on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 2.29.3.199
+          username: root
+          password: ${{ secrets.VPS_SSH_PASS }}
+          timeout: 30s
+          script: |
+            cd /root/mon-site-trading 2>/dev/null || git clone https://github.com/salahhamzii-ship-it/mon-site-trading /root/mon-site-trading
+            git fetch origin main
+            git reset --hard origin/main
+            pkill -f sc_bridge.py 2>/dev/null || true
+            mkdir -p /tmp/sc-bridge
+            nohup python3 sc_bridge.py > /tmp/bridge.log 2>&1 &
+            sleep 2
+            curl -s http://localhost:8766/health && echo " sc_bridge OK"
