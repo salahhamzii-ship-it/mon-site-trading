@@ -429,6 +429,9 @@ export default function Calculateur() {
 
   const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
   const sdTouchRef = useRef<Record<Tab,{sp2:boolean;sm2:boolean}>>({NQ:{sp2:false,sm2:false},ES:{sp2:false,sm2:false},GC:{sp2:false,sm2:false},CL:{sp2:false,sm2:false}})
+  const [wsCustomUrl, setWsCustomUrl] = useState<string>(() => {
+    try { return localStorage.getItem('cmc-ws-url') || '' } catch { return '' }
+  })
 
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -496,7 +499,7 @@ export default function Calculateur() {
     const connect = () => {
       clearTimeout(wsReconnectTimer.current)
       try {
-        const wsUrl = window.location.protocol === 'https:' ? 'wss://2-29-3-199.nip.io/ws' : 'ws://2.29.3.199:8765'
+        const wsUrl = wsCustomUrl.trim() || (window.location.protocol === 'https:' ? 'wss://2-29-3-199.nip.io/ws' : 'ws://2.29.3.199:8765')
         const ws = new WebSocket(wsUrl)
         wsRef.current = ws
         ws.onopen = () => setWsSc('live')
@@ -2368,6 +2371,14 @@ export default function Calculateur() {
         <Ck l="Auto Step By Product" v={cfg.autoStep} s={v=>upC('autoStep',v)} />
         <G2 ch={<><F l="Manual Step (pts)" v={cfg.stepManual} s={v=>upC('stepManual',v)} /><F l="Line Style" v={cfg.lineStyle} s={v=>upC('lineStyle',v)} opts={['Dashed','Solid','Dotted']} /></>}/>
         <G2 ch={<><F l="Rotation Color" v={cfg.rotColor} s={v=>upC('rotColor',v)} t="text" /><Ck l="Show Labels" v={cfg.showORLbl} s={v=>upC('showORLbl',v)} /></>}/>
+      </Sec>
+      <Sec title="BRIDGE · WEBSOCKET" col="#ef4444">
+        <div style={{ fontSize:10, color:'#888', marginBottom:6, lineHeight:1.5 }}>
+          URL WS (vide = auto-detect)<br/>
+          <span style={{ color:'#f87171' }}>HTTPS Vercel → saisir wss://... ou utiliser http:// VPS</span>
+        </div>
+        <F l="WS URL" v={wsCustomUrl} t="text" s={v=>{ setWsCustomUrl(v); try { localStorage.setItem('cmc-ws-url', v) } catch {} }} />
+        <button onClick={()=>{ if(wsRef.current) { wsRef.current.close() } }} style={{ marginTop:6, padding:'4px 12px', background:'rgba(239,68,68,0.15)', border:'1px solid rgba(239,68,68,0.50)', borderRadius:3, color:'#f87171', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:900, letterSpacing:'0.12em', width:'100%' }}>↺ RECONNECTER</button>
       </Sec>
     </div>
   )
