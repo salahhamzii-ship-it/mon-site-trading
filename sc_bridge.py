@@ -52,6 +52,7 @@ RTH_END   = {'NQ': '16:00', 'ES': '16:00', 'GC': '13:30', 'CL': '14:30'}
 WS_HOST   = 'localhost'
 WS_PORT   = 8765
 REFRESH_S = 10          # rafraîchissement CSV (secondes)
+VPS_PUSH_URL = 'http://2.29.3.199:8767/update'  # '' pour désactiver
 
 CLIENTS: set = set()
 
@@ -388,21 +389,45 @@ async def handler(ws: WebSocketServerProtocol) -> None:
         CLIENTS.discard(ws)
         print(f"[-] Client déconnecté ({len(CLIENTS)} actif(s))")
 
+async def push_to_vps(msg: str) -> None:
+    """Pousse les données vers le receiver HTTP sur VPS."""
+    if not VPS_PUSH_URL:
+        return
+    import urllib.request
+    loop = asyncio.get_event_loop()
+    def _push():
+        try:
+            req = urllib.request.Request(
+                VPS_PUSH_URL,
+                data=msg.encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=5):
+                pass
+            print(f"  [VPS] Push OK")
+        except Exception as e:
+            print(f"  [VPS] Push failed: {e}")
+    await loop.run_in_executor(None, _push)
+
+
 async def broadcast_loop() -> None:
     while True:
         await asyncio.sleep(REFRESH_S)
-        if not CLIENTS:
-            continue
-        print(f"\n[{now_et().strftime('%H:%M:%S')}] Rafraîchissement ({len(CLIENTS)} client(s))...")
+        print(f"\n[{now_et().strftime('%H:%M:%S')}] Rafraîchissement...")
         try:
             msg = build_message()
-            results = await asyncio.gather(
-                *[ws.send(msg) for ws in list(CLIENTS)],
-                return_exceptions=True
-            )
-            for r in results:
-                if isinstance(r, Exception):
-                    print(f"  [WARN] Envoi échoué : {r}")
+            # Push vers VPS (pour Vercel proxy)
+            await push_to_vps(msg)
+            # Broadcast aux clients WebSocket locaux
+            if CLIENTS:
+                results = await asyncio.gather(
+                    *[ws.send(msg) for ws in list(CLIENTS)],
+                    return_exceptions=True
+                )
+                for r in results:
+                    if isinstance(r, Exception):
+                        print(f"  [WARN] Envoi WS échoué : {r}")
         except Exception as e:
             print(f"  [ERR] broadcast: {e}")
 

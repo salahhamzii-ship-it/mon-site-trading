@@ -416,8 +416,7 @@ export default function Calculateur() {
 
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const wsRef           = useRef<WebSocket|null>(null)
-  const wsReconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const bridgePollTimer = useRef<ReturnType<typeof setInterval>>(undefined)
   const mounted         = useRef(false)
   const btCsvRef        = useRef<HTMLInputElement|null>(null)
 
@@ -434,17 +433,13 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
-  // SC Bridge — WebSocket vers serveur Python local ws://localhost:8765
+  // SC Bridge — HTTP polling vers Vercel proxy (évite mixed-content ws:// sur HTTPS)
   useEffect(() => {
-    const connect = () => {
-      clearTimeout(wsReconnectTimer.current)
+    const BRIDGE_URL = 'https://salah-tataouine-terminal.vercel.app/api/bridge-data'
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const applyData = (data: Record<string, any>) => {
       try {
-        const ws = new WebSocket('ws://localhost:8765')
-        wsRef.current = ws
-        ws.onopen = () => setWsSc('live')
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data as string)
 
             // --- Instr fields (live prices + IB/ORB + J-1) ---
             setII(prev => {
@@ -590,23 +585,26 @@ export default function Calculateur() {
             fillRth(setRthRows,    'bars_today')
             fillRth(setRthRowsJ1,  'bars_j1')
 
-          } catch(e) { console.warn('SC Bridge:', e) }
-        }
-        ws.onerror = () => setWsSc('off')
-        ws.onclose = () => {
-          setWsSc('off')
-          wsReconnectTimer.current = setTimeout(connect, 3000)
-        }
+      } catch(e) { console.warn('SC Bridge:', e) }
+    }
+
+    const poll = async () => {
+      try {
+        const r = await fetch(BRIDGE_URL, { cache: 'no-store' })
+        if (!r.ok) throw new Error('offline')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await r.json() as Record<string, any>
+        if (data?.error) throw new Error('offline')
+        setWsSc('live')
+        applyData(data)
       } catch {
         setWsSc('off')
-        wsReconnectTimer.current = setTimeout(connect, 3000)
       }
     }
-    connect()
-    return () => {
-      clearTimeout(wsReconnectTimer.current)
-      if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close() }
-    }
+
+    poll()
+    bridgePollTimer.current = setInterval(poll, 10_000)
+    return () => clearInterval(bridgePollTimer.current)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
