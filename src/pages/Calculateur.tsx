@@ -462,6 +462,12 @@ export default function Calculateur() {
                       const atr=pf(cur.atr), rng=ibH-ibL
                       if (atr>0 && rng>0) u.ibClass = rng>2*atr ? 'Wide IB' : rng<0.5*atr ? 'Narrow IB' : 'Normal'
                     }
+                  } else if (isNewDay) {
+                    // Nouveau jour mais barres IB/ORB pas encore disponibles (pré-09h30)
+                    // → vider les valeurs stales d'hier immédiatement
+                    ;(['ibHigh','ibLow','ibClose','ibClass','orbHigh','orbLow','orbClose'] as (keyof Instr)[])
+                      .forEach(f => { (u as Record<string,string>)[f] = '' })
+                    u.ibOrdre = '' as never
                   }
                   // ORB = first RTH bar
                   const orbBar = bars.find(b=>b.time===ORB_BAR_TIME[t])
