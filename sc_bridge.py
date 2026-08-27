@@ -145,6 +145,7 @@ def parse_csv(filepath: str, diag: bool = False) -> list:
     idx_high = find('high', 'haut', 'plus haut')
     idx_low  = find('low', 'bas', 'plus bas')
     idx_last = find('last', 'close', 'clôture', 'cloture', 'dernier', 'cloture')
+    idx_vol  = find('volume', 'vol', 'totalvolume', 'total volume')
     idx_vwap = find('vwap', 'vwap(daily)', 'dailyvwap', 'vwap daily')
     idx_sp1  = find('sd+1', 'sd +1', 'vwap sd+1', '+1sd', 'upper1', 'upper band 1', 'upperband1', 'bande+1', 'bande +1')
     idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd', 'lower1', 'lower band 1', 'lowerband1', 'bande-1', 'bande -1')
@@ -161,6 +162,8 @@ def parse_csv(filepath: str, diag: bool = False) -> list:
                and len(hdrs) >= 6)
     if _sc_std:
         idx_open = 2; idx_high = 3; idx_low = 4; idx_last = 5
+        if idx_vol < 0 and len(hdrs) >= 7:
+            idx_vol = 6   # Sierra Chart standard: col 6 = Volume
         if diag:
             print("  [DIAG] OHLC non trouvés par nom → fallback positionnel SC (col 2-5)")
 
@@ -215,6 +218,7 @@ def parse_csv(filepath: str, diag: bool = False) -> list:
             'high':    get(cols, idx_high),
             'low':     get(cols, idx_low),
             'close':   get(cols, idx_last),
+            'vol':     get(cols, idx_vol),
             'vwap':    get(cols, idx_vwap),
             'sd1h':    get(cols, idx_sp1),
             'sd1l':    get(cols, idx_sm1),
@@ -281,6 +285,33 @@ def session_split(rows: list, instr: str) -> tuple:
     j1    = sessions[-2] if len(sessions) >= 2 else []
     return today, j1
 
+def compute_vwap(bars: list) -> str:
+    """VWAP ancré au début de la liste : Σ(typical_price × volume) / Σ(volume).
+    Si pas de volume, utilise le VWAP Sierra Chart exporté (dernière barre avec valeur non nulle).
+    """
+    cum_pv = 0.0
+    cum_v  = 0.0
+    sc_vwap = ''
+    for r in bars:
+        try:
+            h = float(r['high']); l = float(r['low']); c = float(r['close'])
+            v = float(r.get('vol', '') or 0)
+            tp = (h + l + c) / 3
+            if v > 0:
+                cum_pv += tp * v
+                cum_v  += v
+        except (ValueError, TypeError):
+            pass
+        vv = r.get('vwap', '') or ''
+        try:
+            if vv and float(vv) > 0:
+                sc_vwap = f"{float(vv):.2f}"
+        except (ValueError, TypeError):
+            pass
+    if cum_v > 0:
+        return f"{cum_pv / cum_v:.2f}"
+    return sc_vwap   # fallback : VWAP exporté par Sierra Chart
+
 def atr_auto(all_rows: list, instr: str, n: int = 10) -> str:
     """Moyenne des ranges RTH des n dernières sessions (High - Low)."""
     dates = sorted({r['date'] for r in all_rows if r['date'] is not None}, reverse=True)
@@ -340,30 +371,9 @@ def build_payload(instr: str, all_rows: list) -> dict:
     else:
         last_val = all_rows[-1]['close'] if all_rows else ''
 
-    # OVN VWAP (ancré 18h→maintenant) : VWAP cumulatif de la dernière barre OVN disponible.
-    # Sierra Chart exporte un VWAP cumulatif → la barre la plus récente donne le VWAP de session.
-    # Ordre de priorité : pré-RTH → London → Asia (la plus récente en cours de session)
+    # OVN VWAP ancré à 18h : calculé depuis les barres OVN via OHLCV
     all_ovn = bars_asia + bars_london + bars_pre
-    ovn_vwap = ''
-    # Chercher la barre la plus récente avec un VWAP non nul
-    for r in reversed(all_ovn):
-        v = r.get('vwap', '') or ''
-        try:
-            if v and float(v) > 0:
-                ovn_vwap = f"{float(v):.2f}"
-                break
-        except (ValueError, TypeError):
-            pass
-    # Fallback : dernière barre today_all (inclut toutes les heures)
-    if not ovn_vwap:
-        for r in reversed(today_all):
-            v = r.get('vwap', '') or ''
-            try:
-                if v and float(v) > 0:
-                    ovn_vwap = f"{float(v):.2f}"
-                    break
-            except (ValueError, TypeError):
-                pass
+    ovn_vwap = compute_vwap(all_ovn) if all_ovn else compute_vwap(today_all)
 
     # Asia High/Low pour envoi direct
     asia_hs = [float(r['high']) for r in bars_asia if r.get('high')]

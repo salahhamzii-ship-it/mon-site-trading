@@ -518,8 +518,8 @@ export default function Calculateur() {
                   if (lastBar?.vwap && !d.ovn_vwap) sv('vwap18h', lastBar.vwap, isNewDay)
                 }
 
-                // OVN VWAP calculé par le bridge (18h→maintenant)
-                if (d.ovn_vwap) sv('vwap18h', String(d.ovn_vwap), isNewDay)
+                // OVN VWAP calculé par le bridge (18h→maintenant) — toujours force-update
+                if (d.ovn_vwap) sv('vwap18h', String(d.ovn_vwap), true)
 
                 // ATR auto calculé par le bridge (moyenne ranges RTH 10 sessions)
                 if (d.atr_auto) sv('atr', String(d.atr_auto), false) // ne pas écraser saisie manuelle
