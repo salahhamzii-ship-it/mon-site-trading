@@ -28,6 +28,7 @@ interface Instr {
   alnPattern: Pat; alnFiab: string
   boxHigh: string; boxLow: string
   rSignal: string; rFiab: string; rEntry: string; rStop: string; rC1: string; rC2: string
+  _liveDay: string
 }
 interface Cfg {
   ibOffset: string; showNYIBBg: boolean; ibTextSize: string
@@ -69,7 +70,8 @@ const mkI = (): Instr => ({
   asiaHigh:'', asiaLow:'', asiaClose:'', londonHigh:'', londonLow:'', londonClose:'',
   alnPattern:'', alnFiab:'',
   boxHigh:'', boxLow:'',
-  rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:''
+  rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'',
+  _liveDay: ''
 })
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'02:00', londonMode:'Auto', londonStart:'02:00', londonEnd:'08:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
@@ -432,6 +434,10 @@ export default function Calculateur() {
                 // IB + ORB from bars_today
                 if (Array.isArray(d.bars_today) && d.bars_today.length) {
                   const bars: ScBar[] = d.bars_today
+                  // Day-reset: if bars are from a new day, force-update all intraday fields
+                  const todayISO = new Date().toISOString().slice(0, 10)
+                  const isNewDay = cur._liveDay !== todayISO
+                  if (isNewDay) u._liveDay = todayISO
                   const [ibTA, ibTB] = IB_BAR_TIMES[t]
                   const barA = bars.find(b=>b.time===ibTA)
                   const barB = bars.find(b=>b.time===ibTB)
@@ -441,16 +447,16 @@ export default function Calculateur() {
                     const ibLs = set.map(b=>pf(b.low)).filter(v=>v>0)
                     const ibL = ibLs.length ? Math.min(...ibLs) : 0
                     const ibC = barB ? pf(barB.close) : barA ? pf(barA.close) : 0
-                    sv('ibHigh',  ibH>0 ? ibH.toFixed(2) : '')
-                    sv('ibLow',   ibL>0 ? ibL.toFixed(2) : '')
-                    sv('ibClose', ibC>0 ? ibC.toFixed(2) : '')
+                    sv('ibHigh',  ibH>0 ? ibH.toFixed(2) : '', isNewDay)
+                    sv('ibLow',   ibL>0 ? ibL.toFixed(2) : '', isNewDay)
+                    sv('ibClose', ibC>0 ? ibC.toFixed(2) : '', isNewDay)
                     // IB ordre from first bar direction (open vs midpoint)
-                    if (!cur.ibOrdre && barA) {
+                    if ((isNewDay || !cur.ibOrdre) && barA) {
                       const bH=pf(barA.high), bL=pf(barA.low), bO=pf(barA.open)
                       if (bH>0 && bL>0 && bO>0) u.ibOrdre = bO>=(bH+bL)/2 ? 'HL' : 'LH'
                     }
                     // Classification (needs ATR already filled)
-                    if (!cur.ibClass) {
+                    if (isNewDay || !cur.ibClass) {
                       const atr=pf(cur.atr), rng=ibH-ibL
                       if (atr>0 && rng>0) u.ibClass = rng>2*atr ? 'Wide IB' : rng<0.5*atr ? 'Narrow IB' : 'Normal'
                     }
@@ -458,13 +464,13 @@ export default function Calculateur() {
                   // ORB = first RTH bar
                   const orbBar = bars.find(b=>b.time===ORB_BAR_TIME[t])
                   if (orbBar) {
-                    sv('orbHigh',  pf(orbBar.high)>0  ? pf(orbBar.high).toFixed(2) : '')
-                    sv('orbLow',   pf(orbBar.low)>0   ? pf(orbBar.low).toFixed(2) : '')
-                    sv('orbClose', pf(orbBar.close)>0 ? pf(orbBar.close).toFixed(2) : '')
+                    sv('orbHigh',  pf(orbBar.high)>0  ? pf(orbBar.high).toFixed(2) : '', isNewDay)
+                    sv('orbLow',   pf(orbBar.low)>0   ? pf(orbBar.low).toFixed(2) : '', isNewDay)
+                    sv('orbClose', pf(orbBar.close)>0 ? pf(orbBar.close).toFixed(2) : '', isNewDay)
                   }
                   // VWAP session = last bar's vwap
                   const lastBar = bars[bars.length-1]
-                  if (lastBar?.vwap) sv('vwap18h', lastBar.vwap)
+                  if (lastBar?.vwap) sv('vwap18h', lastBar.vwap, isNewDay)
                 }
 
                 // J-1 open/high/low/settle from bars_j1
