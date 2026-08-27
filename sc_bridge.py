@@ -340,15 +340,30 @@ def build_payload(instr: str, all_rows: list) -> dict:
     else:
         last_val = all_rows[-1]['close'] if all_rows else ''
 
-    # OVN VWAP (18h→maintenant) : VWAP de la dernière barre OVN disponible
+    # OVN VWAP (ancré 18h→maintenant) : VWAP cumulatif de la dernière barre OVN disponible.
+    # Sierra Chart exporte un VWAP cumulatif → la barre la plus récente donne le VWAP de session.
+    # Ordre de priorité : pré-RTH → London → Asia (la plus récente en cours de session)
     all_ovn = bars_asia + bars_london + bars_pre
     ovn_vwap = ''
-    if all_ovn:
-        last_ovn = all_ovn[-1]
-        ovn_vwap = last_ovn.get('vwap', '') or ''
-    # Si pas d'OVN bars, utiliser la dernière barre today disponible
-    if not ovn_vwap and today_all:
-        ovn_vwap = today_all[-1].get('vwap', '') or ''
+    # Chercher la barre la plus récente avec un VWAP non nul
+    for r in reversed(all_ovn):
+        v = r.get('vwap', '') or ''
+        try:
+            if v and float(v) > 0:
+                ovn_vwap = f"{float(v):.2f}"
+                break
+        except (ValueError, TypeError):
+            pass
+    # Fallback : dernière barre today_all (inclut toutes les heures)
+    if not ovn_vwap:
+        for r in reversed(today_all):
+            v = r.get('vwap', '') or ''
+            try:
+                if v and float(v) > 0:
+                    ovn_vwap = f"{float(v):.2f}"
+                    break
+            except (ValueError, TypeError):
+                pass
 
     # Asia High/Low pour envoi direct
     asia_hs = [float(r['high']) for r in bars_asia if r.get('high')]
