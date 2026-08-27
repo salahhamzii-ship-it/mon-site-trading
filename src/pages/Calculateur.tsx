@@ -783,7 +783,8 @@ export default function Calculateur() {
         'ibHigh','ibLow','orbHigh','orbLow','gapHigh','gapLow',
         'ibrExt1H','ibrExt1L','box3','box4','box5','box6',
         'oHigh','oLow','asiaHigh','asiaLow','londonHigh','londonLow',
-        'ovnVah','ovnVal','ovnPoc']
+        'ovnVah','ovnVal','ovnPoc',
+        'rSignal','rFiab','rEntry','rStop','rC1','rC2']
       setII(prev => {
         const updated = { ...prev[t] }
         fields.forEach(f => { if (data[f] !== undefined) (updated as Record<string,string>)[f] = String(data[f]) })
