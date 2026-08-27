@@ -2428,13 +2428,13 @@ export default function Calculateur() {
     const sc2 = (s: Status) => s==='ok'?C.up:s==='wait'?C.amber:s==='no'?C.down:C.muted
 
     const sHdr = (txt: string) => (
-      <div style={{ fontSize:7.5, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)', marginTop:6 }}>{txt}</div>
+      <div style={{ fontSize:11, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)', marginTop:6 }}>{txt}</div>
     )
     const Row2 = ({ s, label, val }: { s: Status; label: string; val?: string }) => (
-      <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
-        <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>{si(s)}</span>
-        <span style={jb(8.5, s==='ok'?600:400, { color:sc2(s), flex:1 })}>{label}</span>
-        {val&&<span style={jb(8.5, 700, { color:sc2(s), fontVariantNumeric:'tabular-nums' })}>{val}</span>}
+      <div style={{ display:'flex', alignItems:'center', gap:7, padding:'3px 0' }}>
+        <span style={{ fontSize:13, lineHeight:1, minWidth:18, textAlign:'center' }}>{si(s)}</span>
+        <span style={jb(12, s==='ok'?600:400, { color:sc2(s), flex:1 })}>{label}</span>
+        {val&&<span style={jb(12, 700, { color:sc2(s), fontVariantNumeric:'tabular-nums' })}>{val}</span>}
       </div>
     )
 
@@ -2442,11 +2442,11 @@ export default function Calculateur() {
       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
         {/* Setup score banner */}
         <div style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 12px', background: setupReady?'rgba(0,255,136,0.07)':setupPartial?'rgba(212,175,55,0.07)':'rgba(136,153,187,0.05)', borderRadius:3, border:`1px solid ${setupReady?'rgba(0,255,136,0.25)':setupPartial?'rgba(212,175,55,0.22)':'rgba(136,153,187,0.14)'}` }}>
-          <span style={orb(11, 900, { color: setupReady?C.up:setupPartial?C.amber:C.muted, letterSpacing:'0.14em' })}>{setupReady?'◈ SETUP PRÊT':setupPartial?'◈ SETUP PARTIEL':'◈ PAS DE SETUP'}</span>
-          <span style={jb(9, 600, { color:C.muted })}>{okCnt}/{active}</span>
+          <span style={orb(15, 900, { color: setupReady?C.up:setupPartial?C.amber:C.muted, letterSpacing:'0.14em' })}>{setupReady?'◈ SETUP PRÊT':setupPartial?'◈ SETUP PARTIEL':'◈ PAS DE SETUP'}</span>
+          <span style={jb(12, 600, { color:C.muted })}>{okCnt}/{active}</span>
           <span style={{ flex:1 }} />
-          <span style={orb(10, 900, { color:dirCol })}>{dir}</span>
-          {nyTime && <span style={jb(8, 400, { color:'rgba(136,153,187,0.55)' })}>{nyTime.slice(0,5)} ET</span>}
+          <span style={orb(13, 900, { color:dirCol })}>{dir}</span>
+          {nyTime && <span style={jb(11, 400, { color:'rgba(136,153,187,0.55)' })}>{nyTime.slice(0,5)} ET</span>}
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
@@ -2456,9 +2456,9 @@ export default function Calculateur() {
             <Row2 s={valAccepted}  label="VAL J-1 acceptée (prix > VAH)"    val={rVah>0?`>${fmt2(rVah)}`:''} />
             <Row2 s={pocMigStatus} label="POC migration"                     val={td.pocMig||'—'} />
             <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
-              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>{alnPat?'ℹ️':'⬜'}</span>
-              <span style={jb(8.5, 400, { color:C.muted, flex:1 })}>ALN Pattern</span>
-              <span style={jb(8.5, 700, { color:alnPat==='P3'?C.up:alnPat==='P4'?C.down:C.muted })}>{alnPat||'—'}{alnBiais!=='—'?` · ${alnBiais}`:''}</span>
+              <span style={{ fontSize:13, lineHeight:1, minWidth:18, textAlign:'center' }}>{alnPat?'ℹ️':'⬜'}</span>
+              <span style={jb(12, 400, { color:C.muted, flex:1 })}>ALN Pattern</span>
+              <span style={jb(12, 700, { color:alnPat==='P3'?C.up:alnPat==='P4'?C.down:C.muted })}>{alnPat||'—'}{alnBiais!=='—'?` · ${alnBiais}`:''}</span>
             </div>
 
             {sHdr('2 · §9 — ALIGNEMENT NQ/ES')}
@@ -2469,10 +2469,10 @@ export default function Calculateur() {
             {boxH>0&&boxL>0&&(<>
               {sHdr('BOX RTH · ZONE BALANCÉE')}
               <Row2 s={boxPosStatus} label="Prix > BOX High (breakout haussier)" val={boxH>0?fmt2(boxH):''} />
-              {boxDH>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Δ BOX High</span><span style={jb(8.5,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDH)}</span></div>}
-              {boxDL>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Δ BOX Low</span><span style={jb(8.5,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDL)}</span></div>}
-              {bMid>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:'#00d4ff'})}>Milieu BOX = pivot</span><span style={jb(8.5,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>{fmt2(bMid)}</span></div>}
-              {cSig.boxPos&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Mode</span><Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'}/></div>}
+              {boxDH>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(11,400,{color:C.muted})}>Δ BOX High</span><span style={jb(12,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDH)}</span></div>}
+              {boxDL>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(11,400,{color:C.muted})}>Δ BOX Low</span><span style={jb(12,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDL)}</span></div>}
+              {bMid>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(11,400,{color:'#00d4ff'})}>Milieu BOX = pivot</span><span style={jb(12,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>{fmt2(bMid)}</span></div>}
+              {cSig.boxPos&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(11,400,{color:C.muted})}>Mode</span><Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'}/></div>}
             </>)}
 
             {sHdr('3 · STRUCTURE TPO')}
@@ -2483,14 +2483,14 @@ export default function Calculateur() {
             {sHdr('4 · TRIGGER')}
             <Row2 s={vwapStatus} label="Prix > VWAP18h" val={vw18>0?fmt2(vw18):''} />
             <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
-              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>⏳</span>
-              <span style={jb(8.5, 400, { color:C.amber, flex:1 })}>Bougie {dir==='LONG'?'rouge':'verte'} sur pullback</span>
-              <span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
+              <span style={{ fontSize:13, lineHeight:1, minWidth:18, textAlign:'center' }}>⏳</span>
+              <span style={jb(12, 400, { color:C.amber, flex:1 })}>Bougie {dir==='LONG'?'rouge':'verte'} sur pullback</span>
+              <span style={jb(11, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
-              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>⏳</span>
-              <span style={jb(8.5, 400, { color:C.amber, flex:1 })}>Close &gt; niveau clé → ENTRÉE</span>
-              <span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'3px 0' }}>
+              <span style={{ fontSize:13, lineHeight:1, minWidth:18, textAlign:'center' }}>⏳</span>
+              <span style={jb(12, 400, { color:C.amber, flex:1 })}>Close &gt; niveau clé → ENTRÉE</span>
+              <span style={jb(11, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
             </div>
 
             {isNoon && (<>
@@ -2502,61 +2502,61 @@ export default function Calculateur() {
 
           {/* ── RIGHT: Signal Output ─────────────── */}
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <div style={{ fontSize:7.5, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)' }}>SIGNAL OUTPUT</div>
+            <div style={{ fontSize:11, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)' }}>SIGNAL OUTPUT</div>
 
             <div style={{ border:`1px solid ${dirCol}30`, borderRadius:4, overflow:'hidden', flexGrow:1 }}>
               <div style={{ padding:'7px 10px', background:`${dirCol}0a`, borderBottom:`1px solid ${dirCol}20`, display:'flex', alignItems:'center', gap:6 }}>
                 <span style={{ width:6, height:6, borderRadius:'50%', background:dirCol, flexShrink:0, animation: setupReady?`pulseDot${dir==='LONG'?'':' '} 1.8s infinite`:'none' }} />
-                <span style={orb(10, 900, { color:dirCol, letterSpacing:'0.16em' })}>SETUP {tab} — {dir}</span>
+                <span style={orb(13, 900, { color:dirCol, letterSpacing:'0.16em' })}>SETUP {tab} — {dir}</span>
               </div>
               <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:5 }}>
                 {/* Condition summary rows */}
                 {valAccepted!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>{si(valAccepted)}</span>
-                  <span style={jb(8.5, valAccepted==='ok'?600:400, { color:sc2(valAccepted) })}>VAL J-1 acceptée</span>
+                  <span style={{ fontSize:13 }}>{si(valAccepted)}</span>
+                  <span style={jb(12, valAccepted==='ok'?600:400, { color:sc2(valAccepted) })}>VAL J-1 acceptée</span>
                 </div>}
                 {p9All!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>{si(p9All)}</span>
-                  <span style={jb(8.5, p9All==='ok'?600:400, { color:sc2(p9All) })}>§9 {p9All==='ok'?'confirmé':p9All==='wait'?'partiel':'divergent'}</span>
+                  <span style={{ fontSize:13 }}>{si(p9All)}</span>
+                  <span style={jb(12, p9All==='ok'?600:400, { color:sc2(p9All) })}>§9 {p9All==='ok'?'confirmé':p9All==='wait'?'partiel':'divergent'}</span>
                 </div>}
                 {otfStatus!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>{si(otfStatus)}</span>
-                  <span style={jb(8.5, otfStatus==='ok'?600:400, { color:sc2(otfStatus) })}>OTF Higher</span>
+                  <span style={{ fontSize:13 }}>{si(otfStatus)}</span>
+                  <span style={jb(12, otfStatus==='ok'?600:400, { color:sc2(otfStatus) })}>OTF Higher</span>
                 </div>}
                 {vwapStatus!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>{si(vwapStatus)}</span>
-                  <span style={jb(8.5, vwapStatus==='ok'?600:400, { color:sc2(vwapStatus) })}>VWAP18h {vwapStatus==='ok'?'au-dessus':'en-dessous'}</span>
+                  <span style={{ fontSize:13 }}>{si(vwapStatus)}</span>
+                  <span style={jb(12, vwapStatus==='ok'?600:400, { color:sc2(vwapStatus) })}>VWAP18h {vwapStatus==='ok'?'au-dessus':'en-dessous'}</span>
                 </div>}
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>⏳</span>
-                  <span style={jb(8.5, 400, { color:C.amber })}>Attendre bougie {dir==='LONG'?'rouge':'verte'}</span>
+                  <span style={{ fontSize:13 }}>⏳</span>
+                  <span style={jb(12, 400, { color:C.amber })}>Attendre bougie {dir==='LONG'?'rouge':'verte'}</span>
                 </div>
 
                 <div style={{ height:1, background:'rgba(201,168,76,0.10)', margin:'3px 0' }} />
 
                 {/* Entry rule */}
                 <div style={{ padding:'5px 8px', background:`${dirCol}08`, borderRadius:2, borderLeft:`2px solid ${dirCol}60` }}>
-                  <div style={jb(8, 400, { color:C.muted, marginBottom:2 })}>Règle entrée</div>
-                  <div style={jb(8.5, 600, { color:dirCol })}>Close {dir==='LONG'?'rouge':'verte'} {dir==='LONG'?'>':'<'} VWAP18h{vw18>0?` (${fmt2(vw18)})`:''}</div>
+                  <div style={jb(11, 400, { color:C.muted, marginBottom:2 })}>Règle entrée</div>
+                  <div style={jb(12, 600, { color:dirCol })}>Close {dir==='LONG'?'rouge':'verte'} {dir==='LONG'?'>':'<'} VWAP18h{vw18>0?` (${fmt2(vw18)})`:''}</div>
                 </div>
 
                 <div style={{ height:1, background:'rgba(201,168,76,0.10)', margin:'1px 0' }} />
 
                 {/* Levels */}
                 {dir==='LONG'?(<>
-                  {stopL>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`sous VAL J-1  ${fmt2(stopL)}`}</span></div>}
-                  {c1L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`SD+1  ${fmt2(c1L)}`}</span></div>}
-                  {c2L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAH J-1  {fmt2(c2L)}</span></div>}
-                  {c3L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+2  {fmt2(c3L)}</span></div>}
-                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:'#00d4ff',minWidth:36})}>Pivot</span><span style={jb(9,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
-                  {rrL!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrL}</span></div>}
+                  {stopL>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>Stop</span><span style={jb(13,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`sous VAL J-1  ${fmt2(stopL)}`}</span></div>}
+                  {c1L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C1</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`SD+1  ${fmt2(c1L)}`}</span></div>}
+                  {c2L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C2</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAH J-1  {fmt2(c2L)}</span></div>}
+                  {c3L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C3</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+2  {fmt2(c3L)}</span></div>}
+                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:'#00d4ff',minWidth:42})}>Pivot</span><span style={jb(13,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
+                  {rrL!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>R:R</span><span style={jb(13,700,{color:C.teal})}>1 : {rrL}</span></div>}
                 </>):(<>
-                  {stopS>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`sur VAH J-1  ${fmt2(stopS)}`}</span></div>}
-                  {c1S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`SD-1  ${fmt2(c1S)}`}</span></div>}
-                  {c2S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAL J-1  {fmt2(c2S)}</span></div>}
-                  {c3S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-2  {fmt2(c3S)}</span></div>}
-                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:'#00d4ff',minWidth:36})}>Pivot</span><span style={jb(9,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
-                  {rrS!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrS}</span></div>}
+                  {stopS>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>Stop</span><span style={jb(13,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`sur VAH J-1  ${fmt2(stopS)}`}</span></div>}
+                  {c1S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C1</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`SD-1  ${fmt2(c1S)}`}</span></div>}
+                  {c2S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C2</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAL J-1  {fmt2(c2S)}</span></div>}
+                  {c3S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C3</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-2  {fmt2(c3S)}</span></div>}
+                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:'#00d4ff',minWidth:42})}>Pivot</span><span style={jb(13,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
+                  {rrS!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>R:R</span><span style={jb(13,700,{color:C.teal})}>1 : {rrS}</span></div>}
                 </>)}
               </div>
             </div>
@@ -2839,7 +2839,7 @@ export default function Calculateur() {
       {slOpen && (
         <div style={{ border:'1px solid rgba(0,212,255,0.22)', borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:'3px solid #00d4ff', background:'rgba(0,212,255,0.04)', borderBottom:'1px solid rgba(0,212,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
-            <span style={orb(8.5, 900, { color:'#00d4ff', letterSpacing:'0.22em' })}>◉ SETUP LAUNCHER · {tab}</span>
+            <span style={orb(12, 900, { color:'#00d4ff', letterSpacing:'0.22em' })}>◉ SETUP LAUNCHER · {tab}</span>
             <span style={{ width:6, height:6, borderRadius:'50%', background:'#00d4ff', animation:'pulseDot 2.4s infinite', flexShrink:0 }} />
           </div>
           <div style={{ padding:'12px 12px', background:C.sur }}>
