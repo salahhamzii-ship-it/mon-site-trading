@@ -494,18 +494,9 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // SC Bridge — WebSocket : localhost en dev, VPS en prod
-  useEffect(() => {
-    const connect = () => {
-      clearTimeout(wsReconnectTimer.current)
-      try {
-        const wsUrl = wsCustomUrl.trim() || (window.location.protocol === 'https:' ? 'wss://2-29-3-199.nip.io/ws' : 'ws://2.29.3.199:8765')
-        const ws = new WebSocket(wsUrl)
-        wsRef.current = ws
-        ws.onopen = () => setWsSc('live')
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data as string)
+  // SC Bridge — traitement données (partagé WS + HTTP polling)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const processScData = (data: Record<string, any>) => {
 
             // --- Instr fields (live prices + IB/ORB + J-1) ---
             setII(prev => {
@@ -680,8 +671,38 @@ export default function Calculateur() {
             }
             fillRth(setRthRows,    'bars_today')
             fillRth(setRthRowsJ1,  'bars_j1')
+  }
 
-          } catch(e) { console.warn('SC Bridge:', e) }
+  // SC Bridge — WebSocket (HTTP ou WS URL custom)
+  useEffect(() => {
+    const useHttpPoll = !wsCustomUrl.trim() && window.location.protocol === 'https:'
+    if (useHttpPoll) {
+      // Polling HTTP via proxy Vercel → pas de mixed-content
+      let active = true
+      const poll = async () => {
+        try {
+          const res = await fetch('/api/bridge-data')
+          if (!res.ok) throw new Error(`${res.status}`)
+          const data = await res.json()
+          if (data._error) throw new Error(data._error)
+          processScData(data)
+          setWsSc('live')
+        } catch { setWsSc('off') }
+      }
+      poll()
+      const id = setInterval(() => { if (active) poll() }, 10000)
+      return () => { active = false; clearInterval(id) }
+    }
+    const connect = () => {
+      clearTimeout(wsReconnectTimer.current)
+      try {
+        const wsUrl = wsCustomUrl.trim() || 'ws://2.29.3.199:8765'
+        const ws = new WebSocket(wsUrl)
+        wsRef.current = ws
+        ws.onopen = () => setWsSc('live')
+        ws.onmessage = (event) => {
+          try { processScData(JSON.parse(event.data as string)) }
+          catch(e) { console.warn('SC Bridge:', e) }
         }
         ws.onerror = () => setWsSc('off')
         ws.onclose = () => {
@@ -699,7 +720,7 @@ export default function Calculateur() {
       if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close() }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [wsCustomUrl])
 
   useEffect(() => {
     const fmt = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })

@@ -24,8 +24,10 @@ import asyncio
 import json
 import re
 import sys
+import threading
 from datetime import date as date_t, timedelta
 from pathlib import Path
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 try:
     import websockets
@@ -49,11 +51,13 @@ FILES = {
 RTH_START = {'NQ': '09:30', 'ES': '09:30', 'GC': '08:20', 'CL': '09:00'}
 RTH_END   = {'NQ': '16:00', 'ES': '16:00', 'GC': '13:30', 'CL': '14:30'}
 
-WS_HOST   = 'localhost'
+WS_HOST   = '0.0.0.0'
 WS_PORT   = 8765
+HTTP_PORT = 8766        # HTTP REST endpoint pour proxy Vercel
 REFRESH_S = 10          # rafraîchissement CSV (secondes)
 
 CLIENTS: set = set()
+LAST_MSG: str = '{}'    # dernier payload JSON (partagé WS + HTTP)
 
 # ─── UTILITAIRES TEMPS ────────────────────────────────────────────────────────
 
@@ -504,13 +508,37 @@ def build_message() -> str:
         print(f"  {instr}: {len(bt)} barres today / {len(bj)} barres J-1  last={data[instr]['last']}")
     return json.dumps(data)
 
+# ─── SERVEUR HTTP (proxy Vercel) ──────────────────────────────────────────────
+
+class _HttpHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/data':
+            body = LAST_MSG.encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            self.send_response(404)
+            self.end_headers()
+    def log_message(self, *args): pass  # silencieux
+
+def _start_http():
+    server = HTTPServer(('0.0.0.0', HTTP_PORT), _HttpHandler)
+    print(f"SC Bridge HTTP http://0.0.0.0:{HTTP_PORT}/data")
+    server.serve_forever()
+
 # ─── SERVEUR WEBSOCKET ────────────────────────────────────────────────────────
 
 async def handler(ws: WebSocketServerProtocol) -> None:
+    global LAST_MSG
     CLIENTS.add(ws)
     print(f"[+] Client connecté ({len(CLIENTS)} actif(s))")
     try:
         msg = build_message()
+        LAST_MSG = msg
         await ws.send(msg)
         async for _ in ws:
             pass
@@ -521,13 +549,15 @@ async def handler(ws: WebSocketServerProtocol) -> None:
         print(f"[-] Client déconnecté ({len(CLIENTS)} actif(s))")
 
 async def broadcast_loop() -> None:
+    global LAST_MSG
     while True:
         await asyncio.sleep(REFRESH_S)
-        if not CLIENTS:
-            continue
         print(f"\n[{now_et().strftime('%H:%M:%S')}] Rafraîchissement ({len(CLIENTS)} client(s))...")
         try:
             msg = build_message()
+            LAST_MSG = msg
+            if not CLIENTS:
+                continue
             results = await asyncio.gather(
                 *[ws.send(msg) for ws in list(CLIENTS)],
                 return_exceptions=True
@@ -546,6 +576,7 @@ async def main() -> None:
         status = "OK" if exists else "absent (ignoré)"
         print(f"  {k}: {v}  [{status}]")
     print()
+    threading.Thread(target=_start_http, daemon=True).start()
     async with websockets.serve(handler, WS_HOST, WS_PORT):
         await broadcast_loop()
 
