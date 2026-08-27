@@ -29,6 +29,9 @@ interface Instr {
   londonHigh: string; londonLow: string; londonClose: string
   alnPattern: Pat; alnFiab: string
   boxHigh: string; boxLow: string
+  box3: string; box4: string; box5: string; box6: string
+  gapHigh: string; gapLow: string
+  ibrExt1H: string; ibrExt1L: string
   rSignal: string; rFiab: string; rEntry: string; rStop: string; rC1: string; rC2: string
   _liveDay: string
 }
@@ -74,6 +77,9 @@ const mkI = (): Instr => ({
   asiaHigh:'', asiaLow:'', asiaClose:'', londonHigh:'', londonLow:'', londonClose:'',
   alnPattern:'', alnFiab:'',
   boxHigh:'', boxLow:'',
+  box3:'', box4:'', box5:'', box6:'',
+  gapHigh:'', gapLow:'',
+  ibrExt1H:'', ibrExt1L:'',
   rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'',
   _liveDay: ''
 })
@@ -1999,6 +2005,26 @@ export default function Calculateur() {
         </div>
       </Sec>
 
+      {/* BOX LEVELS + GAP + IBR */}
+      <Sec title="BOX · GAP · IBR EXT" col={C.amber}>
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          <G4 ch={<>
+            <F l="BOX 6" v={I.box6} s={v=>upI(tab,'box6',v)} />
+            <F l="BOX 5" v={I.box5} s={v=>upI(tab,'box5',v)} />
+            <F l="BOX 4" v={I.box4} s={v=>upI(tab,'box4',v)} />
+            <F l="BOX 3" v={I.box3} s={v=>upI(tab,'box3',v)} />
+          </>}/>
+          <G2 ch={<>
+            <F l="GAP OPEN HAUT" v={I.gapHigh} s={v=>upI(tab,'gapHigh',v)} />
+            <F l="GAP OPEN BAS"  v={I.gapLow}  s={v=>upI(tab,'gapLow',v)} />
+          </>}/>
+          <G2 ch={<>
+            <F l="IBR Ext 1 Haut" v={I.ibrExt1H} s={v=>upI(tab,'ibrExt1H',v)} />
+            <F l="IBR Ext 1 Bas"  v={I.ibrExt1L} s={v=>upI(tab,'ibrExt1L',v)} />
+          </>}/>
+        </div>
+      </Sec>
+
       {/* VWAP / SD */}
       <Sec title={`VWAP / SD · ${tab}`} col={col}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8 }}>
@@ -2210,7 +2236,45 @@ export default function Calculateur() {
           )
         })()}
 
+        {/* BOX 3-6 / GAP / IBR Ext */}
+        {(I.box6||I.box5||I.box4||I.box3||I.gapHigh||I.gapLow||I.ibrExt1H||I.ibrExt1L) && (() => {
+          const thr2 = tab==='NQ' ? 6 : tab==='ES' ? 2.5 : 4
+          const hit = (v:string) => lp>0 && pf(v)>0 && Math.abs(lp-pf(v))<=thr2
+          const rows: [string,string,string][] = [
+            ['BOX 6',         I.box6,     C.amber],
+            ['BOX 5',         I.box5,     C.amber],
+            ['BOX 4',         I.box4,     C.amber],
+            ['BOX 3',         I.box3,     C.amber],
+            ['GAP OPEN HAUT', I.gapHigh,  C.up],
+            ['GAP OPEN BAS',  I.gapLow,   C.down],
+            ['IBR Ext 1 Haut',I.ibrExt1H, '#ff8888'],
+            ['IBR Ext 1 Bas', I.ibrExt1L, '#ff8888'],
+          ].filter(([,v])=>v) as [string,string,string][]
+          return (
+            <div style={{ padding:'8px 10px', background:'rgba(201,168,76,0.04)', border:'1px solid rgba(201,168,76,0.20)', borderRadius:3 }}>
+              <div style={jb(7.5, 600, { color:C.amber, letterSpacing:'0.10em', marginBottom:6 })}>BOX · GAP · IBR EXT</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))', gap:5 }}>
+                {rows.map(([l,v,c])=>(
+                  <div key={l} style={{ padding:'4px 6px', background: hit(v)?'rgba(201,168,76,0.12)':'transparent', borderRadius:2, border: hit(v)?`1px solid ${c}`:'1px solid transparent' }}>
+                    <div style={jb(6.5, 400, { color:C.muted, marginBottom:2 })}>{l}</div>
+                    <div style={jb(12, 700, { color: hit(v)?C.amber:c, textShadow: hit(v)?`0 0 8px ${C.amber}`:'none' })}>{v||'—'}</div>
+                    {hit(v) && <Pill label="TOUCHÉ" col={C.amber} />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          {lp>0&&I.box6&&Math.abs(lp-pf(I.box6))<=(tab==='NQ'?6:2.5) && <Alert msg={`📦 BOX 6 touché (${I.box6})`} col={C.amber} />}
+          {lp>0&&I.box5&&Math.abs(lp-pf(I.box5))<=(tab==='NQ'?6:2.5) && <Alert msg={`📦 BOX 5 touché (${I.box5})`} col={C.amber} />}
+          {lp>0&&I.box4&&Math.abs(lp-pf(I.box4))<=(tab==='NQ'?6:2.5) && <Alert msg={`📦 BOX 4 touché (${I.box4})`} col={C.amber} />}
+          {lp>0&&I.box3&&Math.abs(lp-pf(I.box3))<=(tab==='NQ'?6:2.5) && <Alert msg={`📦 BOX 3 touché (${I.box3})`} col={C.amber} />}
+          {lp>0&&I.gapHigh&&lp>=pf(I.gapHigh) && <Alert msg={`▲ GAP HAUT comblé (${I.gapHigh})`} col={C.up} />}
+          {lp>0&&I.gapLow&&lp<=pf(I.gapLow)   && <Alert msg={`▼ GAP BAS comblé (${I.gapLow})`}   col={C.down} />}
+          {lp>0&&I.ibrExt1H&&Math.abs(lp-pf(I.ibrExt1H))<=(tab==='NQ'?6:2.5) && <Alert msg={`⚡ IBR Ext 1 HAUT touché (${I.ibrExt1H})`} col='#ff8888' />}
+          {lp>0&&I.ibrExt1L&&Math.abs(lp-pf(I.ibrExt1L))<=(tab==='NQ'?6:2.5) && <Alert msg={`⚡ IBR Ext 1 BAS touché (${I.ibrExt1L})`}  col='#ff8888' />}
           {lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh)     && <Alert msg={`▲ Prix au-dessus de l'IB High (${I.ibHigh})`}    col={C.up} />}
           {lp>0&&pf(I.ibLow)>0&&lp<pf(I.ibLow)        && <Alert msg={`▼ Prix en-dessous de l'IB Low (${I.ibLow})`}     col={C.down} />}
           {lp>0&&pf(I.rPoc)>0&&Math.abs(lp-pf(I.rPoc))<2 && <Alert msg={`◈ Prix proche du POC J-1 (${I.rPoc})`}       col={C.gold} />}
