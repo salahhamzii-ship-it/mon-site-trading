@@ -26,7 +26,9 @@ interface Instr {
   asiaHigh: string; asiaLow: string; asiaClose: string
   londonHigh: string; londonLow: string; londonClose: string
   alnPattern: Pat; alnFiab: string
+  boxHigh: string; boxLow: string
   rSignal: string; rFiab: string; rEntry: string; rStop: string; rC1: string; rC2: string
+  _liveDay: string
 }
 interface Cfg {
   ibOffset: string; showNYIBBg: boolean; ibTextSize: string
@@ -67,7 +69,9 @@ const mkI = (): Instr => ({
   vwap18h:'', atr:'',
   asiaHigh:'', asiaLow:'', asiaClose:'', londonHigh:'', londonLow:'', londonClose:'',
   alnPattern:'', alnFiab:'',
-  rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:''
+  boxHigh:'', boxLow:'',
+  rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'',
+  _liveDay: ''
 })
 const mkTD = (): TD => ({ mHigh:'', mLow:'', mPoc:'', mOtf:'', mVah:'', mVal:'', wHigh:'', wLow:'', wPoc:'', wOtf:'', wVah:'', wVal:'', csVah:'', csVal:'', csPoc:'', crVah:'', crVal:'', crPoc:'', lignes:'', gapDay:false, excess:false, poorHigh:false, poorLow:false, tpoOvnH:'', tpoOvnL:'', pocMig:'', events:'', vix:'', petrole:'', yields:'' })
 const mkC = (): Cfg => ({ ibOffset:'0', showNYIBBg:true, ibTextSize:'8', asiaMode:'Auto', asiaStart:'20:00', asiaEnd:'02:00', londonMode:'Auto', londonStart:'02:00', londonEnd:'08:00', nyMode:'Auto', nyStart:'09:30', nyEnd:'10:30', timezone:'America/New_York', showAsia:true, showLondon:true, showNY:true, showLabels:true, nyBg:'rgba(201,168,76,0.06)', nyFH:'rgba(201,168,76,0.10)', tblBg:'rgba(10,14,24,0.9)', tblHd:'rgba(201,168,76,0.15)', showOR:true, orDur:'20', orSrc:'First Bar', orManual:'', showORBg:true, orBgOp:'0.06', showRot:true, rotSide:'4', autoStep:true, stepManual:'', rotColor:'rgba(201,168,76,0.5)', lineStyle:'Dashed', emphNth:'4', showORLbl:true })
@@ -81,6 +85,42 @@ const RTH_TIMES: Record<Tab, string[]> = {
 }
 const mkRthRowsForTab = (t:Tab): RthRow[] => RTH_TIMES[t].map(h=>({ id:h, heure:h, open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' }))
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:mkRthRowsForTab('ES'), GC:mkRthRowsForTab('GC'), CL:mkRthRowsForTab('CL') })
+
+// Clear IB/ORB/signal only when a NEW RTH session starts (09:30 ET).
+// During OVN phases (Asie 18h-02h, Londres 02h-08h, pré-RTH 08h-09h30) the
+// previous session's levels stay visible as reference.
+function sanitizeInstr(instr: Instr): Instr {
+  // Current time in ET
+  const etParts = new Intl.DateTimeFormat('en-US', {
+    timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hour12:false
+  }).formatToParts(new Date())
+  const gp = (t:string) => Number(etParts.find(p=>p.type===t)?.value??'0')
+  const etMins   = gp('hour') * 60 + gp('minute')
+  const rthStarted = etMins >= 9 * 60 + 30  // 09:30 ET = début RTH
+  const etToday  = `${gp('year')}-${String(gp('month')).padStart(2,'0')}-${String(gp('day')).padStart(2,'0')}`
+
+  // Only clear if RTH has started AND stored _liveDay is from a different trading date
+  const isNewRTHDay = rthStarted && !!instr._liveDay && instr._liveDay !== etToday
+
+  // Also clear on cross-instrument scale mismatch (ES prices in NQ state, etc.)
+  const lp = pf(instr.lastPx)
+  const badScale = lp > 0 && (
+    (pf(instr.ibHigh) > 0 && (pf(instr.ibHigh) < lp * 0.5 || pf(instr.ibHigh) > lp * 2)) ||
+    (pf(instr.ibLow)  > 0 && (pf(instr.ibLow)  < lp * 0.5 || pf(instr.ibLow)  > lp * 2)) ||
+    (pf(instr.orbHigh)> 0 && (pf(instr.orbHigh)< lp * 0.5 || pf(instr.orbHigh)> lp * 2)) ||
+    (pf(instr.orbLow) > 0 && (pf(instr.orbLow) < lp * 0.5 || pf(instr.orbLow) > lp * 2))
+  )
+
+  if (isNewRTHDay || badScale) {
+    return { ...instr,
+      ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'' as never, ibClass:'',
+      orbHigh:'', orbLow:'', orbClose:'',
+      rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'',
+    }
+  }
+  return instr
+}
 
 const TICK_SZ: Record<Tab, number> = { NQ:0.25, ES:0.25, GC:0.10, CL:0.01 }
 interface TpoLetter { id:string; letter:string; high:string; low:string; poc:string; vah:string; val:string }
@@ -194,8 +234,10 @@ function runBacktest(bars: BtBar[]): BtTrade[] {
   for (let i = 0; i < sorted.length - 1; i++) {
     if (usedAsRej.has(i)) continue
     const bar = sorted[i]
-    // OVN window 18:00-22:00
-    if (bar.time < '18:00' || bar.time > '22:00') continue
+    // OVN window complète 18:00→09:30 (Globex open → RTH open)
+    // Timings typiques : 2-3h post-Globex, 05:30-07:00 London, post-10:30 IB extension
+    const isOVN = bar.time >= '18:00' || bar.time < '09:30'
+    if (!isOVN) continue
     // Condition 1 — touche ou passe sous SD-2
     if (bar.sm2 <= 0 || bar.low > bar.sm2) continue
     // Condition 2 — bougie suivante ferme au-dessus du low excess
@@ -350,7 +392,7 @@ export default function Calculateur() {
   const [trOpen,   setTrOpen]    = useState<boolean>(()=>{ const s=loadLS(); return s?.trOpen??false })
   const [stOpen,   setStOpen]    = useState<boolean>(()=>{ const s=loadLS(); return s?.stOpen??false })
   const [td,       setTd]        = useState<TD>(()=>{ const s=loadLS(); return s?.td?{...mkTD(),...s.td}:mkTD() })
-  const [II,       setII]        = useState<Record<Tab,Instr>>(()=>{ const s=loadLS(); if(!s?.II) return {NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}; return {NQ:{...mkI(),...s.II.NQ},ES:{...mkI(),...s.II.ES},GC:{...mkI(),...s.II.GC},CL:{...mkI(),...s.II.CL}} })
+  const [II,       setII]        = useState<Record<Tab,Instr>>(()=>{ const s=loadLS(); if(!s?.II) return {NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}; return {NQ:sanitizeInstr({...mkI(),...s.II.NQ}),ES:sanitizeInstr({...mkI(),...s.II.ES}),GC:sanitizeInstr({...mkI(),...s.II.GC}),CL:sanitizeInstr({...mkI(),...s.II.CL})} })
   const [cfg,      setCfg]       = useState<Cfg>(()=>{ const s=loadLS(); return s?.cfg?{...mkC(),...s.cfg}:mkC() })
   const [rthRows,      setRthRows]      = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRows??mkRthRows() })
   const [rthRowsJ1,   setRthRowsJ1]   = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRowsJ1??mkRthRows() })
@@ -364,6 +406,13 @@ export default function Calculateur() {
   const [btBars,   setBtBars]   = useState<BtBar[]>([])
   const [btTrades, setBtTrades] = useState<BtTrade[]>([])
   const [btFile,   setBtFile]   = useState('')
+  const [slOpen,   setSlOpen]   = useState(true)
+  const [posOpen,  setPosOpen]  = useState(false)
+  const [posMode,  setPosMode]  = useState<'OVN'|'RTH'|null>(null)
+  const [posEntry, setPosEntry] = useState('')
+  const [posStop,  setPosStop]  = useState('')
+  const [posSize,  setPosSize]  = useState('1')
+  const [posDir,   setPosDir]   = useState<'LONG'|'SHORT'>('LONG')
 
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -423,6 +472,10 @@ export default function Calculateur() {
                 // IB + ORB from bars_today
                 if (Array.isArray(d.bars_today) && d.bars_today.length) {
                   const bars: ScBar[] = d.bars_today
+                  // Day-reset: if bars are from a new day, force-update all intraday fields
+                  const todayISO = new Date().toISOString().slice(0, 10)
+                  const isNewDay = cur._liveDay !== todayISO
+                  if (isNewDay) u._liveDay = todayISO
                   const [ibTA, ibTB] = IB_BAR_TIMES[t]
                   const barA = bars.find(b=>b.time===ibTA)
                   const barB = bars.find(b=>b.time===ibTB)
@@ -432,30 +485,36 @@ export default function Calculateur() {
                     const ibLs = set.map(b=>pf(b.low)).filter(v=>v>0)
                     const ibL = ibLs.length ? Math.min(...ibLs) : 0
                     const ibC = barB ? pf(barB.close) : barA ? pf(barA.close) : 0
-                    sv('ibHigh',  ibH>0 ? ibH.toFixed(2) : '')
-                    sv('ibLow',   ibL>0 ? ibL.toFixed(2) : '')
-                    sv('ibClose', ibC>0 ? ibC.toFixed(2) : '')
+                    sv('ibHigh',  ibH>0 ? ibH.toFixed(2) : '', isNewDay)
+                    sv('ibLow',   ibL>0 ? ibL.toFixed(2) : '', isNewDay)
+                    sv('ibClose', ibC>0 ? ibC.toFixed(2) : '', isNewDay)
                     // IB ordre from first bar direction (open vs midpoint)
-                    if (!cur.ibOrdre && barA) {
+                    if ((isNewDay || !cur.ibOrdre) && barA) {
                       const bH=pf(barA.high), bL=pf(barA.low), bO=pf(barA.open)
                       if (bH>0 && bL>0 && bO>0) u.ibOrdre = bO>=(bH+bL)/2 ? 'HL' : 'LH'
                     }
                     // Classification (needs ATR already filled)
-                    if (!cur.ibClass) {
+                    if (isNewDay || !cur.ibClass) {
                       const atr=pf(cur.atr), rng=ibH-ibL
                       if (atr>0 && rng>0) u.ibClass = rng>2*atr ? 'Wide IB' : rng<0.5*atr ? 'Narrow IB' : 'Normal'
                     }
+                  } else if (isNewDay) {
+                    // Nouveau jour mais barres IB/ORB pas encore disponibles (pré-09h30)
+                    // → vider les valeurs stales d'hier immédiatement
+                    ;(['ibHigh','ibLow','ibClose','ibClass','orbHigh','orbLow','orbClose'] as (keyof Instr)[])
+                      .forEach(f => { (u as Record<string,string>)[f] = '' })
+                    u.ibOrdre = '' as never
                   }
                   // ORB = first RTH bar
                   const orbBar = bars.find(b=>b.time===ORB_BAR_TIME[t])
                   if (orbBar) {
-                    sv('orbHigh',  pf(orbBar.high)>0  ? pf(orbBar.high).toFixed(2) : '')
-                    sv('orbLow',   pf(orbBar.low)>0   ? pf(orbBar.low).toFixed(2) : '')
-                    sv('orbClose', pf(orbBar.close)>0 ? pf(orbBar.close).toFixed(2) : '')
+                    sv('orbHigh',  pf(orbBar.high)>0  ? pf(orbBar.high).toFixed(2) : '', isNewDay)
+                    sv('orbLow',   pf(orbBar.low)>0   ? pf(orbBar.low).toFixed(2) : '', isNewDay)
+                    sv('orbClose', pf(orbBar.close)>0 ? pf(orbBar.close).toFixed(2) : '', isNewDay)
                   }
                   // VWAP session = last bar's vwap
                   const lastBar = bars[bars.length-1]
-                  if (lastBar?.vwap) sv('vwap18h', lastBar.vwap)
+                  if (lastBar?.vwap) sv('vwap18h', lastBar.vwap, isNewDay)
                 }
 
                 // J-1 open/high/low/settle from bars_j1
@@ -556,6 +615,23 @@ export default function Calculateur() {
     const tick = () => setNyTime(fmt.format(new Date()))
     tick()
     const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Auto-reload silencieux quand une nouvelle version est déployée
+  useEffect(() => {
+    let currentV = ''
+    const check = async () => {
+      try {
+        const r = await fetch(`/version.json?_=${Date.now()}`)
+        if (!r.ok) return
+        const { v } = await r.json() as { v: string }
+        if (!currentV) { currentV = v; return }
+        if (v !== currentV) window.location.reload()
+      } catch { /* offline ou dev */ }
+    }
+    check()
+    const id = setInterval(check, 5 * 60 * 1000) // toutes les 5 min
     return () => clearInterval(id)
   }, [])
 
@@ -773,6 +849,7 @@ export default function Calculateur() {
 
   const halfBack = useMemo(() => { const h=pf(I.rHigh),l=pf(I.rLow); return h>0&&l>0 ? fmt2((h+l)/2) : '' }, [I.rHigh, I.rLow])
   const ibMid    = useMemo(() => { const h=pf(I.ibHigh),l=pf(I.ibLow); return h>0&&l>0 ? fmt2((h+l)/2) : '' }, [I.ibHigh, I.ibLow])
+  const boxMid   = useMemo(() => { const h=pf(I.boxHigh),l=pf(I.boxLow); return h>0&&l>0 ? fmt2((h+l)/2) : '' }, [I.boxHigh, I.boxLow])
 
   const ovnVsS = useMemo(() => {
     const oc=pf(I.oClose), se=pf(I.rSettle)
@@ -822,11 +899,20 @@ export default function Calculateur() {
 
     const s9 = p9Align==='Aligné' ? 1 : p9Align==='Divergent' ? -1 : 0
 
-    const active = [mid2>0&&ibC2>0?1:0, lp2>0&&vw18_2>0?1:0, lp2>0&&orbH2>0&&orbL2>0?1:0, tab==='NQ'&&!!I.alnPattern?1:0, !!p9Align?1:0].reduce((a:number,b:number)=>a+b,0)
-    const total  = ib+vwap+orb2+aln2+s9
+    const boxH2 = pf(I.boxHigh), boxL2 = pf(I.boxLow)
+    let box = 0
+    let boxPos: 'BREAKOUT HAUSSIER'|'BREAKOUT BAISSIER'|'ROTATIONNEL'|'' = ''
+    if (lp2>0 && boxH2>0 && boxL2>0) {
+      if (lp2>boxH2)      { box = 1;  boxPos = 'BREAKOUT HAUSSIER' }
+      else if (lp2<boxL2) { box = -1; boxPos = 'BREAKOUT BAISSIER' }
+      else                 { box = 0;  boxPos = 'ROTATIONNEL' }
+    }
+
+    const active = [mid2>0&&ibC2>0?1:0, lp2>0&&vw18_2>0?1:0, lp2>0&&orbH2>0&&orbL2>0?1:0, tab==='NQ'&&!!I.alnPattern?1:0, !!p9Align?1:0, lp2>0&&boxH2>0&&boxL2>0?1:0].reduce((a:number,b:number)=>a+b,0)
+    const total  = ib+vwap+orb2+aln2+s9+box
     const signal = total>0?'LONG':total<0?'SHORT':'NEUTRE'
     const fiab   = active>0 ? Math.round(Math.abs(total)/active*100) : 0
-    return { signal, fiab, ib, ibCls, vwap, orb:orb2, aln:aln2, s9 }
+    return { signal, fiab, ib, ibCls, vwap, orb:orb2, aln:aln2, s9, box, boxPos }
   }, [I, tab, p9Align])
 
   const cLevels = useMemo(() => {
@@ -952,6 +1038,14 @@ export default function Calculateur() {
       if (rL > 0) lvs.push({ label:`Excess Low · ${I.rLow}`,   price:rL })
     }
 
+    const boxH = pf(I.boxHigh), boxL = pf(I.boxLow)
+    if (boxH>0) lvs.push({ label:`BOX High · ${I.boxHigh}`, price:boxH })
+    if (boxL>0) lvs.push({ label:`BOX Low · ${I.boxLow}`,   price:boxL })
+    if (boxH>0&&boxL>0) {
+      const bMid = (boxH+boxL)/2
+      lvs.push({ label:`BOX Mid · ${fmt2(bMid)}`, price:bMid })
+    }
+
     const out: { msg:string; col:string }[] = []
     const seen = new Set<string>()
     lvs.forEach(({ label, price }) => {
@@ -972,7 +1066,7 @@ export default function Calculateur() {
       }
     })
     return out
-  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rOpen, I.rSettle, I.oClose, I.atr, I.ibHigh, I.ibLow])
+  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rOpen, I.rSettle, I.oClose, I.atr, I.ibHigh, I.ibLow, I.boxHigh, I.boxLow])
 
   const tpoAnalysis = useMemo(() => {
     const letters = tpoLetters[tab]
@@ -1598,6 +1692,16 @@ export default function Calculateur() {
         </Sec>
       </div>
 
+      {/* BOX RTH */}
+      <Sec title="BOX RTH · ZONE BALANCÉE" col="#00d4ff">
+        <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
+          <div style={{ flex:1 }}>
+            <G3 ch={<><F l="BOX High" v={I.boxHigh} s={v=>upI(tab,'boxHigh',v)} /><F l="BOX Low" v={I.boxLow} s={v=>upI(tab,'boxLow',v)} /><F l="BOX Mid" ro dv={boxMid||'—'} /></>}/>
+          </div>
+          {cSig.boxPos && <Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'} />}
+        </div>
+      </Sec>
+
       {/* VWAP / SD */}
       <Sec title={`VWAP / SD · ${tab}`} col={col}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8 }}>
@@ -1688,6 +1792,7 @@ export default function Calculateur() {
           {(cSig.orb!==0) && <><span style={jb(8,400,{color:C.muted})}>ORB</span><Pill label={cSig.orb>0?'Bull':'Bear'} col={cSig.orb>0?C.up:C.down}/></>}
           {(cSig.aln!==0) && <><span style={jb(8,400,{color:C.muted})}>ALN</span><Pill label={cSig.aln>0?'Bull':'Bear'} col={cSig.aln>0?C.up:C.down}/></>}
           {(cSig.s9!==0) && <><span style={jb(8,400,{color:C.muted})}>§9</span><Pill label={cSig.s9>0?'+1':'-1'} col={cSig.s9>0?C.up:C.down}/></>}
+          {cSig.boxPos && <><span style={jb(8,400,{color:C.muted})}>BOX</span><Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'}/></>}
           {dayType && <Pill label={dayType} col={dayType.startsWith('TREND DAY')?(dayType.includes('▲')?C.up:C.down):dayType==='ROTATIONNEL'?C.teal:C.amber} />}
         </div>
         {cLevels.invalid && cLevels.invalidReason && (
@@ -1748,6 +1853,33 @@ export default function Calculateur() {
             </div>
           ))}
         </div>
+
+        {/* BOX RTH block */}
+        {(pf(I.boxHigh)>0||pf(I.boxLow)>0) && (() => {
+          const bH = pf(I.boxHigh), bL = pf(I.boxLow)
+          const bM = bH>0&&bL>0 ? (bH+bL)/2 : 0
+          const boxLabel = cSig.boxPos || (lp>0&&bH>0&&bL>0 ? (lp>bH?'BREAKOUT HAUSSIER':lp<bL?'BREAKOUT BAISSIER':'ROTATIONNEL') : '')
+          const posLabel = bH>0&&bL>0&&lp>0 ? (lp>bH ? 'Au-dessus' : lp<bL ? 'En-dessous' : lp>bM ? 'Dans BOX (haut)' : 'Dans BOX (bas)') : '—'
+          const posCol   = lp>bH?C.up:lp<bL?C.down:'#00d4ff'
+          const dH = bH>0&&lp>0 ? Math.abs(lp-bH) : 0
+          const dL = bL>0&&lp>0 ? Math.abs(lp-bL) : 0
+          return (
+            <div style={{ padding:'8px 10px', background:'rgba(0,212,255,0.04)', border:'1px solid rgba(0,212,255,0.18)', borderRadius:3 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
+                <span style={jb(7.5, 600, { color:'#00d4ff', letterSpacing:'0.10em' })}>BOX RTH ACTIF</span>
+                {boxLabel && <Pill label={boxLabel} col={posCol} />}
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:6 }}>
+                {bH>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>BOX HIGH</div><div style={jb(12,700,{color:C.up})}>{I.boxHigh}</div></div>}
+                {bL>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>BOX LOW</div><div style={jb(12,700,{color:C.down})}>{I.boxLow}</div></div>}
+                {bM>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>MILIEU</div><div style={jb(12,700,{color:'#00d4ff'})}>{fmt2(bM)}</div></div>}
+                <div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>POSITION</div><div style={jb(10,700,{color:posCol})}>{posLabel}</div></div>
+                {dH>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>Δ HIGH</div><div style={jb(12,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(dH)}</div></div>}
+                {dL>0&&<div><div style={jb(7,400,{color:C.muted,marginBottom:2})}>Δ LOW</div><div style={jb(12,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(dL)}</div></div>}
+              </div>
+            </div>
+          )
+        })()}
 
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
           {lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh)     && <Alert msg={`▲ Prix au-dessus de l'IB High (${I.ibHigh})`}    col={C.up} />}
@@ -1931,6 +2063,434 @@ export default function Calculateur() {
     )
   }
 
+  const renderSetupLauncher = () => {
+    type Status = 'ok' | 'wait' | 'no' | 'na'
+    const lp    = pf(I.lastPx)
+    const vw18  = pf(I.vwap18h)
+    const rVah  = pf(I.rVah), rVal = pf(I.rVal)
+    const nqLp  = pf(II.NQ.lastPx), nqVal = pf(II.NQ.rVal)
+    const esLp  = pf(II.ES.lastPx), esVal = pf(II.ES.rVal)
+
+    // 1. CONTEXTE
+    const valAccepted: Status = !lp||!rVah ? 'na' : lp>rVah ? 'ok' : lp>rVal ? 'wait' : 'no'
+    const pocMigStatus: Status = td.pocMig==='Ascendant'?'ok':td.pocMig==='Stable'?'wait':td.pocMig==='Descendant'?'no':'na'
+    const alnPat  = tab==='NQ' ? I.alnPattern : ''
+    const alnBiais = alnPat==='P3'?'Haussier':alnPat==='P4'?'Baissier':alnPat?'Neutre':'—'
+
+    // 2. §9 — NQ/ES vs VAL J-1
+    const nqAboveVal = nqLp>0&&nqVal>0&&nqLp>nqVal
+    const esAboveVal = esLp>0&&esVal>0&&esLp>esVal
+    const p9NQ: Status = !nqLp||!nqVal?'na':nqAboveVal?'ok':'no'
+    const p9ES: Status = !esLp||!esVal?'na':esAboveVal?'ok':'no'
+    const p9All: Status = nqAboveVal&&esAboveVal?'ok':(!nqLp||!esLp||!nqVal||!esVal)?'na':(nqAboveVal||esAboveVal)?'wait':'no'
+
+    // 3. TPO structure
+    const tpoLetts = tpoLetters[tab]
+    let otfStatus: Status = 'na'
+    if (tpoLetts.length >= 2) {
+      const lastPoc = pf(tpoLetts[tpoLetts.length-1].poc)
+      const prevPoc = pf(tpoLetts[tpoLetts.length-2].poc)
+      if (lastPoc>0&&prevPoc>0) otfStatus = lastPoc>prevPoc?'ok':lastPoc<prevPoc?'no':'wait'
+    }
+    let equalHighStatus: Status = 'na'
+    if (tpoLetts.length >= 2) {
+      const h1=pf(tpoLetts[tpoLetts.length-1].high), h2=pf(tpoLetts[tpoLetts.length-2].high)
+      if (h1>0&&h2>0) equalHighStatus = Math.abs(h1-h2)<TICK_SZ[tab]*3?'ok':'no'
+    }
+
+    // BOX levels
+    const boxH = pf(I.boxHigh), boxL = pf(I.boxLow)
+    const bMid = boxH>0&&boxL>0 ? (boxH+boxL)/2 : 0
+    const boxPosStatus: Status = !lp||!boxH||!boxL ? 'na' : lp>boxH ? 'ok' : lp>bMid ? 'wait' : 'no'
+    const boxDH = boxH>0&&lp>0 ? Math.abs(lp-boxH) : 0
+    const boxDL = boxL>0&&lp>0 ? Math.abs(lp-boxL) : 0
+
+    // 4. TRIGGER
+    const vwapStatus: Status = !lp||!vw18?'na':lp>vw18?'ok':lp===vw18?'wait':'no'
+
+    // 5. NOON CURVE
+    const parts0 = nyTime.split(':')
+    const totMin = parseInt(parts0[0]||'0')*60+parseInt(parts0[1]||'0')
+    const isNoon = totMin>=12*60&&totMin<14*60
+    let amHigh=0
+    if (isNoon) {
+      const amBars = rthRows[tab].filter(r=>r.heure>='09:30'&&r.heure<'12:00')
+      amHigh = amBars.reduce((mx,r)=>{const h=pf(r.high);return h>mx?h:mx},0)
+    }
+    const noonAMSet: Status = isNoon?(amHigh>0?'ok':'wait'):'na'
+    const noonPM: Status = isNoon&&amHigh>0&&lp>0 ? (Math.abs(lp-amHigh)<(pf(I.atr)||5)*0.35?'ok':lp<amHigh?'wait':'no') : 'na'
+
+    // Signal direction + score
+    const checks: Status[] = [valAccepted, pocMigStatus, p9All, otfStatus, vwapStatus]
+    const okCnt = checks.filter(s=>s==='ok').length
+    const naCnt = checks.filter(s=>s==='na').length
+    const active = checks.length-naCnt
+    const setupReady   = okCnt>=4
+    const setupPartial = okCnt>=2
+
+    // Direction: prefer cSig if confident, else vote from conditions
+    const dir = cSig.signal==='LONG'?'LONG':cSig.signal==='SHORT'?'SHORT':'LONG'
+    const dirCol = dir==='LONG'?C.up:C.down
+
+    // Levels
+    const stopL   = rVal>0?rVal:pf(sdVals.sm1)
+    const c1L     = pf(sdVals.sp1), c2L=rVah, c3L=pf(sdVals.sp2)
+    const stopS   = rVah>0?rVah:pf(sdVals.sp1)
+    const c1S     = pf(sdVals.sm1), c2S=rVal, c3S=pf(sdVals.sm2)
+    const eApprox = vw18>0?vw18:lp
+    const rrL = eApprox>0&&stopL>0&&c1L>0&&c1L>eApprox&&eApprox>stopL ? ((c1L-eApprox)/(eApprox-stopL)).toFixed(1) : '—'
+    const rrS = eApprox>0&&stopS>0&&c1S>0&&c1S<eApprox&&stopS>eApprox ? ((eApprox-c1S)/(stopS-eApprox)).toFixed(1) : '—'
+
+    const si = (s: Status) => s==='ok'?'✅':s==='wait'?'⏳':s==='no'?'❌':'⬜'
+    const sc2 = (s: Status) => s==='ok'?C.up:s==='wait'?C.amber:s==='no'?C.down:C.muted
+
+    const sHdr = (txt: string) => (
+      <div style={{ fontSize:7.5, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)', marginTop:6 }}>{txt}</div>
+    )
+    const Row2 = ({ s, label, val }: { s: Status; label: string; val?: string }) => (
+      <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
+        <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>{si(s)}</span>
+        <span style={jb(8.5, s==='ok'?600:400, { color:sc2(s), flex:1 })}>{label}</span>
+        {val&&<span style={jb(8.5, 700, { color:sc2(s), fontVariantNumeric:'tabular-nums' })}>{val}</span>}
+      </div>
+    )
+
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {/* Setup score banner */}
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 12px', background: setupReady?'rgba(0,255,136,0.07)':setupPartial?'rgba(212,175,55,0.07)':'rgba(136,153,187,0.05)', borderRadius:3, border:`1px solid ${setupReady?'rgba(0,255,136,0.25)':setupPartial?'rgba(212,175,55,0.22)':'rgba(136,153,187,0.14)'}` }}>
+          <span style={orb(11, 900, { color: setupReady?C.up:setupPartial?C.amber:C.muted, letterSpacing:'0.14em' })}>{setupReady?'◈ SETUP PRÊT':setupPartial?'◈ SETUP PARTIEL':'◈ PAS DE SETUP'}</span>
+          <span style={jb(9, 600, { color:C.muted })}>{okCnt}/{active}</span>
+          <span style={{ flex:1 }} />
+          <span style={orb(10, 900, { color:dirCol })}>{dir}</span>
+          {nyTime && <span style={jb(8, 400, { color:'rgba(136,153,187,0.55)' })}>{nyTime.slice(0,5)} ET</span>}
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          {/* ── LEFT: Checklist ─────────────────── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+            {sHdr('1 · CONTEXTE (TOP-DOWN)')}
+            <Row2 s={valAccepted}  label="VAL J-1 acceptée (prix > VAH)"    val={rVah>0?`>${fmt2(rVah)}`:''} />
+            <Row2 s={pocMigStatus} label="POC migration"                     val={td.pocMig||'—'} />
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
+              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>{alnPat?'ℹ️':'⬜'}</span>
+              <span style={jb(8.5, 400, { color:C.muted, flex:1 })}>ALN Pattern</span>
+              <span style={jb(8.5, 700, { color:alnPat==='P3'?C.up:alnPat==='P4'?C.down:C.muted })}>{alnPat||'—'}{alnBiais!=='—'?` · ${alnBiais}`:''}</span>
+            </div>
+
+            {sHdr('2 · §9 — ALIGNEMENT NQ/ES')}
+            <Row2 s={p9NQ} label={`NQ > VAL J-1`} val={nqVal>0?fmt2(nqVal):''} />
+            <Row2 s={p9ES} label={`ES > VAL J-1`} val={esVal>0?fmt2(esVal):''} />
+            <Row2 s={p9All} label="§9 Global" val={p9All==='ok'?'CONFIRMÉ':p9All==='wait'?'PARTIEL':p9All==='no'?'DIVERGENT':'—'} />
+
+            {boxH>0&&boxL>0&&(<>
+              {sHdr('BOX RTH · ZONE BALANCÉE')}
+              <Row2 s={boxPosStatus} label="Prix > BOX High (breakout haussier)" val={boxH>0?fmt2(boxH):''} />
+              {boxDH>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Δ BOX High</span><span style={jb(8.5,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDH)}</span></div>}
+              {boxDL>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Δ BOX Low</span><span style={jb(8.5,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDL)}</span></div>}
+              {bMid>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:'#00d4ff'})}>Milieu BOX = pivot</span><span style={jb(8.5,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>{fmt2(bMid)}</span></div>}
+              {cSig.boxPos&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Mode</span><Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'}/></div>}
+            </>)}
+
+            {sHdr('3 · STRUCTURE TPO')}
+            <Row2 s={otfStatus}      label="OTF Higher (POC montant)"          val={otfStatus==='ok'?'OUI':otfStatus==='no'?'NON':otfStatus==='wait'?'STABLE':'—'} />
+            <Row2 s={equalHighStatus} label="Equal High"                        val={equalHighStatus==='ok'?'Détecté':equalHighStatus==='no'?'Non':'—'} />
+            <Row2 s={pocMigStatus}   label="POC stable ou montant"             val={td.pocMig||'—'} />
+
+            {sHdr('4 · TRIGGER')}
+            <Row2 s={vwapStatus} label="Prix > VWAP18h" val={vw18>0?fmt2(vw18):''} />
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
+              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>⏳</span>
+              <span style={jb(8.5, 400, { color:C.amber, flex:1 })}>Bougie {dir==='LONG'?'rouge':'verte'} sur pullback</span>
+              <span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
+              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>⏳</span>
+              <span style={jb(8.5, 400, { color:C.amber, flex:1 })}>Close &gt; niveau clé → ENTRÉE</span>
+              <span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
+            </div>
+
+            {isNoon && (<>
+              {sHdr('5 · NOON CURVE (12h–14h)')}
+              <Row2 s={noonAMSet} label="High AM posé"              val={amHigh>0?fmt2(amHigh):''} />
+              <Row2 s={noonPM}    label="PM retour vers High AM"     val={amHigh>0&&lp>0?`Δ${Math.abs(lp-amHigh).toFixed(2)}`:''} />
+            </>)}
+          </div>
+
+          {/* ── RIGHT: Signal Output ─────────────── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <div style={{ fontSize:7.5, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)' }}>SIGNAL OUTPUT</div>
+
+            <div style={{ border:`1px solid ${dirCol}30`, borderRadius:4, overflow:'hidden', flexGrow:1 }}>
+              <div style={{ padding:'7px 10px', background:`${dirCol}0a`, borderBottom:`1px solid ${dirCol}20`, display:'flex', alignItems:'center', gap:6 }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:dirCol, flexShrink:0, animation: setupReady?`pulseDot${dir==='LONG'?'':' '} 1.8s infinite`:'none' }} />
+                <span style={orb(10, 900, { color:dirCol, letterSpacing:'0.16em' })}>SETUP {tab} — {dir}</span>
+              </div>
+              <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:5 }}>
+                {/* Condition summary rows */}
+                {valAccepted!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>{si(valAccepted)}</span>
+                  <span style={jb(8.5, valAccepted==='ok'?600:400, { color:sc2(valAccepted) })}>VAL J-1 acceptée</span>
+                </div>}
+                {p9All!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>{si(p9All)}</span>
+                  <span style={jb(8.5, p9All==='ok'?600:400, { color:sc2(p9All) })}>§9 {p9All==='ok'?'confirmé':p9All==='wait'?'partiel':'divergent'}</span>
+                </div>}
+                {otfStatus!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>{si(otfStatus)}</span>
+                  <span style={jb(8.5, otfStatus==='ok'?600:400, { color:sc2(otfStatus) })}>OTF Higher</span>
+                </div>}
+                {vwapStatus!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>{si(vwapStatus)}</span>
+                  <span style={jb(8.5, vwapStatus==='ok'?600:400, { color:sc2(vwapStatus) })}>VWAP18h {vwapStatus==='ok'?'au-dessus':'en-dessous'}</span>
+                </div>}
+                <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:11 }}>⏳</span>
+                  <span style={jb(8.5, 400, { color:C.amber })}>Attendre bougie {dir==='LONG'?'rouge':'verte'}</span>
+                </div>
+
+                <div style={{ height:1, background:'rgba(201,168,76,0.10)', margin:'3px 0' }} />
+
+                {/* Entry rule */}
+                <div style={{ padding:'5px 8px', background:`${dirCol}08`, borderRadius:2, borderLeft:`2px solid ${dirCol}60` }}>
+                  <div style={jb(8, 400, { color:C.muted, marginBottom:2 })}>Règle entrée</div>
+                  <div style={jb(8.5, 600, { color:dirCol })}>Close {dir==='LONG'?'rouge':'verte'} {dir==='LONG'?'>':'<'} VWAP18h{vw18>0?` (${fmt2(vw18)})`:''}</div>
+                </div>
+
+                <div style={{ height:1, background:'rgba(201,168,76,0.10)', margin:'1px 0' }} />
+
+                {/* Levels */}
+                {dir==='LONG'?(<>
+                  {stopL>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`sous VAL J-1  ${fmt2(stopL)}`}</span></div>}
+                  {c1L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`SD+1  ${fmt2(c1L)}`}</span></div>}
+                  {c2L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAH J-1  {fmt2(c2L)}</span></div>}
+                  {c3L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+2  {fmt2(c3L)}</span></div>}
+                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:'#00d4ff',minWidth:36})}>Pivot</span><span style={jb(9,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
+                  {rrL!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrL}</span></div>}
+                </>):(<>
+                  {stopS>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`sur VAH J-1  ${fmt2(stopS)}`}</span></div>}
+                  {c1S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`SD-1  ${fmt2(c1S)}`}</span></div>}
+                  {c2S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAL J-1  {fmt2(c2S)}</span></div>}
+                  {c3S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-2  {fmt2(c3S)}</span></div>}
+                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:'#00d4ff',minWidth:36})}>Pivot</span><span style={jb(9,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
+                  {rrS!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrS}</span></div>}
+                </>)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderPositionActive = () => {
+    const lp     = pf(I.lastPx)
+    const entry  = pf(posEntry)
+    const stop   = pf(posStop)
+    const vw18   = pf(I.vwap18h)
+    const sp1    = pf(sdVals.sp1), sm1 = pf(sdVals.sm1)
+    const sp2    = pf(sdVals.sp2), sm2 = pf(sdVals.sm2)
+    const ibH    = pf(I.ibHigh),   ibL = pf(I.ibLow)
+    const ibMidV = ibH>0&&ibL>0 ? (ibH+ibL)/2 : 0
+    const orbH   = pf(I.orbHigh),  orbL = pf(I.orbLow)
+    const bxH    = pf(I.boxHigh),  bxL = pf(I.boxLow)
+    const bxMid  = bxH>0&&bxL>0 ? (bxH+bxL)/2 : 0
+    const alnPat = tab==='NQ' ? I.alnPattern : ''
+    const alnBiais = alnPat==='P3' ? 'Haussier' : alnPat==='P4' ? 'Baissier' : alnPat ? 'Neutre' : '—'
+    const alnCol   = alnPat==='P3' ? C.up : alnPat==='P4' ? C.down : C.muted
+    const pnlPts   = lp>0&&entry>0 ? (posDir==='LONG' ? lp-entry : entry-lp) : 0
+    const pnlCol   = pnlPts>0 ? C.up : pnlPts<0 ? C.down : C.muted
+
+    interface Verdict { action: 'TENIR'|'ALLÉGER'|'SORTIR'|'STOP'|'RE-ENTRER'|'ATTENTE'; icon: string; col: string; reason: string; priority: number }
+    const verdicts: Verdict[] = []
+    const add = (action: Verdict['action'], icon: string, col: string, reason: string, priority: number) =>
+      verdicts.push({ action, icon, col, reason, priority })
+
+    if (posMode === 'OVN') {
+      if (posDir === 'LONG') {
+        if (alnPat === 'P4')           add('SORTIR',  '❌', C.down,  'ALN biais Baissier', 10)
+        if (p9Align === 'Divergent')   add('SORTIR',  '❌', C.down,  'NQ/ES divergent', 9)
+        if (lp>0&&vw18>0&&lp<vw18)    add('STOP',    '❌', C.down,  `Prix < VWAP18h (${fmt2(vw18)})`, 8)
+        if (lp>0&&sp2>0&&lp>=sp2)     add('SORTIR',  '🎯', C.teal,  `SD+2 atteint (${fmt2(sp2)})`, 7)
+        if (lp>0&&bxH>0&&lp>=bxH)     add('SORTIR',  '🎯', C.teal,  `BOX High atteint (${fmt2(bxH)})`, 6)
+        if (lp>0&&sp1>0&&lp>=sp1)     add('ALLÉGER', '⚠️', C.amber, `SD+1 atteint (${fmt2(sp1)})`, 5)
+        if (lp>0&&bxMid>0&&lp<bxMid&&bxL>0&&lp>bxL) add('ALLÉGER','⚠️', C.amber, `Prix sous Milieu BOX (${fmt2(bxMid)})`, 4)
+        if (lp>0&&bxL>0&&lp<bxL)      add('STOP',    '❌', C.down,  `Prix sous BOX Low (${fmt2(bxL)})`, 8)
+        if (alnPat==='P3'&&p9Align==='Aligné'&&lp>0&&vw18>0&&lp>vw18)
+                                       add('TENIR',   '✅', C.up,    'ALN Haussier + §9 Aligné + Prix > VWAP', 3)
+        else if (!verdicts.length)     add('ATTENTE', '⏳', C.muted, 'Conditions partielles', 1)
+      } else {
+        if (alnPat === 'P3')           add('SORTIR',  '❌', C.down,  'ALN biais Haussier', 10)
+        if (p9Align === 'Divergent')   add('SORTIR',  '❌', C.down,  'NQ/ES divergent', 9)
+        if (lp>0&&vw18>0&&lp>vw18)    add('STOP',    '❌', C.down,  `Prix > VWAP18h (${fmt2(vw18)})`, 8)
+        if (lp>0&&bxL>0&&lp<=bxL)     add('SORTIR',  '🎯', C.teal,  `BOX Low atteint (${fmt2(bxL)})`, 6)
+        if (lp>0&&sm2>0&&lp<=sm2)     add('SORTIR',  '🎯', C.teal,  `SD-2 atteint (${fmt2(sm2)})`, 7)
+        if (lp>0&&sm1>0&&lp<=sm1)     add('ALLÉGER', '⚠️', C.amber, `SD-1 atteint (${fmt2(sm1)})`, 5)
+        if (lp>0&&bxMid>0&&lp>bxMid&&bxH>0&&lp<bxH) add('ALLÉGER','⚠️', C.amber, `Prix sur Milieu BOX (${fmt2(bxMid)})`, 4)
+        if (lp>0&&bxH>0&&lp>bxH)      add('STOP',    '❌', C.down,  `Prix sur BOX High (${fmt2(bxH)})`, 8)
+        if (alnPat==='P4'&&p9Align==='Aligné'&&lp>0&&vw18>0&&lp<vw18)
+                                       add('TENIR',   '✅', C.up,    'ALN Baissier + §9 Aligné + Prix < VWAP', 3)
+        else if (!verdicts.length)     add('ATTENTE', '⏳', C.muted, 'Conditions partielles', 1)
+      }
+    } else if (posMode === 'RTH') {
+      if (posDir === 'LONG') {
+        const orbConf = lp>0&&orbH>0&&lp>orbH
+        if (ibH>0&&lp>0&&lp<ibH&&orbH>0&&lp>orbL) add('SORTIR', '❌', C.down, 'Prix revient dans IB après cassure', 8)
+        if (ibH>0&&lp>0&&lp>=ibH)                  add('ALLÉGER','⚠️', C.amber,`IB High atteint (${fmt2(ibH)})`, 6)
+        if (ibMidV>0&&lp>0&&lp<ibMidV)             add('ALLÉGER','⚠️', C.amber,`IB Mid perdu (${fmt2(ibMidV)})`, 5)
+        if (I.ibClass==='Wide IB'&&orbConf)         add('RE-ENTRER','🔄',C.teal,'Wide IB + ORB confirmé', 4)
+        if (orbConf)                                add('TENIR',   '✅', C.up,  `ORB cassé haut (${fmt2(orbH)})`, 3)
+        if (!verdicts.length)                       add('ATTENTE', '⏳', C.muted,'ORB non confirmé', 1)
+      } else {
+        const orbConf = lp>0&&orbL>0&&lp<orbL
+        if (ibL>0&&lp>0&&lp>ibL&&orbL>0&&lp<orbH) add('SORTIR', '❌', C.down, 'Prix revient dans IB après cassure', 8)
+        if (ibL>0&&lp>0&&lp<=ibL)                  add('ALLÉGER','⚠️', C.amber,`IB Low atteint (${fmt2(ibL)})`, 6)
+        if (ibMidV>0&&lp>0&&lp>ibMidV)             add('ALLÉGER','⚠️', C.amber,`IB Mid perdu (${fmt2(ibMidV)})`, 5)
+        if (I.ibClass==='Wide IB'&&orbConf)         add('RE-ENTRER','🔄',C.teal,'Wide IB + ORB confirmé', 4)
+        if (orbConf)                                add('TENIR',   '✅', C.up,  `ORB cassé bas (${fmt2(orbL)})`, 3)
+        if (!verdicts.length)                       add('ATTENTE', '⏳', C.muted,'ORB non confirmé', 1)
+      }
+    }
+
+    const sorted  = [...verdicts].sort((a,b)=>b.priority-a.priority)
+    const main    = sorted[0]
+    const others  = sorted.slice(1)
+    const allergerAt = posMode==='OVN' ? (posDir==='LONG' ? sdVals.sp1 : sdVals.sm1) : (posDir==='LONG' ? (ibH>0?fmt2(ibH):'') : (ibL>0?fmt2(ibL):''))
+    const sortirAt   = posMode==='OVN' ? (posDir==='LONG' ? sdVals.sp2 : sdVals.sm2) : ''
+    const hasPos = entry>0 && stop>0
+    const inpS: CSSProperties = { padding:'5px 8px', borderRadius:3, border:'1px solid rgba(201,168,76,0.30)', background:'#1a2236', color:'#fff', fontFamily:'"JetBrains Mono",monospace', fontSize:11, outline:'none', boxSizing:'border-box', width:'100%' }
+
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {/* Mode + Direction */}
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+          <span style={jb(9, 400, { color:C.muted })}>MODE :</span>
+          {(['OVN','RTH'] as const).map(m=>(
+            <button key={m} onClick={()=>setPosMode(p=>p===m?null:m)} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background: posMode===m?'rgba(201,168,76,0.18)':'transparent', outline:`1px solid ${posMode===m?'rgba(201,168,76,0.5)':'rgba(201,168,76,0.14)'}`, color: posMode===m?C.gold:'rgba(136,153,187,0.65)' }}>{m}</button>
+          ))}
+          <span style={{ marginLeft:6, ...jb(9, 400, { color:C.muted }) }}>DIRECTION :</span>
+          {(['LONG','SHORT'] as const).map(d=>(
+            <button key={d} onClick={()=>setPosDir(d)} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background: posDir===d?(d==='LONG'?'rgba(0,255,136,0.12)':'rgba(255,68,68,0.12)'):'transparent', outline:`1px solid ${posDir===d?(d==='LONG'?'rgba(0,255,136,0.4)':'rgba(255,68,68,0.4)'):'rgba(201,168,76,0.14)'}`, color: posDir===d?(d==='LONG'?C.up:C.down):'rgba(136,153,187,0.65)' }}>{d}</button>
+          ))}
+        </div>
+
+        {/* Inputs */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+          {([['ENTRÉE', posEntry, setPosEntry, '29150'],['STOP', posStop, setPosStop, '29066'],['CONTRATS', posSize, setPosSize, '1']] as [string,string,(v:string)=>void,string][]).map(([lbl,val,setter,ph])=>(
+            <div key={lbl}>
+              <div style={jb(8, 400, { color:C.muted, marginBottom:3 })}>{lbl}</div>
+              <input type="text" inputMode="decimal" value={val} onChange={e=>setter(normNum(e.target.value))} placeholder={ph} style={inpS} />
+            </div>
+          ))}
+        </div>
+
+        {/* Position block */}
+        {hasPos && posMode && (
+          <div style={{ border:`2px solid ${posDir==='LONG'?'rgba(0,255,136,0.25)':'rgba(255,68,68,0.25)'}`, borderRadius:4, overflow:'hidden' }}>
+            <div style={{ padding:'8px 12px', background: posDir==='LONG'?'rgba(0,255,136,0.07)':'rgba(255,68,68,0.07)', borderBottom:`1px solid ${posDir==='LONG'?'rgba(0,255,136,0.18)':'rgba(255,68,68,0.18)'}`, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={orb(11, 900, { color: posDir==='LONG'?C.up:C.down, letterSpacing:'0.18em' })}>POSITION ACTIVE — {posDir}</span>
+              <span style={{ flex:1 }} />
+              <span style={jb(9, 400, { color:C.muted })}>{posMode} · {tab}</span>
+            </div>
+            <div style={{ padding:'10px 12px', background:C.sur, display:'flex', flexDirection:'column', gap:8 }}>
+              {/* Metrics */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
+                {([
+                  ['ENTRÉE', fmt2(entry),  C.gold],
+                  ['STOP',   fmt2(stop),   C.down],
+                  ['LAST',   lp>0?fmt2(lp):'—', posDir==='LONG'?(lp>entry?C.up:lp<stop?C.down:C.muted):(lp<entry?C.up:lp>stop?C.down:C.muted)],
+                  ['P&L',    (pnlPts>=0?'+':'')+pnlPts.toFixed(2)+' pts', pnlCol],
+                ] as [string,string,string][]).map(([label,val,c])=>(
+                  <div key={label} style={{ padding:'6px', background:'rgba(0,0,0,0.25)', borderRadius:3, textAlign:'center' }}>
+                    <div style={jb(7, 400, { color:C.muted, marginBottom:2 })}>{label}</div>
+                    <div style={orb(11, 900, { color:c, fontVariantNumeric:'tabular-nums' })}>{val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Main signal */}
+              {main && (
+                <div style={{ padding:'10px 12px', borderRadius:3, background: main.action==='TENIR'?'rgba(0,255,136,0.07)':main.action==='ALLÉGER'?'rgba(212,175,55,0.09)':main.action==='SORTIR'||main.action==='STOP'?'rgba(255,68,68,0.09)':main.action==='RE-ENTRER'?'rgba(30,179,188,0.07)':'rgba(136,153,187,0.05)', border:`1px solid ${main.col}30`, display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontSize:18, lineHeight:1 }}>{main.icon}</span>
+                  <div>
+                    <span style={orb(15, 900, { color:main.col, letterSpacing:'0.14em' })}>{main.action}</span>
+                    <span style={jb(9, 400, { color:'rgba(136,153,187,0.7)', marginLeft:10 })}>{main.reason}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Auto-signals */}
+              <div style={{ display:'flex', flexDirection:'column', gap:4, padding:'6px 0' }}>
+                {posMode==='OVN' && (<>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>ALN</span>
+                    <span style={jb(9, 700, { color:alnCol })}>{alnBiais}</span>
+                    {alnPat && <span style={jb(8, 400, { color:'rgba(136,153,187,0.5)' })}>{alnPat}</span>}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>§9 NQ+ES</span>
+                    <span style={jb(9, 700, { color: p9Align==='Aligné'?C.up:p9Align==='Divergent'?C.down:C.muted })}>{p9Align||'—'}</span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>VWAP18h</span>
+                    <span style={jb(9, 700, { color: lp>0&&vw18>0?(lp>vw18?C.up:C.down):C.muted })}>{lp>0&&vw18>0?(lp>vw18?'Au-dessus ✅':'En-dessous ❌'):'—'}</span>
+                    {vw18>0&&<span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>{fmt2(vw18)}</span>}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>{posDir==='LONG'?'SD+1 / +2':'SD-1 / -2'}</span>
+                    <span style={jb(9, 700, { color:C.amber })}>{posDir==='LONG'?`${sdVals.sp1||'—'} / ${sdVals.sp2||'—'}`:`${sdVals.sm1||'—'} / ${sdVals.sm2||'—'}`}</span>
+                  </div>
+                </>)}
+                {posMode==='RTH' && (<>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>ORB</span>
+                    <span style={jb(9, 700, { color: lp>0&&orbH>0&&orbL>0?(lp>orbH?C.up:lp<orbL?C.up:C.muted):C.muted })}>{lp>0&&orbH>0&&orbL>0?(lp>orbH?`Cassé haut (${fmt2(orbH)}) ✅`:lp<orbL?`Cassé bas (${fmt2(orbL)}) ✅`:'Dans ORB ⚠️'):'—'}</span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>IB</span>
+                    <span style={jb(9, 700, { color: ibH>0&&ibL>0?(lp>ibH?C.up:lp<ibL?C.down:C.muted):C.muted })}>{ibH>0&&ibL>0?(lp>ibH?'Au-dessus IB':lp<ibL?'En-dessous IB':'Dans IB'):'—'}</span>
+                    {I.ibClass&&<span style={jb(8, 400, { color:'rgba(136,153,187,0.5)' })}>{I.ibClass}</span>}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={jb(8, 400, { color:C.muted, minWidth:60 })}>IB Mid</span>
+                    <span style={jb(9, 700, { color: ibMidV>0&&lp>0?(posDir==='LONG'?lp>ibMidV?C.up:C.down:lp<ibMidV?C.up:C.down):C.muted })}>{ibMidV>0?fmt2(ibMidV):'—'}</span>
+                  </div>
+                </>)}
+              </div>
+
+              {/* Targets */}
+              {(allergerAt||sortirAt) && (
+                <div style={{ display:'flex', gap:16, paddingTop:6, borderTop:'1px solid rgba(201,168,76,0.10)', flexWrap:'wrap' }}>
+                  {allergerAt&&<span><span style={jb(8,400,{color:C.muted})}>ALLÉGER 50% : </span><span style={jb(10,700,{color:C.amber})}>{allergerAt}</span></span>}
+                  {sortirAt&&<span><span style={jb(8,400,{color:C.muted})}>SORTIR TOTAL : </span><span style={jb(10,700,{color:C.teal})}>{sortirAt}</span></span>}
+                </div>
+              )}
+
+              {/* Secondary signals */}
+              {others.length>0&&(
+                <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                  {others.map((v,i)=>(
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:6, padding:'3px 8px', background:'rgba(0,0,0,0.15)', borderRadius:2 }}>
+                      <span style={{ fontSize:10, lineHeight:1 }}>{v.icon}</span>
+                      <span style={jb(8,600,{color:v.col})}>{v.action}</span>
+                      <span style={jb(8,400,{color:'rgba(136,153,187,0.55)'})}>{v.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!hasPos && posMode && (
+          <div style={{ textAlign:'center', padding:14, ...jb(10,400,{color:C.muted}) }}>
+            Saisissez Entrée + Stop pour activer le suivi de position
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ width:'100%', height:'100%', overflowY:'auto', overflowX:'hidden', padding:'10px 14px', display:'flex', flexDirection:'column', gap:10, fontFamily:'"JetBrains Mono",monospace', boxSizing:'border-box', background:C.pg }}>
 
@@ -1948,15 +2508,23 @@ export default function Calculateur() {
             <span style={orb(10, 900, { color:C.gold, letterSpacing:'0.14em', fontVariantNumeric:'tabular-nums' })}>{nyTime}</span>
           </div>
         )}
-        {/* SC Bridge status — always visible */}
-        <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background: wsSc==='live' ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.06)', outline:`1px solid ${wsSc==='live' ? 'rgba(0,255,136,0.30)' : 'rgba(255,68,68,0.20)'}` }}>
-          <span style={{ width:5, height:5, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
-          <span style={orb(7, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.14em' })}>{wsSc==='live' ? 'SC LIVE' : 'SC OFF'}</span>
-        </div>
+        {/* SC Bridge status + launch button */}
+        <button
+          onClick={() => { if (wsSc !== 'live') window.open('scbridge://launch') }}
+          title={wsSc === 'live' ? 'Bridge actif' : 'Cliquer pour lancer le bridge Sierra Chart'}
+          style={{ display:'flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:2, border:'none', cursor: wsSc==='live' ? 'default' : 'pointer', background: wsSc==='live' ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.13)', outline:`1px solid ${wsSc==='live' ? 'rgba(0,255,136,0.30)' : 'rgba(255,68,68,0.45)'}`, transition:'all 0.15s' }}
+        >
+          <span style={{ width:6, height:6, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
+          <span style={orb(7, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.14em' })}>
+            {wsSc==='live' ? 'SC LIVE' : '⚡ LANCER BRIDGE'}
+          </span>
+        </button>
+        <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />
         <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
         <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
         <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
         <Btn label="◈ BACKTEST SD-2"    active={btOpen} col={C.teal}  onClick={()=>setBtOpen(o=>!o)} />
+        <Btn label="⬡ POSITION ACTIVE"  active={posOpen} col='#c77dff' onClick={()=>setPosOpen(o=>!o)} />
         <button onClick={handleReset} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(255,68,68,0.08)', outline:'1px solid rgba(255,68,68,0.25)', color:'rgba(255,100,100,0.75)', transition:'all 0.14s' }}>
           ↺ RESET
         </button>
@@ -1978,6 +2546,19 @@ export default function Calculateur() {
           {td.mOtf   && <Pill label={`MONTHLY: ${td.mOtf}`}    col={td.mOtf==='Higher'?C.up:td.mOtf==='Lower'?C.down:C.muted} />}
         </div>
       </div>
+
+      {/* Setup Launcher */}
+      {slOpen && (
+        <div style={{ border:'1px solid rgba(0,212,255,0.22)', borderRadius:4, overflow:'hidden' }}>
+          <div style={{ padding:'6px 12px', borderLeft:'3px solid #00d4ff', background:'rgba(0,212,255,0.04)', borderBottom:'1px solid rgba(0,212,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
+            <span style={orb(8.5, 900, { color:'#00d4ff', letterSpacing:'0.22em' })}>◉ SETUP LAUNCHER · {tab}</span>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:'#00d4ff', animation:'pulseDot 2.4s infinite', flexShrink:0 }} />
+          </div>
+          <div style={{ padding:'12px 12px', background:C.sur }}>
+            {renderSetupLauncher()}
+          </div>
+        </div>
+      )}
 
       {/* Top-Down Dalton */}
       {tdOpen && (
@@ -2038,6 +2619,18 @@ export default function Calculateur() {
           </div>
           <div style={{ padding:'12px 12px', background:C.sur }}>
             {renderBacktest()}
+          </div>
+        </div>
+      )}
+
+      {/* Position Active */}
+      {posOpen && (
+        <div style={{ border:'1px solid rgba(199,125,255,0.22)', borderRadius:4, overflow:'hidden' }}>
+          <div style={{ padding:'6px 12px', borderLeft:'3px solid #c77dff', background:'rgba(199,125,255,0.04)', borderBottom:'1px solid rgba(199,125,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
+            <span style={orb(8.5, 900, { color:'#c77dff', letterSpacing:'0.22em' })}>⬡ GESTION POSITION ACTIVE · {tab}</span>
+          </div>
+          <div style={{ padding:'12px 12px', background:C.sur }}>
+            {renderPositionActive()}
           </div>
         </div>
       )}

@@ -39,8 +39,8 @@ def now_et(): return datetime.now()   # PC déjà en heure New York
 
 # ─── CONFIG — CHEMINS DES FICHIERS CSV ────────────────────────────────────────
 FILES = {
-    'NQ': r"C:\SierraChart_CME\Data\NQ.csv.txt",
-    'ES': r"C:\SierraChart_CME\Data\ESU26_FUT_CME[M]  30 Min  #15_GraphData.txt",
+    'NQ': r"C:\SierraChart_CME\Data\nq 30 mn.txt",
+    'ES': r"C:\SierraChart_CME\Data\ESU26_FUT_CME[M]  30 Min  #17_GraphData.txt",
     'GC': r"C:\SierraChart_CME\Data\GC.csv.txt",
     'CL': r"C:\SierraChart_CME\Data\CL.csv.txt",
 }
@@ -93,8 +93,10 @@ extract_date = parse_sc_date   # alias pour compatibilité
 
 # ─── PARSING CSV ──────────────────────────────────────────────────────────────
 
-def parse_csv(filepath: str) -> list:
-    """Retourne [] silencieusement si le fichier est absent."""
+def parse_csv(filepath: str, diag: bool = False) -> list:
+    """Retourne [] silencieusement si le fichier est absent.
+    diag=True : affiche les headers détectés et les indices de colonnes.
+    """
     rows = []
     try:
         content = Path(filepath).read_text(encoding='utf-8-sig')
@@ -118,32 +120,66 @@ def parse_csv(filepath: str) -> list:
 
     hdrs = [h.lower().strip() for h in split(hdr)]
 
+    if diag:
+        print(f"  [DIAG] Séparateur détecté : {repr(sep)}")
+        print(f"  [DIAG] Headers bruts      : {split(hdr)}")
+        print(f"  [DIAG] Headers normalisés : {hdrs}")
+
     def find(*names):
+        """Cherche par nom exact (insensible casse + espaces) ou sous-chaîne partielle."""
         for n in names:
-            nc = n.replace(' ', '')
+            nc = n.replace(' ', '').lower()
+            # 1) correspondance exacte
             for i, h in enumerate(hdrs):
-                if h == n or h.replace(' ', '') == nc:
+                if h == n.lower() or h.replace(' ', '') == nc:
+                    return i
+            # 2) correspondance partielle (le header contient le terme)
+            for i, h in enumerate(hdrs):
+                if nc in h.replace(' ', ''):
                     return i
         return -1
 
     idx_date = find('date')
-    idx_time = find('time', 'heure', 'date/time', 'datetime', 'timestamp')
-    idx_open = find('open')
-    idx_high = find('high')
-    idx_low  = find('low')
-    idx_last = find('last', 'close', 'clôture', 'cloture')
-    idx_vwap = find('vwap')
-    idx_sp1  = find('sd+1', 'sd +1', 'vwap sd+1', '+1sd')
-    idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd')
-    idx_sp2  = find('sd+2', 'sd +2', 'vwap sd+2', '+2sd')
-    idx_sm2  = find('sd-2', 'sd -2', 'vwap sd-2', '-2sd')
-    idx_poc  = find('tpo poc')
-    idx_vah  = find('tpo vah')
-    idx_val  = find('tpo val')
+    idx_time = find('time', 'heure', 'date/time', 'datetime', 'timestamp', 'dateheure')
+    idx_open = find('open', 'ouverture', 'ouvr')
+    idx_high = find('high', 'haut', 'plus haut')
+    idx_low  = find('low', 'bas', 'plus bas')
+    idx_last = find('last', 'close', 'clôture', 'cloture', 'dernier', 'cloture')
+    idx_vwap = find('vwap', 'vwap(daily)', 'dailyvwap', 'vwap daily')
+    idx_sp1  = find('sd+1', 'sd +1', 'vwap sd+1', '+1sd', 'upper1', 'upper band 1', 'upperband1', 'bande+1', 'bande +1')
+    idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd', 'lower1', 'lower band 1', 'lowerband1', 'bande-1', 'bande -1')
+    idx_sp2  = find('sd+2', 'sd +2', 'vwap sd+2', '+2sd', 'upper2', 'upper band 2', 'upperband2', 'bande+2', 'bande +2')
+    idx_sm2  = find('sd-2', 'sd -2', 'vwap sd-2', '-2sd', 'lower2', 'lower band 2', 'lowerband2', 'bande-2', 'bande -2')
+    idx_poc  = find('tpo poc', 'poc', 'pointofcontrol', 'point of control')
+    idx_vah  = find('tpo vah', 'vah', 'valuearehigh', 'value area high')
+    idx_val  = find('tpo val', 'val', 'valuearealow', 'value area low')
+
+    # Fallback positionnel Sierra Chart standard : Date,Time,Open,High,Low,Last,...
+    # Si OHLC non trouvés par nom mais que date+time sont col 0+1, tenter positions fixes
+    _sc_std = (idx_date == 0 and idx_time == 1
+               and idx_open < 0 and idx_high < 0 and idx_low < 0 and idx_last < 0
+               and len(hdrs) >= 6)
+    if _sc_std:
+        idx_open = 2; idx_high = 3; idx_low = 4; idx_last = 5
+        if diag:
+            print("  [DIAG] OHLC non trouvés par nom → fallback positionnel SC (col 2-5)")
+
+    if diag:
+        print(f"  [DIAG] idx_date={idx_date}  idx_time={idx_time}  "
+              f"idx_open={idx_open}  idx_high={idx_high}  idx_low={idx_low}  idx_last={idx_last}")
+        print(f"  [DIAG] idx_vwap={idx_vwap}  idx_sp1={idx_sp1}  idx_sm1={idx_sm1}  "
+              f"idx_sp2={idx_sp2}  idx_sm2={idx_sm2}")
+        print(f"  [DIAG] idx_poc={idx_poc}  idx_vah={idx_vah}  idx_val={idx_val}")
+        # Affiche la première ligne de données brute
+        if len(lines) > 1:
+            print(f"  [DIAG] 1ère ligne données : {lines[1]}")
+            print(f"  [DIAG] 1ère ligne colonnes: {split(lines[1])}")
 
     time_col = idx_time if idx_time >= 0 else idx_date
     if time_col < 0:
         print(f"[WARN] Colonne horaire introuvable dans {filepath}")
+        if diag:
+            print(f"  [DIAG] Aucune colonne 'date/time/heure' trouvée — parsing impossible.")
         return rows
 
     def get(cols, j):
@@ -188,6 +224,11 @@ def parse_csv(filepath: str) -> list:
             'tpo_vah': get(cols, idx_vah),
             'tpo_val': get(cols, idx_val),
         })
+
+    if diag and rows:
+        print(f"  [DIAG] 1ère barre parsée   : date={rows[0]['date']}  time={rows[0]['time']}  "
+              f"open={rows[0]['open']}  high={rows[0]['high']}  low={rows[0]['low']}  close={rows[0]['close']}")
+        print(f"  [DIAG] Total lignes parsées: {len(rows)}")
 
     return rows
 
@@ -295,13 +336,36 @@ def build_payload(instr: str, all_rows: list) -> dict:
         'bars_london': [bar_dict(r) for r in bars_london],
     }
 
+_DIAG_DONE: set = set()   # instruments déjà diagnostiqués (une seule fois)
+
 def build_message() -> str:
+    from datetime import date as _date
+    now    = now_et()
+    today  = now.date()
+    delta  = 3 if today.weekday() == 0 else 1
+    j1_d   = today - __import__('datetime').timedelta(days=delta)
+    print(f"\n  today = {today.year}-{today.month}-{today.day}  (j1 = {j1_d.year}-{j1_d.month}-{j1_d.day})")
+
     data = {}
     for instr, filepath in FILES.items():
-        rows = parse_csv(filepath)
+        diag = instr not in _DIAG_DONE
+        if diag:
+            print(f"\n  [DIAG] ── {instr} ─── {filepath}")
+        rows = parse_csv(filepath, diag=diag)
+        if diag:
+            _DIAG_DONE.add(instr)
         if not rows:
             # fichier absent ou vide → instrument omis du JSON
             continue
+
+        # Debug : dernière date lue dans le CSV
+        dated = [r['date'] for r in rows if r['date'] is not None]
+        if dated:
+            last_csv_date = max(dated)
+            print(f"  {instr}: dernière date CSV = {last_csv_date.year}-{last_csv_date.month}-{last_csv_date.day}  match={last_csv_date == today}")
+        else:
+            print(f"  {instr}: aucune date parsée dans le CSV (vérifier format colonne Date)")
+
         data[instr] = build_payload(instr, rows)
         bt = data[instr]['bars_today']
         bj = data[instr]['bars_j1']
