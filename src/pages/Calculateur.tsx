@@ -2464,11 +2464,17 @@ export default function Calculateur() {
             <span style={orb(10, 900, { color:C.gold, letterSpacing:'0.14em', fontVariantNumeric:'tabular-nums' })}>{nyTime}</span>
           </div>
         )}
-        {/* SC Bridge status — always visible */}
-        <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background: wsSc==='live' ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.06)', outline:`1px solid ${wsSc==='live' ? 'rgba(0,255,136,0.30)' : 'rgba(255,68,68,0.20)'}` }}>
-          <span style={{ width:5, height:5, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
-          <span style={orb(7, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.14em' })}>{wsSc==='live' ? 'SC LIVE' : 'SC OFF'}</span>
-        </div>
+        {/* SC Bridge status + launch button */}
+        <button
+          onClick={() => { if (wsSc !== 'live') window.open('scbridge://launch') }}
+          title={wsSc === 'live' ? 'Bridge actif' : 'Cliquer pour lancer le bridge Sierra Chart'}
+          style={{ display:'flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:2, border:'none', cursor: wsSc==='live' ? 'default' : 'pointer', background: wsSc==='live' ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.13)', outline:`1px solid ${wsSc==='live' ? 'rgba(0,255,136,0.30)' : 'rgba(255,68,68,0.45)'}`, transition:'all 0.15s' }}
+        >
+          <span style={{ width:6, height:6, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
+          <span style={orb(7, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.14em' })}>
+            {wsSc==='live' ? 'SC LIVE' : '⚡ LANCER BRIDGE'}
+          </span>
+        </button>
         <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />
         <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
         <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
