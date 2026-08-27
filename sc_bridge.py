@@ -51,11 +51,18 @@ FILES = {
 RTH_START = {'NQ': '09:30', 'ES': '09:30', 'GC': '08:20', 'CL': '09:00'}
 RTH_END   = {'NQ': '16:00', 'ES': '16:00', 'GC': '13:30', 'CL': '14:30'}
 
-WS_HOST      = '0.0.0.0'
-WS_PORT      = 8765
-HTTP_PORT    = 8766        # HTTP REST endpoint local
-REFRESH_S    = 10          # rafraîchissement CSV (secondes)
-VPS_PUSH_URL = 'http://2.29.3.199:8767/update'  # '' pour désactiver
+WS_HOST   = '0.0.0.0'
+WS_PORT   = 8765
+HTTP_PORT = 8766
+REFRESH_S = 10
+
+# Dossier de réception des CSV envoyés par send_csv.bat depuis Windows
+import sys as _sys, os as _os
+if _sys.platform != 'win32':
+    _UPLOAD_DIR = '/tmp/sc-bridge'
+    _os.makedirs(_UPLOAD_DIR, exist_ok=True)
+    FILES = {k: f"{_UPLOAD_DIR}/{k}.csv" for k in ('NQ','ES','GC','CL')}
+del _sys, _os
 
 CLIENTS: set = set()
 LAST_MSG: str = '{}'    # dernier payload JSON (partagé WS + HTTP)
@@ -512,6 +519,8 @@ def build_message() -> str:
 # ─── SERVEUR HTTP (proxy Vercel) ──────────────────────────────────────────────
 
 class _HttpHandler(BaseHTTPRequestHandler):
+    INSTRUMENTS = {'NQ', 'ES', 'GC', 'CL'}
+
     def do_GET(self):
         if self.path == '/data':
             body = LAST_MSG.encode()
@@ -521,10 +530,43 @@ class _HttpHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        elif self.path == '/health':
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'ok')
         else:
             self.send_response(404)
             self.end_headers()
-    def log_message(self, *args): pass  # silencieux
+
+    def do_POST(self):
+        # /upload/NQ, /upload/ES, /upload/GC, /upload/CL
+        parts = self.path.strip('/').split('/')
+        if len(parts) == 2 and parts[0] == 'upload' and parts[1].upper() in self.INSTRUMENTS:
+            instr = parts[1].upper()
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                import tempfile, shutil
+                dest = FILES.get(instr, f'/tmp/sc-bridge/{instr}.csv')
+                Path(dest).parent.mkdir(parents=True, exist_ok=True)
+                # Écriture atomique via fichier temporaire
+                tmp = dest + '.tmp'
+                Path(tmp).write_bytes(body)
+                shutil.move(tmp, dest)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"ok":true}')
+                print(f"  [upload] {instr} {len(body)} octets")
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(f'{{"error":"{e}"}}'.encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, *args): pass
 
 def _start_http():
     server = HTTPServer(('0.0.0.0', HTTP_PORT), _HttpHandler)
@@ -549,28 +591,6 @@ async def handler(ws: WebSocketServerProtocol) -> None:
         CLIENTS.discard(ws)
         print(f"[-] Client déconnecté ({len(CLIENTS)} actif(s))")
 
-async def push_to_vps(msg: str) -> None:
-    """Pousse les données vers bridge_receiver.py sur VPS via HTTP POST."""
-    if not VPS_PUSH_URL:
-        return
-    import urllib.request
-    loop = asyncio.get_event_loop()
-    def _push():
-        try:
-            req = urllib.request.Request(
-                VPS_PUSH_URL,
-                data=msg.encode('utf-8'),
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
-            with urllib.request.urlopen(req, timeout=5):
-                pass
-            print(f"  [VPS] Push OK")
-        except Exception as e:
-            print(f"  [VPS] Push failed: {e}")
-    await loop.run_in_executor(None, _push)
-
-
 async def broadcast_loop() -> None:
     global LAST_MSG
     while True:
@@ -579,7 +599,6 @@ async def broadcast_loop() -> None:
         try:
             msg = build_message()
             LAST_MSG = msg
-            await push_to_vps(msg)
             if not CLIENTS:
                 continue
             results = await asyncio.gather(

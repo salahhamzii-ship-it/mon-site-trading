@@ -3,7 +3,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const VPS_URL = 'http://2.29.3.199:8767/data'
+const VPS_URL = 'http://2.29.3.199:8766/data'
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
