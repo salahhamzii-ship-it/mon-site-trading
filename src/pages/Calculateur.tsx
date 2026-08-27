@@ -438,47 +438,43 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
-  // Données session 27/08/2026 — intégrées directement (pas de fetch, pas de cache)
-  useEffect(() => {
-    const SESSION_DATE = '2026-08-27'
-    const SESSION: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
-      NQ: {
-        rOpen:'29174.50', rHigh:'29332.75', rLow:'29133.50', rSettle:'29217.75',
-        rVah:'29277.75', rVal:'29187.25', rPoc:'29226.50',
-        asiaHigh:'29654.75', asiaLow:'29401.75', asiaClose:'29450.75',
-        londonHigh:'29549.75', londonLow:'29401.75', londonClose:'29517.25',
-        oHigh:'29654.75', oLow:'29401.75', oClose:'29517.25',
-        ovnPoc:'29525', ovnVah:'29581', ovnVal:'29412',
-        vwap18h:'29228', ovnSd1h:'29539', ovnSd1l:'29228', ovnSd2h:'29850', ovnSd2l:'28606',
-      },
-      ES: {
-        rOpen:'7678.75', rHigh:'7702.50', rLow:'7676.75', rSettle:'7685.25',
-        rVah:'7692.75', rVal:'7680.50', rPoc:'7686.00',
-        asiaHigh:'7741.25', asiaLow:'7707.00', asiaClose:'7712.75',
-        londonHigh:'7722.00', londonLow:'7707.00', londonClose:'7717.00',
-        oHigh:'7741.25', oLow:'7707.00', oClose:'7717.00',
-        ovnPoc:'7717', ovnVah:'7731', ovnVal:'7710',
-        vwap18h:'7717', ovnSd1h:'7724', ovnSd1l:'7710', ovnSd2h:'7731', ovnSd2l:'7703',
-      },
-    }
-    // Date ET (New York) pour correspondre à la session de trading
-    const etDate = new Intl.DateTimeFormat('en-CA', { timeZone:'America/New_York' }).format(new Date())
-    if (etDate !== SESSION_DATE) return
+  // Données session du jour — appliquées au chargement ET via bouton CHARGER SESSION
+  const SESSION_DATE = '2026-08-27'
+  const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
+    NQ: {
+      rOpen:'29174.50', rHigh:'29332.75', rLow:'29133.50', rSettle:'29217.75',
+      rVah:'29277.75', rVal:'29187.25', rPoc:'29226.50',
+      asiaHigh:'29654.75', asiaLow:'29401.75', asiaClose:'29450.75',
+      londonHigh:'29549.75', londonLow:'29401.75', londonClose:'29517.25',
+      oHigh:'29654.75', oLow:'29401.75', oClose:'29517.25',
+      ovnPoc:'29525', ovnVah:'29581', ovnVal:'29412',
+      vwap18h:'29228', ovnSd1h:'29539', ovnSd1l:'29228', ovnSd2h:'29850', ovnSd2l:'28606',
+    },
+    ES: {
+      rOpen:'7678.75', rHigh:'7702.50', rLow:'7676.75', rSettle:'7685.25',
+      rVah:'7692.75', rVal:'7680.50', rPoc:'7686.00',
+      asiaHigh:'7741.25', asiaLow:'7707.00', asiaClose:'7712.75',
+      londonHigh:'7722.00', londonLow:'7707.00', londonClose:'7717.00',
+      oHigh:'7741.25', oLow:'7707.00', oClose:'7717.00',
+      ovnPoc:'7717', ovnVah:'7731', ovnVal:'7710',
+      vwap18h:'7717', ovnSd1h:'7724', ovnSd1l:'7710', ovnSd2h:'7731', ovnSd2l:'7703',
+    },
+  }
+  const applySessionData = useCallback(() => {
     setII(prev => {
       const next = { ...prev }
-      let changed = false
       for (const t of ['NQ','ES','GC','CL'] as Tab[]) {
-        const patch = SESSION[t]; if (!patch) continue
-        const cur = next[t]
-        const u: Partial<Record<keyof Instr, string>> = {}
-        for (const [k, v] of Object.entries(patch)) {
-          if (!(cur as unknown as Record<string,string>)[k])
-            (u as Record<string,string>)[k] = v
-        }
-        if (Object.keys(u).length) { next[t] = { ...cur, ...(u as Partial<Instr>) }; changed = true }
+        const patch = SESSION_DATA[t]; if (!patch) continue
+        next[t] = { ...next[t], ...(patch as Partial<Instr>) }
       }
-      return changed ? next : prev
+      return next
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const etDate = new Intl.DateTimeFormat('en-CA', { timeZone:'America/New_York' }).format(new Date())
+    if (etDate === SESSION_DATE) applySessionData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -2640,6 +2636,11 @@ export default function Calculateur() {
             {wsSc==='live' ? 'SC LIVE' : '⚡ LANCER BRIDGE'}
           </span>
         </button>
+        <button
+          onClick={applySessionData}
+          title="Charger les données J-1 + OVN + VWAP/SD du jour"
+          style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.50)', color:'#c9a84c', transition:'all 0.14s' }}
+        >⬇ CHARGER SESSION</button>
         <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />
         <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
         <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
