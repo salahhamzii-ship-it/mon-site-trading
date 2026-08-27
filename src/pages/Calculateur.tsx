@@ -677,11 +677,15 @@ export default function Calculateur() {
   useEffect(() => {
     const useHttpPoll = !wsCustomUrl.trim() && window.location.protocol === 'https:'
     if (useHttpPoll) {
-      // Polling HTTP via proxy Vercel → pas de mixed-content
+      // Proxy Vercel: relatif si déjà sur vercel.app, sinon URL absolue
+      const isVercel = window.location.hostname.endsWith('.vercel.app')
+      const PROXY_URL = isVercel
+        ? '/api/bridge-data'
+        : 'https://salah-tataouine-terminal.vercel.app/api/bridge-data'
       let active = true
       const poll = async () => {
         try {
-          const res = await fetch('/api/bridge-data')
+          const res = await fetch(PROXY_URL, { signal: AbortSignal.timeout(9000) })
           if (!res.ok) throw new Error(`${res.status}`)
           const data = await res.json()
           if (data._error) throw new Error(data._error)
