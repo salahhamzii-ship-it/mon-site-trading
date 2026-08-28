@@ -413,6 +413,9 @@ export default function Calculateur() {
   const [jsonModal,   setJsonModal]   = useState(false)
   const [jsonText,    setJsonText]    = useState('')
   const [jsonAnalyse, setJsonAnalyse] = useState<{direction:string;setup:string;alertes:string[]}|null>(null)
+  const [csvScModal,  setCsvScModal]  = useState(false)
+  const [csvScText,   setCsvScText]   = useState('')
+  const [csvScErr,    setCsvScErr]    = useState('')
   // bridge supprimé — mode saisie manuelle uniquement
   const [nyTime,      setNyTime]      = useState('')
   const [btOpen,   setBtOpen]   = useState(false)
@@ -746,6 +749,43 @@ export default function Calculateur() {
   const upC  = <K extends keyof Cfg>(k:K, v:Cfg[K]) => setCfg(p=>({...p,[k]:v}))
 
   const [jsonError, setJsonError] = useState('')
+  const parseCsvSc = () => {
+    setCsvScErr('')
+    const lines = csvScText.trim().split('\n').filter(l => l.trim())
+    if (lines.length < 1) { setCsvScErr('Colle au moins une ligne de données'); return }
+    // Skip header row if first field is not a date
+    const isHeader = (s: string) => isNaN(parseFloat(s.split(',')[2]))
+    const dataLines = isHeader(lines[0]) ? lines.slice(1) : lines
+    if (!dataLines.length) { setCsvScErr('Aucune donnée après l\'entête'); return }
+    const last = dataLines[dataLines.length - 1].split(',').map(s => s.trim())
+    const g = (i: number) => { const v = parseFloat(last[i]); return isNaN(v) || v === 0 ? 0 : v }
+    const f = (v: number) => v > 0 ? fmt2(v) : ''
+    // Colonnes Sierra Chart (0-indexed): 2=open 3=high 4=low 5=close 8=vwap_bar 14=j1open 15=j1high 16=j1low 17=j1settle
+    // 19=session_vwap 20=sd1l 21=sd2h 22=sd2l
+    const close   = g(5);  const vwap  = g(19)
+    const j1High  = g(15); const j1Low = g(16); const j1Settle = g(17)
+    const sd2h    = g(21); const sd1l  = g(20); const sd2l = g(22)
+    // sd1h interpolé entre vwap et sd2h
+    const sd1h = vwap > 0 && sd2h > vwap ? vwap + (sd2h - vwap) / 2 : 0
+    if (!close) { setCsvScErr(`Colonne close (col 5) non trouvée. Vérifier le format.`); return }
+    setII(prev => ({
+      ...prev,
+      [tab]: {
+        ...prev[tab],
+        lastPx:  f(close)    || prev[tab].lastPx,
+        rHigh:   f(j1High)   || prev[tab].rHigh,
+        rLow:    f(j1Low)    || prev[tab].rLow,
+        rSettle: f(j1Settle) || prev[tab].rSettle,
+        vwap18h: f(vwap)     || prev[tab].vwap18h,
+        ovnSd2h: f(sd2h)     || prev[tab].ovnSd2h,
+        ovnSd1h: f(sd1h)     || prev[tab].ovnSd1h,
+        ovnSd1l: f(sd1l)     || prev[tab].ovnSd1l,
+        ovnSd2l: f(sd2l)     || prev[tab].ovnSd2l,
+      }
+    }))
+    setCsvScModal(false); setCsvScText('')
+  }
+
   const loadJsonClaude = () => {
     setJsonError('')
     try {
@@ -2919,6 +2959,11 @@ export default function Calculateur() {
           title="Coller le JSON généré par Claude"
           style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(0,212,255,0.12)', outline:'1px solid rgba(0,212,255,0.50)', color:'#00d4ff', transition:'all 0.14s' }}
         >📋 JSON CLAUDE</button>
+        <button
+          onClick={()=>setCsvScModal(true)}
+          title="Importer CSV Sierra Chart → auto-remplit SD, VWAP, J-1"
+          style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(0,255,136,0.10)', outline:'1px solid rgba(0,255,136,0.40)', color:'#00ff88', transition:'all 0.14s' }}
+        >📊 SC CSV</button>
         {!isSimple && <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />}
         {!isSimple && <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />}
         {!isSimple && <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />}
@@ -3087,6 +3132,38 @@ export default function Calculateur() {
             <div style={{ display:'flex', gap:8, marginTop:10, justifyContent:'flex-end' }}>
               <button onClick={()=>{ setJsonModal(false); setJsonError('') }} style={{ padding:'6px 16px', background:'transparent', border:'1px solid rgba(136,153,187,0.30)', borderRadius:3, color:C.muted, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700 }}>ANNULER</button>
               <button onClick={loadJsonClaude} style={{ padding:'6px 20px', background:'rgba(0,212,255,0.15)', border:'1px solid rgba(0,212,255,0.60)', borderRadius:3, color:'#00d4ff', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:900, letterSpacing:'0.14em' }}>⚡ CHARGER</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal CSV Sierra Chart */}
+      {csvScModal && (
+        <div style={{ position:'fixed', inset:0, zIndex:10000, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={e=>{ if(e.target===e.currentTarget){ setCsvScModal(false); setCsvScErr('') } }}>
+          <div style={{ background:'#0d1526', border:'1px solid rgba(0,255,136,0.40)', borderRadius:6, padding:20, width:'100%', maxWidth:640 }}>
+            <div style={{ display:'flex', alignItems:'center', marginBottom:12 }}>
+              <span style={orb(10, 900, { color:'#00ff88', letterSpacing:'0.18em', flex:1 })}>📊 IMPORTER CSV SIERRA CHART</span>
+              <button onClick={()=>{ setCsvScModal(false); setCsvScErr('') }} style={{ background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:18, lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ marginBottom:8, fontSize:10, color:C.muted, fontFamily:'"JetBrains Mono",monospace' }}>
+              Colle les lignes CSV depuis Sierra Chart (avec ou sans entête).<br/>
+              Colonnes lues : close(5), J1-High(15), J1-Low(16), J1-Settle(17), VWAP(19), SD-1L(20), SD+2H(21), SD-2L(22)
+            </div>
+            <textarea
+              value={csvScText}
+              onChange={e=>setCsvScText(e.target.value)}
+              placeholder={'Colle ici les données CSV Sierra Chart...\nEx: 2026-8-27, 18:00:00.000000, 7733.75, ...'}
+              rows={10}
+              style={{ width:'100%', background:'#111827', border:'1px solid rgba(0,255,136,0.25)', borderRadius:3, padding:'8px 10px', fontSize:10, color:'#cdd6f4', fontFamily:'"JetBrains Mono",monospace', outline:'none', resize:'vertical', boxSizing:'border-box' }}
+            />
+            {csvScErr && (
+              <div style={{ marginTop:8, padding:'6px 10px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.50)', borderRadius:3, color:'#f87171', fontSize:11, fontFamily:'"JetBrains Mono",monospace', whiteSpace:'pre-wrap', wordBreak:'break-all' }}>
+                ⚠ {csvScErr}
+              </div>
+            )}
+            <div style={{ display:'flex', gap:8, marginTop:10, justifyContent:'flex-end' }}>
+              <button onClick={()=>{ setCsvScModal(false); setCsvScErr('') }} style={{ padding:'6px 16px', background:'transparent', border:'1px solid rgba(136,153,187,0.30)', borderRadius:3, color:C.muted, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700 }}>ANNULER</button>
+              <button onClick={parseCsvSc} style={{ padding:'6px 20px', background:'rgba(0,255,136,0.15)', border:'1px solid rgba(0,255,136,0.60)', borderRadius:3, color:'#00ff88', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:900, letterSpacing:'0.14em' }}>⚡ IMPORTER</button>
             </div>
           </div>
         </div>
