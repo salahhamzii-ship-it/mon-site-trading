@@ -1939,9 +1939,9 @@ export default function Calculateur() {
                   { l:'C1',     v:a.c1,    c:C.up },
                   { l:'C2',     v:a.c2,    c:'#00cc66' },
                 ].map(({l,v,c})=>(
-                  <div key={l} style={{ display:'flex', flexDirection:'column', gap:2, alignItems:'center', padding:'5px 4px', background:'rgba(10,14,24,0.7)', borderRadius:3, border:`1px solid ${c}25` }}>
-                    <span style={jb(7,400,{color:C.muted,letterSpacing:'0.08em'})}>{l}</span>
-                    <span style={orb(10,900,{color:c})}>{v||'—'}</span>
+                  <div key={l} style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center', padding:'7px 4px', background:`${c}20`, borderRadius:3, border:`1px solid ${c}55` }}>
+                    <span style={jb(7,700,{color:c,letterSpacing:'0.10em'})}>{l}</span>
+                    <span style={orb(13,900,{color:'#ffffff',fontVariantNumeric:'tabular-nums'})}>{v||'—'}</span>
                   </div>
                 ))}
               </div>
