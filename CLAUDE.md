@@ -44,13 +44,38 @@
 ## SURVIE
 - R28 : Incertitude extrême = options
 
-## SEMAINE
-- R29 : 5 archétypes
-- R30 : Plan de vol hebdo
+## SEMAINE — ARCHÉTYPES (R29) + PLAN DE VOL (R30)
+
+### R29 — La Grille de Lecture de la Semaine : 5 Archétypes
+
+**29.1 — L'Expansion Classique ("La Chevauchée")**
+Le marché fixe son cap dès lundi ou mardi, charge dans une seule direction 2-3 jours, reprend son souffle le vendredi. On laisse courir ses gains, on ne contre-attaque pas.
+
+**29.2 — Le Retournement de Milieu de Semaine ("Le Revirement")**
+Lundi et mardi = piège. Mercredi = retournement. Le vrai mouvement part dans la direction opposée jeudi et vendredi.
+
+**29.3 — Le Retournement de Consolidation ("Le Piège du Range")**
+Lundi à mercredi = range étroit. Jeudi = fausse cassure (le piège). Vendredi = mouvement inverse.
+
+**29.4 — Le Retournement Intra-Semaine ("L'Exception")**
+Retournement mercredi ou jeudi, début de semaine imprévisible. Un seul SAL s'affiche souvent. On s'en remet à la Règle du Phénix.
+
+**29.5 — Le Contre-Mouvement du Jeudi ("Le Contrepied")**
+Tendance du lundi au mercredi, volte-face le jeudi. L'IB du jeudi doit impérativement confirmer.
+
+### R30 — Le Plan de Vol de la Semaine
+
+| Jour | Action |
+| :--- | :--- |
+| Lundi | On laisse le marché ouvrir. Pas de précipitation. ZAR (ronflement). On observe. |
+| Mardi | On vérifie si le lundi a fixé le cap. Carte de la Forteresse (SAL/LMRG). |
+| Mercredi | Le jour charnière. Changement d'état sur le graphique horaire. On suspecte le piège. |
+| Jeudi | Le jour du breakdown ou du piège. Signaux combinés : état horaire + forteresse. |
+| Vendredi | La poursuite ou la clôture du cap. Objectifs SAL haute. Jour de la Conquête. |
 
 ## BALANCE
-- R31 : Range 4 jours = neutre
-- R32 : Tone of the day
+- R31 : Dans un range de 4 jours : rester neutre. Sortie confirmée = suivre. Échec de sortie = contre-pied.
+- R32 : Le marché a une « tonalité » pour la journée. Les traders court terme ne voient que ça. Prenez du recul.
 
 ## VALUE TRADING + BORNES SD
 - R33 : Le marché joue les bornes SD tracées avant l'ouverture (SD+2 haut / SD-2 bas)
@@ -253,6 +278,12 @@ CL haussier = contexte risk-on (NQ haussier probable). CL baissier fort = risk-o
 Structure → Péage → Attente → Follow-Through OU Retour → Réponse
 
 Le prix paie le péage. Il franchit la référence. Il montre qu'il mérite le passage. Le chameau regarde, boit son thé, et répond.
+
+---
+
+> 📖 **Fin de la Bible Traders — Salah Tataouine**
+> Ligiste du désert. Héritier de Dalton, Dorian, Josh et du Texan.
+> *"Vivons cachés, vivons heureux."* 🐪
 
 ---
 
