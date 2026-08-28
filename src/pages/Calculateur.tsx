@@ -292,7 +292,7 @@ function buildDist(letters: TpoLetter[], tick: number): Map<number, number> {
   return dist
 }
 
-const LS_KEY = 'cmc-calc-v2'
+const LS_KEY = 'cmc-calc-v3'
 const loadLS = () => { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null } catch { return null } }
 
 const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.07)' : '#1a2236', border:`1px solid ${ro ? 'rgba(201,168,76,0.30)' : 'rgba(201,168,76,0.30)'}`, borderRadius:3, padding:'6px 10px', minHeight:32, fontSize:14, fontWeight:500, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' })
@@ -451,11 +451,35 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
-  // Données session du jour — appliquées via bouton CHARGER SESSION uniquement
+  // Données session — auto-appliquées au mount si date ET correspond
   const SESSION_DATE = '2026-08-28'
   const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
-    NQ: {},
-    ES: {},
+    NQ: {
+      rOpen:   '29524',
+      rSettle: '29691',
+      rVah:    '29646',
+      rVal:    '29532',
+      rPoc:    '29590',
+      vwap18h: '29622',
+      ovnSd1h: '29652',
+      ovnSd1l: '29592',
+      ovnSd2h: '29682',
+      ovnSd2l: '29562',
+    },
+    ES: {
+      rOpen:   '7716.25',
+      rHigh:   '7755.50',
+      rLow:    '7702.75',
+      rSettle: '7741.25',
+      rVah:    '7748',
+      rVal:    '7728',
+      rPoc:    '7738',
+      vwap18h: '7742',
+      ovnSd1h: '7746',
+      ovnSd1l: '7738',
+      ovnSd2h: '7750',
+      ovnSd2l: '7734',
+    },
   }
   const applySessionData = useCallback(() => {
     setII(prev => {
