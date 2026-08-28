@@ -16,7 +16,6 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     clearTimeout(tid)
     if (!r.ok) throw new Error(`VPS ${r.status}`)
     const data = await r.json()
-    if (!data || Object.keys(data).length === 0) throw new Error('no_data')
     res.json(data)
   } catch (e: unknown) {
     res.status(503).json({ error: 'bridge_offline', detail: String(e) })
