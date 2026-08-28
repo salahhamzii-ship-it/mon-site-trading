@@ -897,9 +897,16 @@ export default function Calculateur() {
         if (last.last)   statsUp.rSettle = last.last
         if (allH.length) statsUp.rHigh   = String(Math.max(...allH))
         if (allL.length) statsUp.rLow    = String(Math.min(...allL))
-        // VWAP J-1 RTH → vwap18h seulement si non encore rempli (l'OVN prime)
+        // VWAP + SD depuis la dernière barre du CSV J-1 → écrase toujours (valeurs fraîches)
         const vwapJ1 = pf(last.vwap)
-        if (vwapJ1 > 0) statsUp.vwap18h = String(vwapJ1)
+        if (vwapJ1 > 0) {
+          statsUp.vwap18h = String(vwapJ1)
+          // SD+1/SD-1/SD+2/SD-2 depuis les colonnes du CSV (même fichier, même session)
+          const sd1h = pf(last.sp1); if (sd1h > 0) statsUp.ovnSd1h = String(sd1h)
+          const sd1l = pf(last.sm1); if (sd1l > 0) statsUp.ovnSd1l = String(sd1l)
+          const sd2h = pf(last.sp2); if (sd2h > 0) statsUp.ovnSd2h = String(sd2h)
+          const sd2l = pf(last.sm2); if (sd2l > 0) statsUp.ovnSd2l = String(sd2l)
+        }
         if (Object.keys(statsUp).length) setII(prev=>({...prev,[t]:{...prev[t],...statsUp}}))
 
         // ---- Auto-compute IB and ORB from CSV rows ----
