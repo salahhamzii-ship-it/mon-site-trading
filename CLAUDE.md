@@ -442,3 +442,45 @@ Trois ancres :
 | IB Bear A + Noon Bull | Retournement possible |
 
 **En 1 ligne** : Q2 > Q1 High = PM haussier. Q2 < Q1 High = PM baissier. 82% fiable. Aligner avec IB et §9. 🐪
+
+### Statistiques complètes (n = 2,479 sessions · 10 ans)
+
+**Classification sessions**
+| Type | Sessions | % |
+| :--- | :--- | :--- |
+| Opposite sides (H AM + L PM ou inverse) | 1,805 | **72.81%** |
+| Both in AM | 541 | 21.82% |
+| Both in PM | 133 | 5.37% |
+
+**Temps de formation des extrêmes**
+| Fenêtre | Moyenne | Std Dev |
+| :--- | :--- | :--- |
+| AM (High ou Low) | **10h12** | ±72 min |
+| PM (High ou Low) | **14h04** | ±88 min |
+
+**% de mouvement depuis le TBR Open (08h00)**
+| Extrême | Moyenne | Médiane |
+| :--- | :--- | :--- |
+| AM High (n=1,322) | +0.46% | +0.31% |
+| AM Low (n=1,565) | −0.52% | −0.36% |
+| PM High (n=1,157) | **+1.07%** | +0.88% |
+| PM Low (n=914) | **−1.29%** | −1.05% |
+
+### Noon Curve Quarterly Confluence (Q1/Q2/Q3/Q4)
+
+- **Q1** = 08h00–10h00 | **Q2** = 10h00–12h00 | **Q3** = 12h00–14h00 | **Q4** = 14h00–16h00
+- Q1 pose le High ou Low AM dans **84.95%** des sessions
+
+**Signal Q2 (sessions opposite-side uniquement, n=1,805)**
+
+| Q2 action | Sessions | Signal | Outcome |
+| :--- | :--- | :--- | :--- |
+| Q2 casse Q1 High (pas Low) | 794 (44%) | **FORT** | AM=TBR Low / PM=TBR High : **82.12%** |
+| Q2 casse Q1 Low (pas High) | 631 (35%) | **FORT** | AM=TBR High / PM=TBR Low : **72.42%** |
+| Q2 casse Q1 High ET Low | 253 (14%) | Pas de signal | ~50/50 |
+| Q2 ne casse ni H ni L | 127 (7%) | Pas de signal | ~50/50 |
+
+**Règle clé** :
+- Q2 casse Q1 High → TBR Low posé en AM (avant la cassure Q1) → **PM monte vers TBR High** (82%)
+- Q2 casse Q1 Low → TBR High posé en AM → **PM descend vers TBR Low** (72%)
+- Q2 casse les deux ou aucun → pas d'edge → rester spectateur
