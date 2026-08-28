@@ -734,3 +734,48 @@ Close = 29 498 (autour du POC 29 508)
 
 → Clôture sur SD-1 exact = marché ferme sous VWAP RTH → biais baissier court terme
 → Migration dimanche soir Globex → nouveaux SD lundi à tracer avant RTH
+
+### SD Bands — Clôture RTH 28/08/2026 (à migrer dimanche)
+
+| Bande | Prix |
+| :--- | :--- |
+| SD+2 | **29 811** |
+| SD+1 | **29 704** |
+| VWAP RTH close | **29 600** |
+| SD-1 | **29 497** ← clôture RTH (~29 498) |
+| SD-2 | **29 395** |
+
+→ Clôture sur SD-1 exact = marché ferme sous VWAP RTH → biais baissier court terme
+→ Migration dimanche soir Globex → nouveaux SD lundi à tracer avant RTH
+
+---
+
+## PARTIE 16 — J-1 RTH 28/08/2026 (référence Lundi 31/08)
+
+### RTH 28/08 — Données finales
+
+| Donnée | Valeur |
+| :--- | :--- |
+| High | **29 811.50** |
+| Low | **29 436.25** |
+| Settle | **29 493.25** |
+| VAH | **29 664** |
+| VAL | **29 443** |
+| POC | **29 496** |
+| Type journée | **Rotational** |
+| Excès | **Bas** (SD-2 = LBF = absorption) |
+
+### 78-min Bars — Session complète
+
+| Barre | Période | High | Low | Close | BidVol | AskVol | Delta |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | 09h30 | 29 755 | 29 505 | 29 738 | 83 428 | 83 662 | **+234** |
+| 2 | 10h48 | 29 811.50 | 29 509.75 | 29 551.75 | 55 267 | 55 368 | **+101** |
+| 3 | 12h06 | 29 593 | **29 436.25** | 29 454.50 | 42 755 | 44 067 | **+1 312** |
+| 4 | 13h24 | 29 529.25 | 29 453.75 | 29 488.75 | 20 933 | 21 698 | **+765** |
+| 5 | 14h42 | 29 521.50 | 29 441.00 | **29 496.50** | 30 808 | 33 002 | **+2 194** |
+
+→ **5/5 barres delta positif** — 0 barre vendeuse sur 5. Acheteurs actifs toute la journée.
+→ Bar 5 = Delta le plus élevé (+2194) en clôture → accumulation finale.
+→ Clôture 29493 = POC 29496 → parfait équilibre.
+→ Lundi 31/08 : rotation attendue inside VAH/VAL (29664/29443) selon Globex dimanche.
