@@ -682,3 +682,42 @@ Close = 29 498 (autour du POC 29 508)
 > le marché cherche l'équilibre entre les deux forces.
 > Il s'arrête sur la confluence la plus proche (Single Print + bande SD).
 > Quand vous lisez la structure, vous n'êtes jamais surpris.
+
+### Daily NQ — Structure depuis le 18/08/2026
+
+**Chronologie 9 RTH :**
+| RTH | Structure |
+| :--- | :--- |
+| 1-2-3 | OTF Lower |
+| 3-4 | Balance (rotation) |
+| 5 | **Cassure BAS** (breakdown) |
+| 5-6 | OTF Higher (rebond) |
+| 7 | Inside + GAP |
+| 7-8 (27-28/08) | **Balance 2 jours** |
+
+→ Volatilité sur 9 RTH consécutifs depuis le 18/08
+→ Lundi 01/09 : rotation inside OU cassure de balance selon Globex dimanche
+
+**Bornes de la grande balance daily :**
+- Cassure HAUTE : **29 850** → GO WITH UP
+- Cassure BASSE : **28 959** → GO WITH DOWN
+
+**Niveaux internes (rotation si inside) :**
+| Niveau | Rôle |
+| :--- | :--- |
+| 29 849 | ★★★ résistance haute balance |
+| 29 806 | ★★ résistance |
+| 29 666 | ★★ |
+| 29 647 | ★★ |
+| 29 443 | ★★★ pivot (SD-2 / Single Print zone) |
+| 29 421 | ★★ |
+| 29 293 | ★★ |
+| 29 163 | ★★ |
+| 29 143 | ★★ |
+| 28 990 | ★★★ support bas balance |
+
+**Règle pour Lundi :**
+> Open Globex dimanche + clôture RTH vendredi → déterminent le biais.
+> Si inside balance → rotation entre les niveaux internes.
+> Si cassure haute 29 850 → suivre haussier vers gap 29 789→30 057.
+> Si cassure basse 28 959 → suivre baissier vers Single Prints 29 359.
