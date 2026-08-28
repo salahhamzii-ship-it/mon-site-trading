@@ -484,12 +484,18 @@ export default function Calculateur() {
       ovnSd2l: '7734',
     },
   }
-  const applySessionData = useCallback(() => {
+  const applySessionData = useCallback((forceOverwrite = false) => {
     setII(prev => {
       const next = { ...prev }
       for (const t of ['NQ','ES','GC','CL'] as Tab[]) {
         const patch = SESSION_DATA[t]; if (!patch) continue
-        next[t] = { ...next[t], ...(patch as Partial<Instr>) }
+        const cur = next[t]
+        const merged: Partial<Instr> = {}
+        for (const k of Object.keys(patch) as (keyof Instr)[]) {
+          // ne remplace que si le champ est vide (ou forceOverwrite)
+          if (forceOverwrite || !cur[k]) merged[k] = (patch as Partial<Instr>)[k]
+        }
+        next[t] = { ...cur, ...merged }
       }
       return next
     })
