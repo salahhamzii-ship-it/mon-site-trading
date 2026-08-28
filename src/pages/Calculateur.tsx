@@ -456,10 +456,13 @@ export default function Calculateur() {
   const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
     NQ: {
       rOpen:   '29524',
+      rHigh:   '29704',
+      rLow:    '29401',
       rSettle: '29691',
       rVah:    '29646',
       rVal:    '29532',
       rPoc:    '29590',
+      atr:     '30',
       vwap18h: '29622',
       ovnSd1h: '29652',
       ovnSd1l: '29592',
