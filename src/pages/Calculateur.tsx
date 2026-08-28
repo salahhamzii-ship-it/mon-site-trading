@@ -1353,7 +1353,6 @@ export default function Calculateur() {
     const settle = pf(I.rSettle) || pf(I.oClose)
     const ibH  = pf(I.ibHigh), ibL = pf(I.ibLow)
     const rH   = pf(I.rHigh),  rL  = pf(I.rLow)
-    const rO   = pf(I.rOpen)
 
     const lvs: { label:string; price:number }[] = []
 
@@ -1366,10 +1365,19 @@ export default function Calculateur() {
     }
     if (td.poorHigh && rH > 0) lvs.push({ label:`Poor High J-1 · ${I.rHigh}`, price:rH })
     if (td.poorLow  && rL > 0) lvs.push({ label:`Poor Low J-1 · ${I.rLow}`,   price:rL })
-    if (td.gapDay && rO > 0 && settle > 0) {
-      const gH = Math.max(rO, settle), gL = Math.min(rO, settle)
-      lvs.push({ label:`Gap Zone Haut · ${fmt2(gH)}`, price:gH })
-      lvs.push({ label:`Gap Zone Bas · ${fmt2(gL)}`,  price:gL })
+    // Dalton: gap = mesuré depuis le HIGH ou LOW de J-1, pas depuis le settle
+    // Gap UP  : open session > rHigh → fill target = rHigh
+    // Gap DOWN: open session < rLow  → fill target = rLow
+    if (td.gapDay && rH > 0) {
+      const oC = pf(I.oClose) || pf(I.oHigh) || settle
+      if (rL > 0 && oC > 0 && oC < rL) {
+        lvs.push({ label:`Gap DOWN · Fill → J-1 Low ${I.rLow}`, price:rL })
+      } else if (oC > rH) {
+        lvs.push({ label:`Gap UP · Fill → J-1 High ${I.rHigh}`, price:rH })
+      } else {
+        lvs.push({ label:`Gap Ref J-1 High · ${I.rHigh}`, price:rH })
+        if (rL > 0) lvs.push({ label:`Gap Ref J-1 Low · ${I.rLow}`, price:rL })
+      }
     }
     if (td.excess) {
       if (rH > 0) lvs.push({ label:`Excess High · ${I.rHigh}`, price:rH })
@@ -1404,7 +1412,7 @@ export default function Calculateur() {
       }
     })
     return out
-  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rOpen, I.rSettle, I.oClose, I.atr, I.ibHigh, I.ibLow, I.boxHigh, I.boxLow])
+  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rSettle, I.oClose, I.oHigh, I.atr, I.ibHigh, I.ibLow, I.boxHigh, I.boxLow])
 
   const tpoAnalysis = useMemo(() => {
     const letters = tpoLetters[tab]
@@ -1605,7 +1613,13 @@ export default function Calculateur() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:8 }}>
         <Sec title="DAILY BARS" col={C.down} mini>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-            <Ck l="Gap"       v={td.gapDay}   s={v=>upTD('gapDay',v)} />
+            <Ck l={(() => {
+              const oC = pf(I.oClose) || pf(I.oHigh)
+              const rH2 = pf(I.rHigh), rL2 = pf(I.rLow)
+              if (oC > 0 && rH2 > 0 && oC > rH2) return `Gap ▲ +${fmt2(oC - rH2)}`
+              if (oC > 0 && rL2 > 0 && oC < rL2) return `Gap ▼ −${fmt2(rL2 - oC)}`
+              return 'Gap'
+            })()} v={td.gapDay} s={v=>upTD('gapDay',v)} />
             <Ck l="Excess"    v={td.excess}   s={v=>upTD('excess',v)} />
             <Ck l="Poor High" v={td.poorHigh} s={v=>upTD('poorHigh',v)} />
             <Ck l="Poor Low"  v={td.poorLow}  s={v=>upTD('poorLow',v)} />
