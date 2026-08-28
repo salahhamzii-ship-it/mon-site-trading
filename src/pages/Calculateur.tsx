@@ -763,27 +763,44 @@ export default function Calculateur() {
     // Colonnes Sierra Chart (0-indexed): 2=open 3=high 4=low 5=close 8=vwap_bar 14=j1open 15=j1high 16=j1low 17=j1settle
     // 19=session_vwap 20=sd1l 21=sd2h 22=sd2l
     const close   = g(5);  const vwap  = g(19)
+    if (!close) { setCsvScErr(`Colonne close (col 5) non trouvée. Vérifier le format.`); return }
+    // Garde un champ seulement si sa valeur est dans la même échelle de prix (±40% du close)
+    const inRange = (v: number) => v > 0 && v >= close * 0.60 && v <= close * 1.40
     const j1High  = g(15); const j1Low = g(16); const j1Settle = g(17)
     const sd2h    = g(21); const sd1l  = g(20); const sd2l = g(22)
-    // sd1h interpolé entre vwap et sd2h
-    const sd1h = vwap > 0 && sd2h > vwap ? vwap + (sd2h - vwap) / 2 : 0
-    if (!close) { setCsvScErr(`Colonne close (col 5) non trouvée. Vérifier le format.`); return }
+    // Valeurs hors gamme → 0 (autre instrument dans le CSV Sierra Chart)
+    const safeJ1H = inRange(j1High)   ? j1High   : 0
+    const safeJ1L = inRange(j1Low)    ? j1Low    : 0
+    const safeJ1S = inRange(j1Settle) ? j1Settle : 0
+    const safeSd2h = inRange(sd2h)    ? sd2h     : 0
+    const safeSd1l = inRange(sd1l)    ? sd1l     : 0
+    const safeSd2l = inRange(sd2l)    ? sd2l     : 0
+    // sd1h interpolé entre vwap et sd2h (uniquement si sd2h valide)
+    const safeVwap = inRange(vwap) ? vwap : (vwap > 0 && vwap >= close * 0.3 && vwap <= close * 1.7 ? vwap : 0)
+    const sd1h = safeVwap > 0 && safeSd2h > safeVwap ? safeVwap + (safeSd2h - safeVwap) / 2 : 0
+    const skipped: string[] = []
+    if (j1High > 0   && !safeJ1H)   skipped.push(`J1-High(${j1High})`)
+    if (j1Low > 0    && !safeJ1L)   skipped.push(`J1-Low(${j1Low})`)
+    if (sd2h > 0     && !safeSd2h)  skipped.push(`SD+2H(${sd2h})`)
+    if (sd1l > 0     && !safeSd1l)  skipped.push(`SD-1L(${sd1l})`)
+    if (sd2l > 0     && !safeSd2l)  skipped.push(`SD-2L(${sd2l})`)
+    if (skipped.length) setCsvScErr(`⚠ Champs ignorés (hors gamme ${tab} ~${fmt2(close)}) : ${skipped.join(', ')}`)
     setII(prev => ({
       ...prev,
       [tab]: {
         ...prev[tab],
-        lastPx:  f(close)    || prev[tab].lastPx,
-        rHigh:   f(j1High)   || prev[tab].rHigh,
-        rLow:    f(j1Low)    || prev[tab].rLow,
-        rSettle: f(j1Settle) || prev[tab].rSettle,
-        vwap18h: f(vwap)     || prev[tab].vwap18h,
-        ovnSd2h: f(sd2h)     || prev[tab].ovnSd2h,
-        ovnSd1h: f(sd1h)     || prev[tab].ovnSd1h,
-        ovnSd1l: f(sd1l)     || prev[tab].ovnSd1l,
-        ovnSd2l: f(sd2l)     || prev[tab].ovnSd2l,
+        lastPx:  f(close)      || prev[tab].lastPx,
+        rHigh:   f(safeJ1H)   || prev[tab].rHigh,
+        rLow:    f(safeJ1L)   || prev[tab].rLow,
+        rSettle: f(safeJ1S)   || prev[tab].rSettle,
+        vwap18h: f(safeVwap)  || prev[tab].vwap18h,
+        ovnSd2h: f(safeSd2h)  || prev[tab].ovnSd2h,
+        ovnSd1h: f(sd1h)      || prev[tab].ovnSd1h,
+        ovnSd1l: f(safeSd1l)  || prev[tab].ovnSd1l,
+        ovnSd2l: f(safeSd2l)  || prev[tab].ovnSd2l,
       }
     }))
-    setCsvScModal(false); setCsvScText('')
+    if (!skipped.length) { setCsvScModal(false); setCsvScText('') }
   }
 
   const loadJsonClaude = () => {
