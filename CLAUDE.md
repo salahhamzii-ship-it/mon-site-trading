@@ -629,3 +629,30 @@ Session RTH : 09h30 → 16h00 = **390 minutes ÷ 5 = 78 min par barre**
 | 13h24 | 29529.25 | 29453.75 | 29497.50 | 19 459 | 20 342 | **+883** |
 
 → Bar 3 : Delta +1312 au Low SD-2 (29436) = acheteurs absorbaient = excess bas confirmé par le delta.
+
+---
+
+## PARTIE 15 — STRUCTURE MENSUELLE / HEBDOMADAIRE (28/08/2026)
+
+### Monthly NQ — Août 2026
+- **Inside Juillet** → pas de changement de tendance mensuelle
+- VAH mensuelle : **29 936**
+- VAL mensuelle : **29 231**
+
+### Weekly NQ — 3 semaines OTF Lower RTH
+Semaines du 7/08, 17/08, 24/08 = **3 semaines consécutives Lower Low**
+- RTH Weekly High : **30 334**
+- RTH Weekly Low : **28 947**
+- **Gap non comblé** (semaine précédente) : **29 789 → 30 057**
+
+### Cette semaine (25-29/08) — RTH Weekly
+| Niveau | Prix |
+| :--- | :--- |
+| VAH semaine | **29 545** |
+| VAL semaine | **28 947** |
+| POC semaine | **29 222** |
+
+**Double Distribution** avec Single Prints :
+- Single Print haut : **29 440**
+- Single Print bas : **29 359**
+- Distribution au-dessus et en dessous des singles → structure de retournement potentiel
