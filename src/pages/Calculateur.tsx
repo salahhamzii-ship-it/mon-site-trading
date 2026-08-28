@@ -292,7 +292,7 @@ function buildDist(letters: TpoLetter[], tick: number): Map<number, number> {
   return dist
 }
 
-const LS_KEY = 'cmc-calc-v1'
+const LS_KEY = 'cmc-calc-v2'
 const loadLS = () => { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null } catch { return null } }
 
 const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.07)' : '#1a2236', border:`1px solid ${ro ? 'rgba(201,168,76,0.30)' : 'rgba(201,168,76,0.30)'}`, borderRadius:3, padding:'6px 10px', minHeight:32, fontSize:14, fontWeight:500, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' })
@@ -451,28 +451,11 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
-  // Données session du jour — appliquées au chargement ET via bouton CHARGER SESSION
-  const SESSION_DATE = '2026-08-27'
+  // Données session du jour — appliquées via bouton CHARGER SESSION uniquement
+  const SESSION_DATE = '2026-08-28'
   const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
-    NQ: {
-      lastPx:'29517.25',
-      rOpen:'29174.50', rHigh:'29332.75', rLow:'29133.50', rSettle:'29217.75',
-      rVah:'29277.75', rVal:'29187.25', rPoc:'29226.50',
-      asiaHigh:'29654.75', asiaLow:'29401.75', asiaClose:'29450.75',
-      londonHigh:'29549.75', londonLow:'29401.75', londonClose:'29517.25',
-      oHigh:'29654.75', oLow:'29401.75', oClose:'29517.25',
-      ovnPoc:'29525', ovnVah:'29581', ovnVal:'29412',
-      vwap18h:'29228', ovnSd1h:'29284', ovnSd1l:'29172', ovnSd2h:'29340', ovnSd2l:'29116',
-    },
-    ES: {
-      rOpen:'7678.75', rHigh:'7702.50', rLow:'7676.75', rSettle:'7685.25',
-      rVah:'7692.75', rVal:'7680.50', rPoc:'7686.00',
-      asiaHigh:'7741.25', asiaLow:'7707.00', asiaClose:'7712.75',
-      londonHigh:'7722.00', londonLow:'7707.00', londonClose:'7717.00',
-      oHigh:'7741.25', oLow:'7707.00', oClose:'7717.00',
-      ovnPoc:'7717', ovnVah:'7731', ovnVal:'7710',
-      vwap18h:'7717', ovnSd1h:'7724', ovnSd1l:'7710', ovnSd2h:'7731', ovnSd2l:'7703',
-    },
+    NQ: {},
+    ES: {},
   }
   const applySessionData = useCallback(() => {
     setII(prev => {
