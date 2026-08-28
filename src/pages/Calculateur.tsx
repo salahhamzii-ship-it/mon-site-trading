@@ -2202,42 +2202,92 @@ export default function Calculateur() {
     const ALERT_TTL = 3 * 60 * 1000
     const sp2Alert = sdReject.sp2 > 0 && (Date.now() - sdReject.sp2) < ALERT_TTL
     const sm2Alert = sdReject.sm2 > 0 && (Date.now() - sdReject.sm2) < ALERT_TTL
-    const items: [string,string,string,number][] = [
-      ['LAST',    I.lastPx||'—',   C.gold,  20],
-      ['HIGH J-1',I.rHigh||'—',   C.up,    14],
-      ['LOW J-1', I.rLow||'—',    C.down,  14],
-      ['OVN MID', oMid,            C.amber, 14],
-      ['VWAP 18h',I.vwap18h||'—', C.teal,  14],
-      ['POC J-1', I.rPoc||'—',    C.gold,  14],
-      ['VAH J-1', I.rVah||'—',    C.gold,  14],
-      ['VAL J-1', I.rVal||'—',    C.gold,  14],
-    ]
-    const sdItems: [string,string][] = [
-      ['SD +2', sdVals.sp2],
-      ['SD +1', sdVals.sp1],
-      ['SD -1', sdVals.sm1],
-      ['SD -2', sdVals.sm2],
-    ]
+
+    // ── Prix Échelle ──
+    type LvlE = { label:string; val:number; col:string }
+    const ladder: LvlE[] = []
+    const addL = (label:string, valStr:string, col:string) => {
+      const v = pf(valStr); if (v>0) ladder.push({label, val:v, col})
+    }
+    addL('SD +2',    sdVals.sp2,  '#ff4444')
+    addL('SD +1',    sdVals.sp1,  C.amber)
+    addL('HIGH J-1', I.rHigh,     C.up)
+    addL('VAH J-1',  I.rVah,      C.gold)
+    addL('VWAP 18h', I.vwap18h,   C.teal)
+    addL('OVN HIGH', I.oHigh,     C.up)
+    addL('POC J-1',  I.rPoc,      C.gold)
+    addL('OVN MID',  oMid,        C.amber)
+    addL('IB HIGH',  I.ibHigh,    '#00d4ff')
+    addL('IB LOW',   I.ibLow,     '#00d4ff')
+    addL('OVN LOW',  I.oLow,      C.down)
+    addL('VAL J-1',  I.rVal,      C.gold)
+    addL('LOW J-1',  I.rLow,      C.down)
+    addL('SD -1',    sdVals.sm1,  C.amber)
+    addL('SD -2',    sdVals.sm2,  '#ff8833')
+    ladder.sort((a,b)=>b.val-a.val)
+    const seen = new Set<string>()
+    const uniq = ladder.filter(l=>{ const k=l.val.toFixed(2); if(seen.has(k))return false; seen.add(k); return true })
+    const insertIdx = lp>0 ? uniq.findIndex(l=>l.val<=lp) : -1
+
     return (
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:8 }}>
-          {items.map(([l,v,c,sz])=>(
-            <div key={l}>
-              <div style={jb(7, 400, { color:C.muted, marginBottom:3 })}>{l}</div>
-              <div style={jb(sz, 700, { color:c })}>{v}</div>
+
+        {/* ── LAST prominent ── */}
+        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', background:'rgba(201,168,76,0.07)', border:'1px solid rgba(201,168,76,0.28)', borderRadius:4 }}>
+          <div>
+            <div style={jb(8, 600, { color:C.muted, letterSpacing:'0.14em', marginBottom:2 })}>LAST · {tab}</div>
+            <div style={orb(30, 900, { color: lp>0?C.gold:C.muted, letterSpacing:'0.04em', fontVariantNumeric:'tabular-nums', lineHeight:1, textShadow: lp>0?'0 0 18px rgba(201,168,76,0.35)':'none' })}>
+              {lp>0 ? fmt2(lp) : '—'}
             </div>
-          ))}
+          </div>
+          {lp>0 && vw18>0 && (
+            <div style={{ marginLeft:'auto', textAlign:'right' }}>
+              <div style={jb(8,400,{color:C.muted,marginBottom:3})}>vs VWAP</div>
+              <div style={jb(13,700,{color:lp>vw18?C.up:C.down,fontVariantNumeric:'tabular-nums'})}>
+                {lp>vw18?'▲ +':'▼ '}{fmt2(Math.abs(lp-vw18))}
+              </div>
+            </div>
+          )}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:6, padding:'8px', background:'rgba(30,179,188,0.04)', border:'1px solid rgba(30,179,188,0.15)', borderRadius:3 }}>
-          {sdItems.map(([l,v])=>(
-            <div key={l} style={{ textAlign:'center' }}>
-              <div style={jb(7, 400, { color:C.muted, marginBottom:3 })}>{l}</div>
-              <div style={jb(13, 700, { color: sdHit(v) ? C.amber : C.teal, textShadow: sdHit(v) ? `0 0 8px ${C.amber}` : 'none' })}>{v||'—'}</div>
-              {sdHit(v) && <div style={{ marginTop:2 }}><Pill label="TOUCHÉ" col={C.amber} /></div>}
-            </div>
-          ))}
-        </div>
+        {/* ── Échelle de prix ── */}
+        {uniq.length>0 && (
+          <div style={{ border:'1px solid rgba(136,153,187,0.14)', borderRadius:4, overflow:'hidden', background:'rgba(255,255,255,0.01)' }}>
+            {uniq.map((lev,i)=>{
+              const isNear = lp>0 && Math.abs(lev.val-lp)<=sdThr*1.5
+              const dVal = lp>0 ? lev.val-lp : null
+              const isAbove = dVal !== null && dVal > 0
+              const showLast = lp>0 && i===insertIdx
+              return (
+                <div key={lev.label+lev.val}>
+                  {showLast && (
+                    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'5px 12px', background:'rgba(201,168,76,0.13)', borderTop:'1px solid rgba(201,168,76,0.40)', borderBottom:'1px solid rgba(201,168,76,0.40)' }}>
+                      <span style={jb(9,700,{color:C.gold,letterSpacing:'0.12em'})}>▶ LAST</span>
+                      <span style={orb(14,900,{color:C.gold,fontVariantNumeric:'tabular-nums'})}>{fmt2(lp)}</span>
+                    </div>
+                  )}
+                  <div style={{ display:'flex', alignItems:'center', gap:0, padding:'4px 12px', background: isNear?`${lev.col}10`:'transparent', borderBottom: i<uniq.length-1?'1px solid rgba(136,153,187,0.07)':'none' }}>
+                    <div style={{ width:4, height:4, borderRadius:'50%', background: isNear?lev.col:'rgba(136,153,187,0.20)', marginRight:8, flexShrink:0, boxShadow: isNear?`0 0 5px ${lev.col}`:'none', animation: isNear?'pulseDot 1s infinite':'none' }}/>
+                    <span style={jb(9, isNear?700:400, { color: isNear?lev.col:C.muted, letterSpacing:'0.05em', minWidth:76, flexShrink:0 })}>{lev.label}</span>
+                    <span style={orb(12, 700, { color: isNear?lev.col:'#cdd6f4', fontVariantNumeric:'tabular-nums', flex:1, textShadow: isNear?`0 0 7px ${lev.col}`:'none' })}>{lev.val.toFixed(2)}</span>
+                    {dVal!==null && (
+                      <span style={jb(9,600,{color:isAbove?'rgba(0,255,136,0.55)':'rgba(255,100,100,0.55)',fontVariantNumeric:'tabular-nums',letterSpacing:'0.03em',minWidth:56,textAlign:'right'})}>
+                        {isAbove?'▲ +':'▼ '}{Math.abs(dVal).toFixed(2)}
+                      </span>
+                    )}
+                    {isNear && <span style={{ marginLeft:8, padding:'1px 5px', borderRadius:2, background:`${lev.col}22`, border:`1px solid ${lev.col}55`, fontFamily:'Orbitron,monospace', fontSize:6.5, fontWeight:900, color:lev.col, letterSpacing:'0.10em', flexShrink:0 }}>TOUCHÉ</span>}
+                  </div>
+                </div>
+              )
+            })}
+            {lp>0 && insertIdx===uniq.length && (
+              <div style={{ display:'flex', alignItems:'center', gap:10, padding:'5px 12px', background:'rgba(201,168,76,0.13)', borderTop:'1px solid rgba(201,168,76,0.40)' }}>
+                <span style={jb(9,700,{color:C.gold,letterSpacing:'0.12em'})}>▶ LAST</span>
+                <span style={orb(14,900,{color:C.gold,fontVariantNumeric:'tabular-nums'})}>{fmt2(lp)}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Alertes OVN dans Live Tracker ── */}
         {ovnAlerts.length > 0 && ovnAlerts.map((a, i) => (
@@ -2324,38 +2374,45 @@ export default function Calculateur() {
           )
         })()}
 
-        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-          {lp>0&&I.box6&&Math.abs(lp-pf(I.box6))<=(tab==='NQ'?6:2.5) && <Alert msg={`📦 BOX 6 touché (${I.box6})`} col={C.amber} />}
-          {lp>0&&I.box5&&Math.abs(lp-pf(I.box5))<=(tab==='NQ'?6:2.5) && <Alert msg={`📦 BOX 5 touché (${I.box5})`} col={C.amber} />}
-          {lp>0&&I.box4&&Math.abs(lp-pf(I.box4))<=(tab==='NQ'?6:2.5) && <Alert msg={`📦 BOX 4 touché (${I.box4})`} col={C.amber} />}
-          {lp>0&&I.box3&&Math.abs(lp-pf(I.box3))<=(tab==='NQ'?6:2.5) && <Alert msg={`📦 BOX 3 touché (${I.box3})`} col={C.amber} />}
-          {lp>0&&I.gapHigh&&lp>=pf(I.gapHigh) && <Alert msg={`▲ GAP HAUT comblé (${I.gapHigh})`} col={C.up} />}
-          {lp>0&&I.gapLow&&lp<=pf(I.gapLow)   && <Alert msg={`▼ GAP BAS comblé (${I.gapLow})`}   col={C.down} />}
-          {lp>0&&I.ibrExt1H&&Math.abs(lp-pf(I.ibrExt1H))<=(tab==='NQ'?6:2.5) && <Alert msg={`⚡ IBR Ext 1 HAUT touché (${I.ibrExt1H})`} col='#ff8888' />}
-          {lp>0&&I.ibrExt1L&&Math.abs(lp-pf(I.ibrExt1L))<=(tab==='NQ'?6:2.5) && <Alert msg={`⚡ IBR Ext 1 BAS touché (${I.ibrExt1L})`}  col='#ff8888' />}
-          {lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh)     && <Alert msg={`▲ Prix au-dessus de l'IB High (${I.ibHigh})`}    col={C.up} />}
-          {lp>0&&pf(I.ibLow)>0&&lp<pf(I.ibLow)        && <Alert msg={`▼ Prix en-dessous de l'IB Low (${I.ibLow})`}     col={C.down} />}
-          {lp>0&&pf(I.rPoc)>0&&Math.abs(lp-pf(I.rPoc))<2 && <Alert msg={`◈ Prix proche du POC J-1 (${I.rPoc})`}       col={C.gold} />}
-          {lp>0&&pf(I.orbHigh)>0&&lp>pf(I.orbHigh)    && <Alert msg={`▲ Extension au-dessus de l'ORB High (${I.orbHigh})`} col={C.up} />}
-          {lp>0&&pf(I.orbLow)>0&&lp<pf(I.orbLow)      && <Alert msg={`▼ Cassure sous l'ORB Low (${I.orbLow})`}        col={C.down} />}
-          {lp>0&&vw18>0&&lp>vw18                       && <Alert msg={`▲ Prix au-dessus du VWAP 18h (${I.vwap18h})`}   col={C.teal} />}
-          {lp>0&&vw18>0&&lp<vw18                       && <Alert msg={`▼ Prix en-dessous du VWAP 18h (${I.vwap18h})`} col={C.down} />}
-          {sdVals.sp1&&sdHit(sdVals.sp1)               && <Alert msg={`⚡ SD +1 touché (${sdVals.sp1})`}              col={C.amber} />}
-          {sdVals.sm1&&sdHit(sdVals.sm1)               && <Alert msg={`⚡ SD -1 touché (${sdVals.sm1})`}              col={C.amber} />}
-          {sdVals.sp2&&sdHit(sdVals.sp2)               && <Alert msg={`⚡ SD +2 touché (${sdVals.sp2})`}              col={C.down} />}
-          {sdVals.sm2&&sdHit(sdVals.sm2)               && <Alert msg={`⚡ SD -2 touché (${sdVals.sm2})`}              col={C.up} />}
-          {sp2Alert && <Alert msg={`🔴 ALERTE VENTE — SD +2 rejeté (${sdVals.sp2})`} col={C.down} />}
-          {sm2Alert && <Alert msg={`🟢 ALERTE ACHAT — SD -2 rejeté (${sdVals.sm2})`} col={C.up} />}
-          {(!lp || (!pf(I.ibHigh)&&!pf(I.ibLow)&&!vw18)) && (
-            <span style={jb(8, 400, { color:'rgba(136,153,187,0.4)' })}>Saisir un dernier prix + IB / VWAP pour activer les alertes.</span>
-          )}
-          {zoneAlerts.length > 0 && (
-            <>
-              <div style={jb(7.5, 600, { color:C.amber, letterSpacing:'0.10em', marginTop:4 })}>ZONES CLÉS</div>
-              {zoneAlerts.map((a,i) => <Alert key={i} msg={a.msg} col={a.col} />)}
-            </>
-          )}
-        </div>
+        {/* ── Alertes texte ── */}
+        {(() => {
+          const alerts: { msg:string; col:string; big?:boolean }[] = []
+          if (sp2Alert) alerts.push({msg:`🔴 ALERTE VENTE — SD +2 rejeté (${sdVals.sp2})`, col:C.down, big:true})
+          if (sm2Alert) alerts.push({msg:`🟢 ALERTE ACHAT — SD -2 rejeté (${sdVals.sm2})`, col:C.up,   big:true})
+          if (sdVals.sp2&&sdHit(sdVals.sp2)) alerts.push({msg:`⚡ SD +2 TOUCHÉ (${sdVals.sp2})`,  col:'#ff4444', big:true})
+          if (sdVals.sm2&&sdHit(sdVals.sm2)) alerts.push({msg:`⚡ SD -2 TOUCHÉ (${sdVals.sm2})`,  col:'#ff8833', big:true})
+          if (sdVals.sp1&&sdHit(sdVals.sp1)) alerts.push({msg:`⚡ SD +1 touché (${sdVals.sp1})`,  col:C.amber})
+          if (sdVals.sm1&&sdHit(sdVals.sm1)) alerts.push({msg:`⚡ SD -1 touché (${sdVals.sm1})`,  col:C.amber})
+          if (lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh))   alerts.push({msg:`▲ Au-dessus IB High (${I.ibHigh})`, col:C.up})
+          if (lp>0&&pf(I.ibLow)>0&&lp<pf(I.ibLow))      alerts.push({msg:`▼ Sous IB Low (${I.ibLow})`,        col:C.down})
+          if (lp>0&&pf(I.orbHigh)>0&&lp>pf(I.orbHigh))  alerts.push({msg:`▲ Extension ORB High (${I.orbHigh})`, col:C.up})
+          if (lp>0&&pf(I.orbLow)>0&&lp<pf(I.orbLow))    alerts.push({msg:`▼ Cassure ORB Low (${I.orbLow})`,     col:C.down})
+          if (lp>0&&pf(I.rPoc)>0&&Math.abs(lp-pf(I.rPoc))<2) alerts.push({msg:`◈ Proche POC J-1 (${I.rPoc})`, col:C.gold})
+          if (lp>0&&I.gapHigh&&lp>=pf(I.gapHigh)) alerts.push({msg:`▲ GAP HAUT comblé (${I.gapHigh})`,  col:C.up})
+          if (lp>0&&I.gapLow&&lp<=pf(I.gapLow))   alerts.push({msg:`▼ GAP BAS comblé (${I.gapLow})`,    col:C.down})
+          const thr2=tab==='NQ'?6:2.5
+          if (lp>0&&I.box6&&Math.abs(lp-pf(I.box6))<=thr2) alerts.push({msg:`📦 BOX 6 touché (${I.box6})`, col:C.amber})
+          if (lp>0&&I.box5&&Math.abs(lp-pf(I.box5))<=thr2) alerts.push({msg:`📦 BOX 5 touché (${I.box5})`, col:C.amber})
+          if (lp>0&&I.box4&&Math.abs(lp-pf(I.box4))<=thr2) alerts.push({msg:`📦 BOX 4 touché (${I.box4})`, col:C.amber})
+          if (lp>0&&I.box3&&Math.abs(lp-pf(I.box3))<=thr2) alerts.push({msg:`📦 BOX 3 touché (${I.box3})`, col:C.amber})
+          if (lp>0&&I.ibrExt1H&&Math.abs(lp-pf(I.ibrExt1H))<=thr2) alerts.push({msg:`⚡ IBR Ext HAUT (${I.ibrExt1H})`, col:'#ff8888'})
+          if (lp>0&&I.ibrExt1L&&Math.abs(lp-pf(I.ibrExt1L))<=thr2) alerts.push({msg:`⚡ IBR Ext BAS (${I.ibrExt1L})`,  col:'#ff8888'})
+          zoneAlerts.forEach(a => alerts.push({msg:a.msg, col:a.col}))
+          if (!alerts.length && (!lp || (!pf(I.ibHigh)&&!pf(I.ibLow)&&!vw18))) {
+            return <span style={jb(9,400,{color:'rgba(136,153,187,0.35)'})}>Saisir un prix + IB/VWAP pour activer les alertes.</span>
+          }
+          if (!alerts.length) return null
+          return (
+            <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+              {alerts.map((a,i)=>(
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:9, padding: a.big?'7px 12px':'5px 12px', borderRadius:3, background:`${a.col}${a.big?'18':'10'}`, border:`1px solid ${a.col}${a.big?'55':'30'}` }}>
+                  <span style={{ width: a.big?8:6, height: a.big?8:6, borderRadius:'50%', background:a.col, flexShrink:0, boxShadow: a.big?`0 0 7px ${a.col}`:'none', animation: a.big?'pulseDot 1.2s infinite':'none' }} />
+                  <span style={jb(a.big?11:10, a.big?700:500, { color:a.col, letterSpacing:'0.06em' })}>{a.msg}</span>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
       </div>
     )
   }
