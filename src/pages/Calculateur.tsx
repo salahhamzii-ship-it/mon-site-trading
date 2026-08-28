@@ -490,12 +490,11 @@ export default function Calculateur() {
       for (const t of ['NQ','ES','GC','CL'] as Tab[]) {
         const patch = SESSION_DATA[t]; if (!patch) continue
         const cur = next[t]
-        const merged: Partial<Instr> = {}
+        const merged: Record<string, string> = {}
         for (const k of Object.keys(patch) as (keyof Instr)[]) {
-          // ne remplace que si le champ est vide (ou forceOverwrite)
-          if (forceOverwrite || !cur[k]) merged[k] = (patch as Partial<Instr>)[k]
+          if (forceOverwrite || !cur[k]) merged[k] = (patch as Record<string,string>)[k] ?? ''
         }
-        next[t] = { ...cur, ...merged }
+        next[t] = { ...cur, ...(merged as Partial<Instr>) }
       }
       return next
     })
@@ -3149,7 +3148,7 @@ export default function Calculateur() {
           </div>
         )}
         {!isSimple && <button
-          onClick={applySessionData}
+          onClick={()=>applySessionData(true)}
           title="Charger les données J-1 + OVN + VWAP/SD du jour"
           style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.50)', color:'#c9a84c', transition:'all 0.14s' }}
         >⬇ CHARGER SESSION</button>}
