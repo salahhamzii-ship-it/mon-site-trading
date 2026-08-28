@@ -529,3 +529,62 @@ Cette méthode hybride combine la dynamique des bougies E-F-G (pièges, cassures
 | A→G | 28 874 | 28 690 | 28 788 (stable bas) |
 
 Close G = 28 697 → légèrement au-dessus du VAL (28 690) → encore dans Value Area → **Range/Neutre**, attendre sortie en H.
+
+---
+
+## PARTIE 13 — ANALYSE SIMPLIFIÉE TOP-DOWN (TEMPLATE QUOTIDIEN)
+
+### Format à utiliser chaque matin avant RTH
+
+```
+📅 [DATE] — TOP DOWN
+
+─── STRUCTURE ────────────────────────────────
+Monthly  : [OTF Higher / Lower / Balance]
+Weekly   : [OTF Higher / Lower / Balance]
+Daily J-2: [résumé type journée]
+
+─── J-1 RTH ──────────────────────────────────
+High     : [prix]   Low   : [prix]   Settle : [prix]
+VAH      : [prix]   VAL   : [prix]   POC    : [prix]
+Type     : [Trend / Rotational / Balance]
+Excès    : [Haut / Bas / Aucun]
+
+─── OVN (18h → 09h30) ────────────────────────
+High     : [prix]   Low   : [prix]   Close : [prix]
+Inventaire vs Settle : [Long / Short / Neutre]
+Position vs J-1 Value : [Inside / Outside]
+ALN Pattern          : [P1 / P2 / P3 / P4]
+
+─── RTH SETUP ────────────────────────────────
+Gap        : [Up / Down / No Gap] vs J-1 [H/L]
+Ouverture  : [Inside / Outside Range]
+OVN aligné : [Oui / Non]
+SD+2       : [prix]   SD+1 : [prix]
+AVWAP 18h  : [prix]
+SD-1       : [prix]   SD-2 : [prix]
+
+─── ZONES CLÉS ───────────────────────────────
+★★★ [prix] — [rôle]
+★★  [prix] — [rôle]
+★   [prix] — [rôle]
+
+─── SCÉNARIOS ────────────────────────────────
+LONG  : [condition] → [cible]
+SHORT : [condition] → [cible] / NO SHORT
+
+─── RÈGLES DU JOUR ───────────────────────────
+• [R applicable 1]
+• [R applicable 2]
+```
+
+### Logique RTH vs OVN vs RTH
+
+| Étape | Question clé |
+| :--- | :--- |
+| J-1 RTH | Quel inventaire a été créé ? Trend ou rotation ? |
+| OVN | Les vendeurs/acheteurs de nuit sont-ils alignés avec J-1 ? |
+| Ouverture RTH | Gap comblé rapidement ou non ? |
+| IB (09h30-10h30) | Bull A/B ou Bear A/B ? OVN inventaire confirmé ? |
+| 12h00 Noon Curve | Q2 vs Q1 High → biais PM |
+| 13h00 E+G | Value G vs Value E → PM confirmé |
