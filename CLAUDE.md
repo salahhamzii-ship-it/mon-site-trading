@@ -626,9 +626,13 @@ Session RTH : 09h30 → 16h00 = **390 minutes ÷ 5 = 78 min par barre**
 | 09h30 | 29755 | 29505 | 29738 | 83 428 | 83 662 | **+234** |
 | 10h48 | 29811.50 | 29509.75 | 29551.75 | 55 267 | 55 368 | **+101** |
 | 12h06 | 29593 | **29436.25** | 29454.50 | 42 755 | 44 067 | **+1 312** |
-| 13h24 | 29529.25 | 29453.75 | 29497.50 | 19 459 | 20 342 | **+883** |
+| 13h24 | 29529.25 | 29453.75 | 29488.75 | 20 933 | 21 698 | **+765** |
+| 14h42 | 29503.75 | 29441.00 | 29498.00 | 14 140 | 14 570 | **+430** |
 
 → Bar 3 : Delta +1312 au Low SD-2 (29436) = acheteurs absorbaient = excess bas confirmé par le delta.
+→ **5/5 barres delta positif** = acheteurs dominants toute la session malgré la descente des prix.
+→ Volume décroissant bar à bar = épuisement vendeurs. Close Bar 5 = 29498 ≈ POC 29508 = rotational day.
+→ R18 : prix sous POC toute la session PM = inventaire trop short = short squeeze risk non matérialisé vendredi.
 
 ---
 
