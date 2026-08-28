@@ -755,10 +755,19 @@ export default function Calculateur() {
     const target = csvScTab  // tab verrouillé à l'ouverture du modal — jamais le tab actuel
     const lines = csvScText.trim().split('\n').filter(l => l.trim())
     if (lines.length < 1) { setCsvScErr('Colle au moins une ligne de données'); return }
-    const isHeader = (s: string) => isNaN(parseFloat(s.split(',')[2]))
-    const dataLines = isHeader(lines[0]) ? lines.slice(1) : lines
+    // Auto-detect delimiter: count separators on first line
+    const first = lines[0]
+    const cS = (first.match(/;/g)||[]).length
+    const cT = (first.match(/\t/g)||[]).length
+    const cC = (first.match(/,/g)||[]).length
+    const sep = cS > cC && cS > cT ? ';' : cT > cC ? '\t' : ','
+    const split = (s: string) => s.split(sep).map(c => c.trim().replace(/^"|"$/g,''))
+    // Skip header if first column of first row is not a number (date string)
+    const firstCols = split(lines[0])
+    const isHeader = isNaN(parseFloat(firstCols[2]))
+    const dataLines = isHeader ? lines.slice(1) : lines
     if (!dataLines.length) { setCsvScErr('Aucune donnée après l\'entête'); return }
-    const last = dataLines[dataLines.length - 1].split(',').map(s => s.trim())
+    const last = split(dataLines[dataLines.length - 1])
     const g = (i: number) => { const v = parseFloat(last[i]); return isNaN(v) || v === 0 ? 0 : v }
     const f = (v: number) => v > 0 ? fmt2(v) : ''
     // Colonnes Sierra Chart OVN 30min (0-indexed, date+time = col 0+1 séparés) :
@@ -767,7 +776,8 @@ export default function Calculateur() {
     const vwap  = g(14)
     const sd1h  = g(15); const sd1l = g(16)
     const sd2h  = g(17); const sd2l = g(18)
-    if (!close) { setCsvScErr(`Colonne close (col 5) introuvable — vérifier le format ${target}`); return }
+    const sepName = sep === ',' ? 'virgule' : sep === ';' ? 'point-virgule' : 'tabulation'
+    if (!close) { setCsvScErr(`Colonne close (col 5) introuvable — délimiteur détecté: ${sepName} — vérifier le format ${target}`); return }
     setII(prev => ({
       ...prev,
       [target]: {
@@ -780,7 +790,7 @@ export default function Calculateur() {
         ovnSd2l: f(sd2l)  || prev[target].ovnSd2l,
       }
     }))
-    showCsvMsg(`✓ Import ${target} terminé — ${dataLines.length} lignes · VWAP ${f(vwap)||'—'} · SD+1 ${f(sd1h)||'—'} / SD-1 ${f(sd1l)||'—'}`, true)
+    showCsvMsg(`✓ Import ${target} — ${dataLines.length} lignes (${sepName}) · VWAP ${f(vwap)||'—'} · SD+1 ${f(sd1h)||'—'} / SD-1 ${f(sd1l)||'—'}`, true)
     setCsvScModal(false); setCsvScText('')
   }
 
@@ -1139,6 +1149,47 @@ export default function Calculateur() {
         sdConfirm: false,
         confirmLabels: [],
       })
+    }
+
+    // ── 5. SD-2 BREAK + RETEST → SHORT ───────────────────────────────────────
+    // OVN Low a cassé sous SD-2 → prix revient sur SD-2 par dessous → rejet = SHORT
+    // Méthode Salah : pas d'entrée sur simple contact SD — attendre BREAK+RETEST+REJECT
+    if (sd2l > 0 && oL > 0 && oL < sd2l) {
+      const pxRetestSd2l = px >= sd2l - thr && px <= sd2l + thr * 2.5
+      if (pxRetestSd2l) {
+        alerts.push({
+          type: 'SD-2 RETEST',
+          dir: 'SHORT',
+          entry: fmt2(sd2l),
+          stop:  fmt2(sd2l + thr * 3),
+          c1:    fmt2(oL),
+          c2:    vpoc > 0 ? fmt2(vpoc) : '',
+          desc:  `Low ${fmt2(oL)} a cassé SD-2 → retest ${fmt2(sd2l)} par dessous — ATTENDRE rejet`,
+          col:   C.down,
+          sdConfirm: true,
+          confirmLabels: ['BREAK', 'RETEST'],
+        })
+      }
+    }
+
+    // ── 6. SD+2 BREAK + RETEST → LONG ────────────────────────────────────────
+    // OVN High a cassé au-dessus SD+2 → prix revient sur SD+2 par dessus → rejet = LONG
+    if (sd2h > 0 && oH > 0 && oH > sd2h) {
+      const pxRetestSd2h = px >= sd2h - thr * 2.5 && px <= sd2h + thr
+      if (pxRetestSd2h) {
+        alerts.push({
+          type: 'SD+2 RETEST',
+          dir: 'LONG',
+          entry: fmt2(sd2h),
+          stop:  fmt2(sd2h - thr * 3),
+          c1:    fmt2(oH),
+          c2:    vpoc > 0 ? fmt2(vpoc) : '',
+          desc:  `High ${fmt2(oH)} a cassé SD+2 → retest ${fmt2(sd2h)} par dessus — ATTENDRE rejet`,
+          col:   C.up,
+          sdConfirm: true,
+          confirmLabels: ['BREAK', 'RETEST'],
+        })
+      }
     }
 
     return alerts
