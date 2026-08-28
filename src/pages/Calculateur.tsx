@@ -413,7 +413,7 @@ export default function Calculateur() {
   const [jsonModal,   setJsonModal]   = useState(false)
   const [jsonText,    setJsonText]    = useState('')
   const [jsonAnalyse, setJsonAnalyse] = useState<{direction:string;setup:string;alertes:string[]}|null>(null)
-  const [wsSc,        setWsSc]        = useState<'live'|'off'>('off')
+  // bridge supprimé — mode saisie manuelle uniquement
   const [nyTime,      setNyTime]      = useState('')
   const [btOpen,   setBtOpen]   = useState(false)
   const [btBars,   setBtBars]   = useState<BtBar[]>([])
@@ -429,14 +429,8 @@ export default function Calculateur() {
 
   const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
   const sdTouchRef = useRef<Record<Tab,{sp2:boolean;sm2:boolean}>>({NQ:{sp2:false,sm2:false},ES:{sp2:false,sm2:false},GC:{sp2:false,sm2:false},CL:{sp2:false,sm2:false}})
-  const [wsCustomUrl, setWsCustomUrl] = useState<string>(() => {
-    try { return localStorage.getItem('cmc-ws-url') || '' } catch { return '' }
-  })
-
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const wsRef           = useRef<WebSocket|null>(null)
-  const wsReconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const mounted         = useRef(false)
   const btCsvRef        = useRef<HTMLInputElement|null>(null)
 
@@ -496,6 +490,7 @@ export default function Calculateur() {
 
   // SC Bridge — traitement données (partagé WS + HTTP polling)
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // @ts-ignore — bridge désactivé, fonction conservée pour réactivation future
   const processScData = (data: Record<string, any>) => {
 
             // --- Instr fields (live prices + IB/ORB + J-1) ---
@@ -673,58 +668,6 @@ export default function Calculateur() {
             fillRth(setRthRowsJ1,  'bars_j1')
   }
 
-  // SC Bridge — WebSocket (HTTP ou WS URL custom)
-  useEffect(() => {
-    const useHttpPoll = !wsCustomUrl.trim() && window.location.protocol === 'https:'
-    if (useHttpPoll) {
-      // Proxy Vercel: relatif si déjà sur vercel.app, sinon URL absolue
-      const isVercel = window.location.hostname.endsWith('.vercel.app')
-      const PROXY_URL = isVercel
-        ? '/api/bridge-data'
-        : 'https://salah-tataouine-terminal.vercel.app/api/bridge-data'
-      let active = true
-      const poll = async () => {
-        try {
-          const res = await fetch(PROXY_URL, { signal: AbortSignal.timeout(9000) })
-          if (!res.ok) throw new Error(`${res.status}`)
-          const data = await res.json()
-          if (data._error) throw new Error(data._error)
-          processScData(data)
-          setWsSc('live')
-        } catch { setWsSc('off') }
-      }
-      poll()
-      const id = setInterval(() => { if (active) poll() }, 10000)
-      return () => { active = false; clearInterval(id) }
-    }
-    const connect = () => {
-      clearTimeout(wsReconnectTimer.current)
-      try {
-        const wsUrl = wsCustomUrl.trim() || 'ws://2.29.3.199:8765'
-        const ws = new WebSocket(wsUrl)
-        wsRef.current = ws
-        ws.onopen = () => setWsSc('live')
-        ws.onmessage = (event) => {
-          try { processScData(JSON.parse(event.data as string)) }
-          catch(e) { console.warn('SC Bridge:', e) }
-        }
-        ws.onerror = () => setWsSc('off')
-        ws.onclose = () => {
-          setWsSc('off')
-          wsReconnectTimer.current = setTimeout(connect, 3000)
-        }
-      } catch {
-        setWsSc('off')
-        wsReconnectTimer.current = setTimeout(connect, 3000)
-      }
-    }
-    connect()
-    return () => {
-      clearTimeout(wsReconnectTimer.current)
-      if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close() }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wsCustomUrl])
 
   useEffect(() => {
     const fmt = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })
@@ -2401,14 +2344,6 @@ export default function Calculateur() {
         <G2 ch={<><F l="Manual Step (pts)" v={cfg.stepManual} s={v=>upC('stepManual',v)} /><F l="Line Style" v={cfg.lineStyle} s={v=>upC('lineStyle',v)} opts={['Dashed','Solid','Dotted']} /></>}/>
         <G2 ch={<><F l="Rotation Color" v={cfg.rotColor} s={v=>upC('rotColor',v)} t="text" /><Ck l="Show Labels" v={cfg.showORLbl} s={v=>upC('showORLbl',v)} /></>}/>
       </Sec>
-      <Sec title="BRIDGE · WEBSOCKET" col="#ef4444">
-        <div style={{ fontSize:10, color:'#888', marginBottom:6, lineHeight:1.5 }}>
-          URL WS (vide = auto-detect)<br/>
-          <span style={{ color:'#f87171' }}>HTTPS Vercel → saisir wss://... ou utiliser http:// VPS</span>
-        </div>
-        <F l="WS URL" v={wsCustomUrl} t="text" s={v=>{ setWsCustomUrl(v); try { localStorage.setItem('cmc-ws-url', v) } catch {} }} />
-        <button onClick={()=>{ if(wsRef.current) { wsRef.current.close() } }} style={{ marginTop:6, padding:'4px 12px', background:'rgba(239,68,68,0.15)', border:'1px solid rgba(239,68,68,0.50)', borderRadius:3, color:'#f87171', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:900, letterSpacing:'0.12em', width:'100%' }}>↺ RECONNECTER</button>
-      </Sec>
     </div>
   )
 
@@ -2974,17 +2909,6 @@ export default function Calculateur() {
             <span style={orb(10, 900, { color:C.gold, letterSpacing:'0.14em', fontVariantNumeric:'tabular-nums' })}>{nyTime}</span>
           </div>
         )}
-        {/* SC Bridge status + launch button */}
-        <button
-          onClick={() => { if (wsSc !== 'live') window.open('scbridge://launch') }}
-          title={wsSc === 'live' ? 'Bridge actif' : 'Cliquer pour lancer le bridge Sierra Chart'}
-          style={{ display:'flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:2, border:'none', cursor: wsSc==='live' ? 'default' : 'pointer', background: wsSc==='live' ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.13)', outline:`1px solid ${wsSc==='live' ? 'rgba(0,255,136,0.30)' : 'rgba(255,68,68,0.45)'}`, transition:'all 0.15s' }}
-        >
-          <span style={{ width:6, height:6, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
-          <span style={orb(7, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.14em' })}>
-            {wsSc==='live' ? 'SC LIVE' : '⚡ LANCER BRIDGE'}
-          </span>
-        </button>
         {!isSimple && <button
           onClick={applySessionData}
           title="Charger les données J-1 + OVN + VWAP/SD du jour"
