@@ -22,7 +22,7 @@ interface Instr {
   oHigh: string; oLow: string; oClose: string
   ovnPoc: string; ovnVah: string; ovnVal: string
   ovnSd1h: string; ovnSd1l: string; ovnSd2h: string; ovnSd2l: string
-  ibHigh: string; ibLow: string; ibClose: string; ibOrdre: string; ibClass: string
+  ibHigh: string; ibLow: string; ibClose: string; ibAvwap: string; ibOrdre: string; ibClass: string
   orbHigh: string; orbLow: string; orbClose: string
   vwap18h: string; atr: string
   asiaHigh: string; asiaLow: string; asiaClose: string
@@ -71,7 +71,7 @@ const mkI = (): Instr => ({
   oHigh:'', oLow:'', oClose:'',
   ovnPoc:'', ovnVah:'', ovnVal:'',
   ovnSd1h:'', ovnSd1l:'', ovnSd2h:'', ovnSd2l:'',
-  ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'', ibClass:'',
+  ibHigh:'', ibLow:'', ibClose:'', ibAvwap:'', ibOrdre:'', ibClass:'',
   orbHigh:'', orbLow:'', orbClose:'',
   vwap18h:'', atr:'',
   asiaHigh:'', asiaLow:'', asiaClose:'', londonHigh:'', londonLow:'', londonClose:'',
@@ -124,7 +124,7 @@ function sanitizeInstr(instr: Instr): Instr {
 
   if (isNewRTHDay || badScale) {
     return { ...instr,
-      ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'' as never, ibClass:'',
+      ibHigh:'', ibLow:'', ibClose:'', ibAvwap:'', ibOrdre:'' as never, ibClass:'',
       orbHigh:'', orbLow:'', orbClose:'',
       rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'',
     }
@@ -482,6 +482,16 @@ export default function Calculateur() {
       londonHigh:   '29665.00',
       londonLow:    '29578.25',
       londonClose:  '29659.00',
+      // IB 09h30–10h30
+      ibHigh:       '29713.00',
+      ibLow:        '29505.00',
+      ibClose:      '29680.00',
+      ibAvwap:      '29628.86',
+      ibOrdre:      'HL',
+      // ORB 09h30–09h50
+      orbHigh:      '29703.25',
+      orbLow:       '29562.75',
+      orbClose:     '29629.00',
     },
     ES: {
       // J-1 RTH
@@ -510,6 +520,16 @@ export default function Calculateur() {
       londonHigh:   '7751.25',
       londonLow:    '7731.00',
       londonClose:  '7749.75',
+      // IB 09h30–10h30
+      ibHigh:       '7760.50',
+      ibLow:        '7726.50',
+      ibClose:      '7752.50',
+      ibAvwap:      '7743.38',
+      ibOrdre:      'HL',
+      // ORB 09h30–09h50
+      orbHigh:      '7751.25',
+      orbLow:       '7727.25',
+      orbClose:     '7749.75',
     },
   }
   const applySessionData = useCallback((forceOverwrite = false) => {
@@ -1259,11 +1279,16 @@ export default function Calculateur() {
     const orbH2 = pf(I.orbHigh), orbL2 = pf(I.orbLow)
 
     let ib = 0, ibCls = ''
-    if (mid2>0 && ibC2>0) {
-      if      (ibC2>mid2 && I.ibOrdre==='LH') { ibCls='Bull A'; ib= 1 }
-      else if (ibC2>mid2 && I.ibOrdre==='HL') { ibCls='Bull B'; ib= 1 }
-      else if (ibC2<mid2 && I.ibOrdre==='HL') { ibCls='Bear A'; ib=-1 }
-      else if (ibC2<mid2 && I.ibOrdre==='LH') { ibCls='Bear B'; ib=-1 }
+    const ibAv2 = pf(I.ibAvwap)
+    const avwapRef = ibAv2 > 0 ? ibAv2 : mid2
+    const ibRng2 = ibH2 - ibL2
+    const quartHaut = ibRng2 > 0 ? ibH2 - ibRng2 / 4 : 0
+    const quartBas  = ibRng2 > 0 ? ibL2 + ibRng2 / 4 : 0
+    if (avwapRef > 0 && ibC2 > 0) {
+      if      (ibC2 > avwapRef && ibC2 >= quartHaut && I.ibOrdre==='LH') { ibCls='Bull A'; ib= 1 }
+      else if (ibC2 > avwapRef)                                            { ibCls='Bull B'; ib= 1 }
+      else if (ibC2 < avwapRef && ibC2 <= quartBas  && I.ibOrdre==='HL') { ibCls='Bear A'; ib=-1 }
+      else if (ibC2 < avwapRef)                                            { ibCls='Bear B'; ib=-1 }
     }
 
     let vwap = 0
@@ -2197,7 +2222,7 @@ export default function Calculateur() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title={`IB · ${IB_H[tab]}`} col={col}>
           <G4 ch={<><F l="IB High" v={I.ibHigh} s={v=>upI(tab,'ibHigh',v)} /><F l="IB Low" v={I.ibLow} s={v=>upI(tab,'ibLow',v)} /><F l="IB Close" v={I.ibClose} s={v=>upI(tab,'ibClose',v)} /><F l="IB Mid" ro dv={ibMid} /></>}/>
-          <G2 ch={<><F l="Ordre HL" v={I.ibOrdre} s={v=>upI(tab,'ibOrdre',v)} opts={['HL','LH']} /><F l="Classification" v={I.ibClass} s={v=>upI(tab,'ibClass',v)} opts={['Normal','Wide IB','Narrow IB','Rotational']} /></>}/>
+          <G3 ch={<><F l="IB AVWAP" v={I.ibAvwap} s={v=>upI(tab,'ibAvwap',v)} /><F l="Ordre HL" v={I.ibOrdre} s={v=>upI(tab,'ibOrdre',v)} opts={['HL','LH']} /><F l="Classification" v={I.ibClass} s={v=>upI(tab,'ibClass',v)} opts={['Normal','Wide IB','Narrow IB','Rotational']} /></>}/>
         </Sec>
         <Sec title={`ORB · ${OR_H[tab]}`} col={col}>
           <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
@@ -2209,6 +2234,73 @@ export default function Calculateur() {
           <G3 ch={<><F l="ORB High" v={I.orbHigh} s={v=>upI(tab,'orbHigh',v)} /><F l="ORB Low" v={I.orbLow} s={v=>upI(tab,'orbLow',v)} /><F l="ORB Close" v={I.orbClose} s={v=>upI(tab,'orbClose',v)} /></>}/>
         </Sec>
       </div>
+
+      {/* ── IB AVWAP SCALPEL (Méthode Salah) ──────────────────────── */}
+      {(() => {
+        const ibH3 = pf(I.ibHigh), ibL3 = pf(I.ibLow), ibC3 = pf(I.ibClose)
+        const ibAv3 = pf(I.ibAvwap)
+        const mid3 = ibH3>0&&ibL3>0 ? (ibH3+ibL3)/2 : 0
+        const avRef = ibAv3>0 ? ibAv3 : mid3
+        if (!avRef || !ibC3) return null
+        const rng3 = ibH3 - ibL3
+        const qH = rng3>0 ? ibH3 - rng3/4 : 0
+        const qL = rng3>0 ? ibL3 + rng3/4 : 0
+        let cls = ''
+        if      (ibC3 > avRef && qH>0 && ibC3 >= qH && I.ibOrdre==='LH') cls = 'Bull A'
+        else if (ibC3 > avRef)                                              cls = 'Bull B'
+        else if (ibC3 < avRef && qL>0 && ibC3 <= qL && I.ibOrdre==='HL') cls = 'Bear A'
+        else if (ibC3 < avRef)                                              cls = 'Bear B'
+        if (!cls) return null
+        const isBull = cls.startsWith('Bull')
+        const isA = cls.endsWith('A')
+        const col = isBull ? C.up : C.down
+        const colB = isA ? col : C.amber
+        const setup = isA
+          ? (isBull ? `Pullback → AVWAP (${fmt2(avRef)}) → rebond → LONG` : `Remontée → AVWAP (${fmt2(avRef)}) → rejet → SHORT`)
+          : (isBull ? `Signal faible — attendre pullback AVWAP (${fmt2(avRef)}) + rebond` : `Signal faible — attendre remontée AVWAP (${fmt2(avRef)}) + rejet`)
+        const target = isBull
+          ? (ibH3>0 ? `Cible : IB High ${fmt2(ibH3)}` : '')
+          : (ibL3>0 ? `Cible : IB Low ${fmt2(ibL3)}` : '')
+        const fiabTxt = isA ? '★★★ SIGNAL FORT' : '★★ SIGNAL FAIBLE'
+        const ordre = I.ibOrdre==='LH' ? 'Low First' : I.ibOrdre==='HL' ? 'High First' : ''
+        return (
+          <div style={{ border:`2px solid ${colB}`, borderRadius:3, overflow:'hidden' }}>
+            <div style={{ padding:'6px 12px', background:`${colB}14`, borderBottom:`1px solid ${colB}30`, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+              <span style={{ width:8, height:8, borderRadius:'50%', background:colB, flexShrink:0 }}/>
+              <span style={orb(9,900,{color:colB,letterSpacing:'0.18em'})}>IB AVWAP SCALPEL</span>
+              <Pill label={cls} col={colB} />
+              {ordre && <span style={jb(8,500,{color:'rgba(136,153,187,0.7)'})}>{ordre}</span>}
+              <span style={{ flex:1 }}/>
+              <span style={orb(8,700,{color:colB,letterSpacing:'0.12em'})}>{fiabTxt}</span>
+            </div>
+            <div style={{ padding:'8px 12px', background:C.sur, display:'flex', flexDirection:'column', gap:6 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={jb(7,400,{color:C.muted})}>IB AVWAP</span>
+                  <span style={orb(12,700,{color:'#eef',fontVariantNumeric:'tabular-nums'})}>{ibAv3>0?fmt2(ibAv3):fmt2(mid3)}{ibAv3===0?' (mid)':''}</span>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={jb(7,400,{color:C.muted})}>IB Close</span>
+                  <span style={orb(12,700,{color:colB,fontVariantNumeric:'tabular-nums'})}>{fmt2(ibC3)}</span>
+                </div>
+                {qH>0&&<div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={jb(7,400,{color:C.muted})}>Q. Haut</span>
+                  <span style={orb(10,600,{color:'rgba(136,153,187,0.8)',fontVariantNumeric:'tabular-nums'})}>{fmt2(qH)}</span>
+                </div>}
+                {qL>0&&<div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={jb(7,400,{color:C.muted})}>Q. Bas</span>
+                  <span style={orb(10,600,{color:'rgba(136,153,187,0.8)',fontVariantNumeric:'tabular-nums'})}>{fmt2(qL)}</span>
+                </div>}
+                <span style={{ flex:1 }}/>
+                <div style={{ textAlign:'right' }}>
+                  <div style={jb(8,600,{color:colB})}>{setup}</div>
+                  {target&&<div style={jb(7,400,{color:C.muted,marginTop:2})}>{target}</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* BOX RTH */}
       <Sec title="BOX RTH · ZONE BALANCÉE" col="#00d4ff">
