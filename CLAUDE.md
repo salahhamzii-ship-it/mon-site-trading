@@ -398,3 +398,47 @@ Le prix paie le péage. Il franchit la référence. Il montre qu'il mérite le p
 - **Mardi 11/8 :** NQ SD+2 29851 / VWAP 29702 / SD-2 29553
 - **Mercredi 12/8 :** Imbalance High 29813.25 / Imbalance Low 29728 / SD 29538.25
 - **Jeudi 13/8 :** AVWAP 18h 29860 | NQ 29851/29776/29702/29626/29553 | ES 7796/7781/7766/7753/7738
+
+---
+
+## PARTIE 11 — NOON CURVE
+
+### Définition
+**Time-Based Range (TBR)** : 08h00 → 16h00 Eastern | n = 2,479 sessions NQ
+
+Trois ancres :
+- **08h00** : TBR Open (ancre Noon Curve)
+- **12h00** : Noon Curve midpoint — divise AM / PM
+- **16h00** : TBR Close (ancre Noon Curve)
+
+**Thèse principale** : dans la majorité des sessions, le High TBR se forme d'un côté du midpoint et le Low TBR de l'autre côté. Il est statistiquement rare que High ET Low soient tous les deux dans l'AM ou tous les deux dans le PM.
+
+### Règles Noon Curve
+| Condition | Biais PM |
+| :--- | :--- |
+| Q2 > Q1 High | 🟢 HAUSSIER |
+| Q2 < Q1 High | 🔴 BAISSIER |
+| Q2 Inside Q1 | ⚖️ Range / Indécision |
+
+**Statistique : 82.12%** du temps, le PM suit la direction de Q2 vs Q1 High.
+
+- Q1 = AM window (08h00–12h00)
+- Q2 = PM window (12h00–16h00)
+
+### Intégration Cockpit
+| Étape | Action |
+| :--- | :--- |
+| 1. IB 10h30 | Bull A / Bear A / B → biais AM |
+| 2. Noon Curve 12h | Q2 vs Q1 High → biais PM |
+| 3. IB + Noon alignés | Conviction ++ |
+| 4. IB + Noon divergents | Spectateur / Prudence |
+
+### Nuances
+| Cas | Lecture |
+| :--- | :--- |
+| IB Bull A + Noon Bull | LONG solide |
+| IB Bull A + Noon Bear | Piège possible |
+| IB Bear A + Noon Bear | SHORT solide |
+| IB Bear A + Noon Bull | Retournement possible |
+
+**En 1 ligne** : Q2 > Q1 High = PM haussier. Q2 < Q1 High = PM baissier. 82% fiable. Aligner avec IB et §9. 🐪
