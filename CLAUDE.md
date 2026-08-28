@@ -52,6 +52,17 @@
 - R31 : Range 4 jours = neutre
 - R32 : Tone of the day
 
+## VALUE TRADING + BORNES SD
+- R33 : Le marché joue les bornes SD tracées avant l'ouverture (SD+2 haut / SD-2 bas)
+- R34 : SD+2 touché trop vite = QUESTIONABLE HIGH → généralement à revisiter
+- R35 : SD-2 touché trop vite = QUESTIONABLE LOW → généralement à revisiter
+- R36 : LBF sur SD-2 + Higher Low au-dessus = LONG
+- R37 : LAF sur SD+2 + Lower High en dessous = SHORT
+- R38 : VALUE TRADING NOT PRICE — entre SD+2 et SD-2, on trade la Value (VAH/VAL/POC)
+- R39 : Cassure basse Value → viser l'opposite side (VAH) | Cassure haute Value → viser l'opposite side (VAL)
+- R40 : Ne pas trader au milieu de la Value
+- R41 : Attendre que le marché montre sa main sur la barre TPO 30 min
+
 ---
 
 # MÉTHODE DALTON-SALAH — RÉFÉRENCE COMPLÈTE v1.0
