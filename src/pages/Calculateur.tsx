@@ -2308,9 +2308,9 @@ export default function Calculateur() {
             {/* Niveaux */}
             <div style={{ padding:'10px 12px', background:C.sur, display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
               {([['ENTRÉE', a.entry, a.col],['STOP', a.stop, C.down],['C1', a.c1, C.up],['C2', a.c2, '#00cc66']] as [string,string,string][]).map(([l,v,c])=>(
-                <div key={l} style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center', padding:'7px 4px', background:'rgba(10,14,24,0.75)', borderRadius:3, border:`1px solid ${c}28` }}>
-                  <span style={jb(7,400,{color:C.muted,letterSpacing:'0.08em'})}>{l}</span>
-                  <span style={orb(12,900,{color:c})}>{v||'—'}</span>
+                <div key={l} style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center', padding:'7px 4px', background:`${c}20`, borderRadius:3, border:`1px solid ${c}55` }}>
+                  <span style={jb(7,700,{color:c,letterSpacing:'0.10em'})}>{l}</span>
+                  <span style={orb(13,900,{color:'#ffffff',fontVariantNumeric:'tabular-nums'})}>{v||'—'}</span>
                 </div>
               ))}
             </div>
