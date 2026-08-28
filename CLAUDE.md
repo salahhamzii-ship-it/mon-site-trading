@@ -660,3 +660,25 @@ Semaines du 7/08, 17/08, 24/08 = **3 semaines consécutives Lower Low**
 - Single Print haut : **29 440**
 - Single Print bas : **29 359**
 - Distribution au-dessus et en dessous des singles → structure de retournement potentiel
+
+### MGI — Lecture de l'équilibre structurel (28/08/2026)
+
+**Principe fondamental :** Un prix bas ou un prix haut = une RAISON. Ce n'est pas un hasard.
+
+Avant l'ouverture RTH du 28/08, la structure hebdo affichait :
+- **Aimant BAISSIER** : Single Prints bas à 29 359 → le marché doit les combler
+- **Aimant HAUSSIER** : Gap non comblé en haut 29 789 → 30 057 → le marché doit y retourner
+- **Arrêt structurel prévu** : Single Print haut semaine 29 440 + SD-2 29 436 = confluence
+
+Niveaux tracés AVANT la session : **29 518** (pivot/POC zone) et **29 426** (arrêt bas structurel)
+
+**Le marché a joué exactement entre ces deux bornes.**
+
+Low du jour = 29 436.25 (SD-2 exact = Single Print haut ±4 ticks) → LBF → rebond
+Close = 29 498 (autour du POC 29 508)
+
+**Règle MGI — Équilibre Structurel :**
+> Quand la structure weekly montre Single Prints bas ET un gap non comblé en haut,
+> le marché cherche l'équilibre entre les deux forces.
+> Il s'arrête sur la confluence la plus proche (Single Print + bande SD).
+> Quand vous lisez la structure, vous n'êtes jamais surpris.
