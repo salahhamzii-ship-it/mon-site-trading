@@ -1993,6 +1993,42 @@ export default function Calculateur() {
             </div>
           </div>
 
+          {/* ── OVN INVENTORY (vs Settle Dalton) ──────────────────── */}
+          {(() => {
+            const oc = pf(inst.oClose), se = pf(inst.rSettle)
+            if (!oc || !se) return null
+            const delta = oc - se
+            if (Math.abs(delta) < 1) return null
+            const isLong = delta > 0
+            const col = isLong ? C.up : C.down
+            const inv = isLong ? 'LONG' : 'SHORT'
+            const arrow = isLong ? '↓' : '↑'
+            const implication = isLong
+              ? 'Contre-auction vendeuse probable au RTH open'
+              : 'Contre-auction acheteuse probable au RTH open'
+            const pts = (isLong ? '+' : '') + fmt2(delta) + ' pts'
+            return (
+              <div style={{ border:`2px solid ${col}`, borderRadius:3, overflow:'hidden' }}>
+                <div style={{ padding:'6px 12px', background:`${col}14`, borderBottom:`1px solid ${col}30`, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                  <span style={{ width:8, height:8, borderRadius:'50%', background:col, flexShrink:0 }}/>
+                  <span style={orb(9,900,{color:col,letterSpacing:'0.20em'})}>OVN INVENTORY</span>
+                  <Pill label={inv} col={col} />
+                  <span style={orb(11,900,{color:col,fontVariantNumeric:'tabular-nums'})}>{pts}</span>
+                  <span style={{ flex:1 }}/>
+                  <span style={orb(10,900,{color:col,letterSpacing:'0.16em'})}>75% COUNTER AUCTION {arrow}</span>
+                </div>
+                <div style={{ padding:'8px 12px', background:C.sur, display:'flex', alignItems:'center', gap:12 }}>
+                  <span style={jb(8,400,{color:C.muted})}>OVN Close</span>
+                  <span style={orb(12,700,{color:'#eef',fontVariantNumeric:'tabular-nums'})}>{fmt2(oc)}</span>
+                  <span style={jb(8,400,{color:C.muted})}>J-1 Settle</span>
+                  <span style={orb(12,700,{color:'#eef',fontVariantNumeric:'tabular-nums'})}>{fmt2(se)}</span>
+                  <span style={{ flex:1 }}/>
+                  <span style={jb(8,500,{color:col,fontStyle:'italic'})}>{implication}</span>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* ── Alertes setups OVN ─────────────────────────────────── */}
           {ovnAlerts.map((a, i) => (
             <div key={i} style={{ border:`2px solid ${a.col}`, borderRadius:3, overflow:'hidden', animation:'pulseBorder 1.4s infinite' }}>
