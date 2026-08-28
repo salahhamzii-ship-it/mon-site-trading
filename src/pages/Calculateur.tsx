@@ -455,33 +455,61 @@ export default function Calculateur() {
   const SESSION_DATE = '2026-08-28'
   const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
     NQ: {
-      rOpen:   '29524',
-      rHigh:   '29704',
-      rLow:    '29401',
-      rSettle: '29691',
-      rVah:    '29646',
-      rVal:    '29532',
-      rPoc:    '29590',
-      atr:     '30',
-      vwap18h: '29622',
-      ovnSd1h: '29652',
-      ovnSd1l: '29592',
-      ovnSd2h: '29682',
-      ovnSd2l: '29562',
+      // J-1 RTH
+      rOpen:        '29524',
+      rHigh:        '29704',
+      rLow:         '29401',
+      rSettle:      '29691',
+      rVah:         '29646',
+      rVal:         '29532',
+      rPoc:         '29590',
+      // VWAP / SD 18h
+      atr:          '30',
+      vwap18h:      '29622',
+      ovnSd1h:      '29652',
+      ovnSd1l:      '29592',
+      ovnSd2h:      '29682',
+      ovnSd2l:      '29562',
+      // OVN agrégé 18h–09h30
+      oHigh:        '29707.00',
+      oLow:         '29578.25',
+      oClose:       '29659.00',
+      // Asie 18h–02h
+      asiaHigh:     '29707.00',
+      asiaLow:      '29592.00',
+      asiaClose:    '29598.25',
+      // Londres 02h–08h30
+      londonHigh:   '29665.00',
+      londonLow:    '29578.25',
+      londonClose:  '29659.00',
     },
     ES: {
-      rOpen:   '7716.25',
-      rHigh:   '7755.50',
-      rLow:    '7702.75',
-      rSettle: '7741.25',
-      rVah:    '7748',
-      rVal:    '7728',
-      rPoc:    '7738',
-      vwap18h: '7742',
-      ovnSd1h: '7746',
-      ovnSd1l: '7738',
-      ovnSd2h: '7750',
-      ovnSd2l: '7734',
+      // J-1 RTH
+      rOpen:        '7716.25',
+      rHigh:        '7755.50',
+      rLow:         '7702.75',
+      rSettle:      '7741.25',
+      rVah:         '7748',
+      rVal:         '7728',
+      rPoc:         '7738',
+      // VWAP / SD 18h
+      vwap18h:      '7742',
+      ovnSd1h:      '7746',
+      ovnSd1l:      '7738',
+      ovnSd2h:      '7750',
+      ovnSd2l:      '7734',
+      // OVN agrégé 18h–09h30
+      oHigh:        '7751.25',
+      oLow:         '7727.25',
+      oClose:       '7749.75',
+      // Asie 18h–02h
+      asiaHigh:     '7747.50',
+      asiaLow:      '7727.25',
+      asiaClose:    '7731.75',
+      // Londres 02h–08h30
+      londonHigh:   '7751.25',
+      londonLow:    '7731.00',
+      londonClose:  '7749.75',
     },
   }
   const applySessionData = useCallback((forceOverwrite = false) => {
