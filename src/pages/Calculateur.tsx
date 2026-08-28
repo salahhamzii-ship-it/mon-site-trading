@@ -492,6 +492,12 @@ export default function Calculateur() {
       orbHigh:      '29703.25',
       orbLow:       '29562.75',
       orbClose:     '29629.00',
+      // BOX RTH J-1
+      boxHigh:      '29725',
+      boxLow:       '29401',
+      // ALN
+      alnPattern:   'P3',
+      alnFiab:      '80.8',
     },
     ES: {
       // J-1 RTH
@@ -530,6 +536,12 @@ export default function Calculateur() {
       orbHigh:      '7751.25',
       orbLow:       '7727.25',
       orbClose:     '7749.75',
+      // BOX RTH J-1
+      boxHigh:      '7755.50',
+      boxLow:       '7702.75',
+      // ALN
+      alnPattern:   'P3',
+      alnFiab:      '80.8',
     },
   }
   const applySessionData = useCallback((forceOverwrite = false) => {
