@@ -484,3 +484,48 @@ Trois ancres :
 - Q2 casse Q1 High → TBR Low posé en AM (avant la cassure Q1) → **PM monte vers TBR High** (82%)
 - Q2 casse Q1 Low → TBR High posé en AM → **PM descend vers TBR Low** (72%)
 - Q2 casse les deux ou aucun → pas d'edge → rester spectateur
+
+---
+
+## PARTIE 12 — CADRE HYBRIDE E+G
+
+### Objectif
+Qualifier la tendance de l'après-midi (à partir de 13h00) en comparant la Value Area de la matinée (A→E) à son évolution après la période de transition (F&G).
+
+### Découpage TPO (barres 30 min)
+| Période | Barres | Rôle |
+| :--- | :--- | :--- |
+| Matinée | A → E (09h30–12h00) | Construction Value Area initiale |
+| Transition | F & G (12h00–13h00) | Test et validation — NE PAS AGIR |
+| Après-midi | H → M (13h00–16h00) | Tendance confirmée ou range |
+
+### Étape 1 — Value E (clôture de E, 12h00)
+Relever les niveaux cumulés A→E :
+- **POC** (Point of Control)
+- **VAH** (Value Area High)
+- **VAL** (Value Area Low)
+
+→ C'est la **photo de référence de la matinée**.
+
+### Étape 2 — Observation F & G (12h00–13h00)
+Observer la position du prix par rapport aux trois niveaux de Value E. **Ne pas agir** — phase de test et validation uniquement.
+
+### Étape 3 — Value G et décision (clôture de G, 13h00)
+
+| Condition à la fin de G | Biais PM (H→M) |
+| :--- | :--- |
+| Prix > VAH matinée (A→E) ET POC tient ou monte | 🟢 **HAUSSIER CONFIRMÉ** |
+| Prix < VAL matinée (A→E) ET POC descend | 🔴 **BAISSIER CONFIRMÉ** |
+| Prix entre VAL et VAH | ⚖️ **RANGE / NEUTRE** — attendre sortie en H ou I |
+
+### Remarque importante
+Cette méthode hybride combine la dynamique des bougies E-F-G (pièges, cassures) avec l'ancrage de valeur établi le matin. Elle **ne remplace pas** la règle EGH (pullback en deux temps + rejet), qui est une règle distincte, mécanique et symétrique, applicable à toute séquence de trois périodes.
+
+### Exemple réel (7 mai 2026, NQ)
+| Cumul | VAH | VAL | POC |
+| :--- | :--- | :--- | :--- |
+| A→E | 28 915 | 28 793 | 28 858 |
+| A→F | 28 903 | 28 743 | 28 786 (en baisse) |
+| A→G | 28 874 | 28 690 | 28 788 (stable bas) |
+
+Close G = 28 697 → légèrement au-dessus du VAL (28 690) → encore dans Value Area → **Range/Neutre**, attendre sortie en H.
