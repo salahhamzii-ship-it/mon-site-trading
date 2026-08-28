@@ -1,52 +1,145 @@
-# BIBLE TRADERS SALAH — RÈGLES ESSENTIELLES
+# BIBLE TRADERS — SALAH TATAOUINE
+*Les Règles Essentielles du Ligiste du Désert*
 
-## STRUCTURE & TOP-DOWN
-- R1 : Top-down chaque matin
-- R2 : Toujours séparer OVN et RTH
-- R3 : Jamais sous 30 min
+---
 
-## PSYCHOLOGIE
-- R4 : Identifier la phase comportementale
-- R5 : Comportement > prix
-- R6 : Pensée explicite + implicite
-- R7 : L'anxiété d'ouverture tue
-- R8 : Incertitude = adapter ou cash
-- R9 : 60% d'information suffit
-- R10 : Journal de trading
+## 🔭 PARTIE 1 — STRUCTURE & TOP-DOWN
 
-## PIÈGES
-- R11 : Références visibles = pièges
-- R12 : Référence mécanique exacte = drapeau rouge
-- R13 : Short trap
-- R14 : Halfback rallye = mains faibles
+**Règle 1** — Préparez-vous top-down chaque matin : mensuel → hebdo → daily → profils
+Cela vous donne le contexte (tendance ou balance) avant d'interpréter l'ouverture.
 
-## VALUE & POC
-- R15 : VAH touchée sans follow-through = VAL
-- R16 : VAL touchée sans follow-through = VAH
-- R17 : POC immobile = accumulation/distribution
-- R18 : Ligne 45° POC/prix
+**Règle 2** — Toujours splitter overnight et RTH (Regular Trading Hours)
+L'inventaire de nuit est le carburant du squeeze du jour. Ne pas mélanger les profils. Un vendeur de nuit est un acheteur potentiel du jour.
 
-## RALLIES
-- R19 : Rallye en P = short covering, ne dure pas
-- R20 : Profil P = pas de new money
-- R21 : Profil élagué = rallye sain
-- R22 : Short in the hole
+**Règle 3** — Ne tradez pas avec des graphiques de moins de 30 minutes
+Les unités plus courtes (1,5,15 min) masquent les structures importantes (pics pauvres, creux pauvres, excès, formes P, etc.). Utilisez des barres de 30 min ou plus.
 
-## EXCÈS
-- R23 : Ce qui ne se produit pas compte
-- R24 : Deux lows sans excès = ne pas acheter double bottom
-- R25 : Gap sans consolidation = dangereux
+---
 
-## GAPS
-- R26 : Ouvrir dans le range = patience
-- R27 : Gap hors range = conditions strictes
+## 🧠 PARTIE 2 — COMPORTEMENT & PSYCHOLOGIE
 
-## SURVIE
-- R28 : Incertitude extrême = options
+**Règle 4** — Identifiez la phase comportementale du marché (innovateurs, primo-adopteurs, majorité, retardataires)
+Les retardataires (laggards) achètent ou vendent à des niveaux exacts. Ils sont les victimes désignées du prochain retournement.
 
-## SEMAINE — ARCHÉTYPES (R29) + PLAN DE VOL (R30)
+**Règle 5** — Comportement (behavior) > prix
+Lire le marché = comprendre qui achète/vend à quels niveaux.
 
-### R29 — La Grille de Lecture de la Semaine : 5 Archétypes
+**Règle 6** — Distinguez pensée explicite et pensée implicite
+Explicite = niveaux, règles, stats. Implicite = intuition, flow, contexte. Un bon trader équilibre les deux. L'implicite s'acquiert par des milliers d'heures d'observation, pas par la lecture seule.
+
+**Règle 7** — L'anxiété de l'ouverture tue
+Si vous êtes pressé de trader dès l'ouverture par peur de rater le meilleur trade, éloignez-vous de l'écran. Attendez qu'une opportunité favorable se présente, ne la cherchez pas.
+
+**Règle 8** — Les marchés détestent l'incertitude
+L'incertitude (annonces politiques, tarifs) crée des extrêmes d'inventaire (trop long, trop short). Les stratégies normales échouent. Adaptez-vous ou restez en cash.
+
+**Règle 9** — Exactness kills → 60% d'information suffit
+Prendre une décision avec 60% d'indices. Attendre 100% fait rater l'opportunité.
+
+**Règle 10** — Tenez un journal de trading
+Notez vos émotions, vos erreurs, vos biais. On se ment à soi-même. Le papier ne ment pas. C'est le point de départ pour changer des habitudes.
+
+---
+
+## 🪤 PARTIE 3 — PIÈGES & RÉFÉRENCES
+
+**Règle 11** — Les références visibles sont des pièges (VAH, VAL, halfback, settle, POC)
+Un rallye qui démarre exactement sur le settle ou le halfback est signe de mains faibles. La seconde tentative est encore moins fiable.
+
+**Règle 12** — Une référence mécanique (exacte) est un drapeau rouge
+C'est le comportement des mains faibles. Ne vous fiez pas à ces niveaux pour une tendance durable.
+
+**Règle 13** — Short trap (piège à shorts)
+Accumulation de références mécaniques (ventes à des ticks sous le settle, halfback, etc.) sur une journée = signe que les vendeurs sont des retardataires (faibles mains).
+
+**Règle 14** — Halfback rallye = faibles mains, pas de staying power
+Rebond exactement sur le halfback, inversé rapidement. La force ne dure pas.
+
+---
+
+## 📊 PARTIE 4 — VALUE AREA & POC
+
+**Règle 15** — VAH touchée + pas de follow-through = destination VAL
+Le marché ouvre au-dessus de la VAH, puis comble le gap. Pas de continuation acheteuse → retour vers la VAL.
+
+**Règle 16** — VAL touchée + pas de follow-through = destination VAH
+Liquidation touchant un bas, mais sans vendeurs institutionnels → rebond jusqu'à la VAH.
+
+**Règle 17** — POC qui ne bouge pas = accumulation / distribution en cours
+POC overnight très visible, testé plusieurs fois sans se déplacer → marché en équilibre.
+
+**Règle 18** — La ligne à 45° POC/prix (Le POC suiveur)
+- POC monte avec le prix → marché sain.
+- POC descend avec le prix → marché sain.
+- POC bloqué alors que le prix s'écarte violemment → excès émotionnel.
+- Prix très au-dessus du POC = trop long → risque de liquidation baissière.
+- Prix très en dessous du POC = trop short → risque de short squeeze.
+Un POC « laissé en arrière » est un signal aussi fort qu'un excès (single print).
+
+---
+
+## 📈 PARTIE 5 — RALLIES & RETOURNEMENTS
+
+**Règle 19** — Un rallye en forme de P (short covering sans new money) ne dure pas
+Si le profil a la forme d'un P, ce n'est que de la couverture de shorts. Attendez un retournement. Si le profil est élagué (allongé), il y a de l'argent neuf et la tendance a plus de chances de continuer.
+
+**Règle 20** — Profil en P = short covering rally
+Forme de P sur le profil = couverture de shorts sans nouvel argent acheteur. Rallye non durable. Ne pas suivre, vendre sur faiblesse.
+
+**Règle 21** — Profil élagué (elongated) = rallye sain
+Signe que short covering est accompagné de new money → rallye plus solide. Rester long, ajouter en pullback.
+
+**Règle 22** — Short in the hole
+Inventaire très court à de mauvais prix → forte probabilité de short covering rally. Se préparer à un short squeeze – acheter des calls.
+
+---
+
+## 🕳️ PARTIE 6 — EXCÈS & ABSENCE D'EXCÈS
+
+**Règle 23** — Ce qui ne se produit pas est aussi important que ce qui se produit
+Exemple : Tempo très lent à la baisse = absence de vendeurs → signal de retournement. Pas de vente additionnelle après liquidation = baisse non sérieuse.
+
+**Règle 24** — Deux plus bas (lows) successifs sans excès augmentent fortement la probabilité qu'ils soient repris
+Un seul low sans excès donne déjà une probabilité modérée. Deux lows sans excès consécutifs augmentent considérablement cette probabilité. Ne pas acheter le « double bottom ».
+
+**Règle 25** — L'absence de consolidation (backing and filling) dans un gap rend le marché dangereux
+Un gap sans marches d'escalier ne donne aucun niveau logique pour arrêter le mouvement. Soyez prudent.
+
+---
+
+## 🎯 PARTIE 7 — GAPS & OUVERTURES
+
+**Règle 26** — Ouvrir dans le range = patience
+Ouvrir dans la fourchette de la veille donne une forte probabilité de chop (rotation). N'entrez pas tant qu'une référence claire n'est pas testée avec confirmation.
+
+**Règle 27** — Ouvrir hors range (gap) est une opportunité sous conditions strictes
+Un gap est mesuré par rapport au plus haut ou plus bas de la veille (pas le settle). C'est une forme d'excès signalant un rééquilibrage radical.
+
+Règle du gap :
+- Si le gap n'est pas comblé rapidement → aller dans sa direction avec confiance.
+- Si le gap est comblé (filled), surveiller la valeur (value) développée dans la journée.
+- Si la valeur ne parvient pas à revenir au niveau de la veille, probabilités élevées que le marché reparte dans la direction initiale du gap.
+- Si la valeur se ré-accepte dans la zone de la veille, le gap est annulé.
+
+Conditions pour trader un gap à l'ouverture :
+- L'inventaire overnight doit être aligné (long pour gap up, court pour gap down).
+- Des références structurelles solides (pics pauvres, POC visible) doivent confirmer.
+- La confiance dès l'ouverture doit être haute (mouvement directionnel immédiat).
+- Pas de rapport économique majeur dans l'heure (sauf stratégie dédiée).
+- Ne jamais : trader un gap par anxiété, ni fader un gap tant qu'il n'est pas comblé avec acceptation de valeur opposée.
+
+---
+
+## 🛡️ PARTIE 8 — DÉFENSE & SURVIE
+
+**Règle 28** — En période d'incertitude extrême, utilisez des options (straddles) pour définir votre risque
+Achetez call et put. Quand un côté gagne, vendez une option plus loin pour vous mettre en break-even, puis attendez un contre-mouvement. Ne tradez pas des futures à découvert si vous ne pouvez pas dormir.
+
+---
+
+## 📅 PARTIE 9 — ARCHÉTYPES DE SEMAINE
+
+**Règle 29** — La Grille de Lecture de la Semaine : 5 Archétypes
 
 **29.1 — L'Expansion Classique ("La Chevauchée")**
 Le marché fixe son cap dès lundi ou mardi, charge dans une seule direction 2-3 jours, reprend son souffle le vendredi. On laisse courir ses gains, on ne contre-attaque pas.
@@ -63,7 +156,7 @@ Retournement mercredi ou jeudi, début de semaine imprévisible. Un seul SAL s'a
 **29.5 — Le Contre-Mouvement du Jeudi ("Le Contrepied")**
 Tendance du lundi au mercredi, volte-face le jeudi. L'IB du jeudi doit impérativement confirmer.
 
-### R30 — Le Plan de Vol de la Semaine
+**Règle 30** — Le Plan de Vol de la Semaine
 
 | Jour | Action |
 | :--- | :--- |
@@ -73,20 +166,35 @@ Tendance du lundi au mercredi, volte-face le jeudi. L'IB du jeudi doit impérati
 | Jeudi | Le jour du breakdown ou du piège. Signaux combinés : état horaire + forteresse. |
 | Vendredi | La poursuite ou la clôture du cap. Objectifs SAL haute. Jour de la Conquête. |
 
-## BALANCE
-- R31 : Dans un range de 4 jours : rester neutre. Sortie confirmée = suivre. Échec de sortie = contre-pied.
-- R32 : Le marché a une « tonalité » pour la journée. Les traders court terme ne voient que ça. Prenez du recul.
+---
 
-## VALUE TRADING + BORNES SD
-- R33 : Le marché joue les bornes SD tracées avant l'ouverture (SD+2 haut / SD-2 bas)
-- R34 : SD+2 touché trop vite = QUESTIONABLE HIGH → généralement à revisiter
-- R35 : SD-2 touché trop vite = QUESTIONABLE LOW → généralement à revisiter
-- R36 : LBF sur SD-2 + Higher Low au-dessus = LONG
-- R37 : LAF sur SD+2 + Lower High en dessous = SHORT
-- R38 : VALUE TRADING NOT PRICE — entre SD+2 et SD-2, on trade la Value (VAH/VAL/POC)
-- R39 : Cassure basse Value → viser l'opposite side (VAH) | Cassure haute Value → viser l'opposite side (VAL)
-- R40 : Ne pas trader au milieu de la Value
-- R41 : Attendre que le marché montre sa main sur la barre TPO 30 min
+## ⚖️ PARTIE 10 — BALANCE
+
+**Règle 31** — Balance trading guidelines
+Dans un range de 4 jours : rester neutre. Sortie confirmée = suivre. Échec de sortie = contre-pied.
+
+**Règle 32** — Tone for the day
+Le marché a une « tonalité » pour la journée. Les traders court terme ne voient que ça. Prenez du recul.
+
+---
+
+## 📐 VALUE TRADING + BORNES SD (Salah — Ajouts de session)
+
+- **R33** : Le marché joue les bornes SD tracées avant l'ouverture (SD+2 haut / SD-2 bas)
+- **R34** : SD+2 touché trop vite = QUESTIONABLE HIGH → généralement à revisiter
+- **R35** : SD-2 touché trop vite = QUESTIONABLE LOW → généralement à revisiter
+- **R36** : LBF sur SD-2 + Higher Low au-dessus = LONG
+- **R37** : LAF sur SD+2 + Lower High en dessous = SHORT
+- **R38** : VALUE TRADING NOT PRICE — entre SD+2 et SD-2, on trade la Value (VAH/VAL/POC)
+- **R39** : Cassure basse Value → viser l'opposite side (VAH) | Cassure haute Value → viser l'opposite side (VAL)
+- **R40** : Ne pas trader au milieu de la Value
+- **R41** : Attendre que le marché montre sa main sur la barre TPO 30 min
+
+---
+
+> 📖 **Fin de la Bible Traders — Salah Tataouine**
+> Ligiste du désert. Héritier de Dalton, Dorian, Josh et du Texan.
+> *"Vivons cachés, vivons heureux."* 🐪
 
 ---
 
@@ -278,12 +386,6 @@ CL haussier = contexte risk-on (NQ haussier probable). CL baissier fort = risk-o
 Structure → Péage → Attente → Follow-Through OU Retour → Réponse
 
 Le prix paie le péage. Il franchit la référence. Il montre qu'il mérite le passage. Le chameau regarde, boit son thé, et répond.
-
----
-
-> 📖 **Fin de la Bible Traders — Salah Tataouine**
-> Ligiste du désert. Héritier de Dalton, Dorian, Josh et du Texan.
-> *"Vivons cachés, vivons heureux."* 🐪
 
 ---
 
