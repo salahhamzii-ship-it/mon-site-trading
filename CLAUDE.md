@@ -588,3 +588,44 @@ SHORT : [condition] → [cible] / NO SHORT
 | IB (09h30-10h30) | Bull A/B ou Bear A/B ? OVN inventaire confirmé ? |
 | 12h00 Noon Curve | Q2 vs Q1 High → biais PM |
 | 13h00 E+G | Value G vs Value E → PM confirmé |
+
+---
+
+## PARTIE 14 — BARRES 78 MIN — DELTA BID/ASK PAR PHASE RTH
+
+### Principe
+Session RTH : 09h30 → 16h00 = **390 minutes ÷ 5 = 78 min par barre**
+
+5 barres couvrent exactement la session. Chaque barre capture une phase naturelle du marché.
+
+### Découpage
+| Barre | Période | Phase |
+| :--- | :--- | :--- |
+| 1 | 09h30 → 10h48 | IB + réaction post-IB |
+| 2 | 10h48 → 12h06 | Développement AM / High-Low AM |
+| 3 | 12h06 → 13h24 | Lunch / Noon Curve transition |
+| 4 | 13h24 → 14h42 | Retour PM |
+| 5 | 14h42 → 16h00 | Clôture PM / settlement |
+
+### Colonnes Sierra Chart
+`Date, Time, Open, High, Low, Last, Volume, NumberOfTrades, BidVolume, AskVolume`
+
+**Delta = AskVolume − BidVolume**
+- Delta > 0 = acheteurs agressifs dominant
+- Delta < 0 = vendeurs agressifs dominant
+- Delta positif sur barre baissière = absorption = LBF potentiel
+
+### Lecture
+- Volume décroissant barre à barre = épuisement directionnel
+- Delta diverge du prix = signal de retournement
+- Barre Lunch (3) = souvent la barre révélatrice du biais PM
+
+### Exemple réel (28/08/2026, NQ)
+| Barre | High | Low | Last | BidVol | AskVol | Delta |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 09h30 | 29755 | 29505 | 29738 | 83 428 | 83 662 | **+234** |
+| 10h48 | 29811.50 | 29509.75 | 29551.75 | 55 267 | 55 368 | **+101** |
+| 12h06 | 29593 | **29436.25** | 29454.50 | 42 755 | 44 067 | **+1 312** |
+| 13h24 | 29529.25 | 29453.75 | 29497.50 | 19 459 | 20 342 | **+883** |
+
+→ Bar 3 : Delta +1312 au Low SD-2 (29436) = acheteurs absorbaient = excess bas confirmé par le delta.
