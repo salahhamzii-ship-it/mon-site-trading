@@ -888,6 +888,19 @@ export default function Calculateur() {
         if (last.tpoPoc) upI(t,'rPoc',last.tpoPoc)
         if (last.tpoVah) upI(t,'rVah',last.tpoVah)
         if (last.tpoVal) upI(t,'rVal',last.tpoVal)
+        // Auto-compute session stats depuis les barres RTH J-1
+        const first = rows[0]
+        const allH = rows.map(r=>pf(r.high)).filter(v=>v>0)
+        const allL = rows.map(r=>pf(r.low)).filter(v=>v>0)
+        const statsUp: Partial<Instr> = {}
+        if (first.open)  statsUp.rOpen   = first.open
+        if (last.last)   statsUp.rSettle = last.last
+        if (allH.length) statsUp.rHigh   = String(Math.max(...allH))
+        if (allL.length) statsUp.rLow    = String(Math.min(...allL))
+        // VWAP J-1 RTH → vwap18h seulement si non encore rempli (l'OVN prime)
+        const vwapJ1 = pf(last.vwap)
+        if (vwapJ1 > 0) statsUp.vwap18h = String(vwapJ1)
+        if (Object.keys(statsUp).length) setII(prev=>({...prev,[t]:{...prev[t],...statsUp}}))
 
         // ---- Auto-compute IB and ORB from CSV rows ----
         const t2m = (s:string) => { const [h,m] = s.split(':').map(Number); return h*60+(m||0) }
