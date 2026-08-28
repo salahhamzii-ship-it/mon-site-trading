@@ -779,3 +779,25 @@ Close = 29 498 (autour du POC 29 508)
 → Bar 5 = Delta le plus élevé (+2194) en clôture → accumulation finale.
 → Clôture 29493 = POC 29496 → parfait équilibre.
 → Lundi 31/08 : rotation attendue inside VAH/VAL (29664/29443) selon Globex dimanche.
+
+---
+
+## RÈGLE DE PROCESSUS — MORNING PLAN À LA CLÔTURE RTH
+
+**Principe :** Le Morning Plan se construit à la CLÔTURE RTH, pas le lendemain matin.
+
+**Pourquoi :**
+- Les données sont fraîches — l'esprit est encore dans le marché
+- La journée entière vient de se dérouler : on sait ce qu'ils ont FAIT et PAS VOULU faire
+- Ce qu'ils n'ont PAS VOULU faire (R23) est aussi précieux que ce qu'ils ont fait
+- Les prévisions du lendemain sont plus fiables construites à chaud
+
+**Exemple 28/08/2026 :**
+- FAIT : Monté SD+2 (29811) → Questionable High → fuite 100 pts/heure
+- FAIT : Chuté vers SD-2 (29436) → LBF → absorption massive
+- FAIT : Dodo de midi à 16H dans zone 29443-29521
+- PAS VOULU : Fermer sous VAL (29443) = Single Print semaine tient
+- PAS VOULU : Combler le gap 29789-30057 → reste attractif lundi
+
+**En une ligne :**
+> À la clôture, vous savez tout. Le lendemain matin, vous avez oublié la moitié.
