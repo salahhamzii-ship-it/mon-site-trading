@@ -721,3 +721,16 @@ Close = 29 498 (autour du POC 29 508)
 > Si inside balance → rotation entre les niveaux internes.
 > Si cassure haute 29 850 → suivre haussier vers gap 29 789→30 057.
 > Si cassure basse 28 959 → suivre baissier vers Single Prints 29 359.
+
+### SD Bands — Clôture RTH 28/08/2026 (à migrer dimanche)
+
+| Bande | Prix |
+| :--- | :--- |
+| SD+2 | **29 811** |
+| SD+1 | **29 704** |
+| VWAP RTH close | **29 600** |
+| SD-1 | **29 497** ← clôture RTH (~29 498) |
+| SD-2 | **29 395** |
+
+→ Clôture sur SD-1 exact = marché ferme sous VWAP RTH → biais baissier court terme
+→ Migration dimanche soir Globex → nouveaux SD lundi à tracer avant RTH
