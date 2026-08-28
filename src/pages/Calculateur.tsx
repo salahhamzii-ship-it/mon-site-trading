@@ -1957,7 +1957,14 @@ export default function Calculateur() {
 
           {/* VWAP 18h + SD bands */}
           <div style={{ border:`1px solid rgba(201,168,76,0.18)`, borderRadius:3, overflow:'hidden' }}>
-            {subHdr('VWAP 18H · BANDES SD', C.gold)}
+            <div style={{ display:'flex', alignItems:'center' }}>
+              {subHdr('VWAP 18H · BANDES SD', C.gold)}
+              <button
+                onClick={()=>{ ['vwap18h','ovnSd1h','ovnSd1l','ovnSd2h','ovnSd2l'].forEach(k=>upI(t2,k as keyof Instr,'')) }}
+                title="Vider VWAP + SD uniquement (sans toucher au reste)"
+                style={{ marginLeft:'auto', marginRight:10, padding:'2px 8px', border:'1px solid rgba(255,80,80,0.45)', borderRadius:2, background:'rgba(255,80,80,0.10)', color:'#ff6060', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:7, fontWeight:700, letterSpacing:'0.10em', whiteSpace:'nowrap' }}
+              >✕ VIDER</button>
+            </div>
             <div style={{ padding:'8px 10px', background:C.sur }}>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:4 }}>
                 {[
