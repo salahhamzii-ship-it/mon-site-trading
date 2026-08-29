@@ -1,0 +1,969 @@
+<title>ÉTUDE MULTI-INSTRUMENTS · MÉTHODE SALAH v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0F17;--surface:#131925;--surface2:#1A2436;
+  --border:#1E2A3A;--border2:#263548;
+  --text:#D8DCE8;--muted:#5A6680;
+  --gold:#C8A84B;--gold-dim:#7A6430;
+  --green:#4CAF82;--red:#E05C5C;--amber:#D4903A;--blue:#5B8FD4;
+  --mono:'IBM Plex Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+  --sw:220px;--hh:52px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;overflow:hidden}
+button{font-family:var(--sans);cursor:pointer;border:none;outline:none}
+input,textarea,select{font-family:var(--mono);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:3px;outline:none;font-size:12px;-moz-appearance:textfield}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--gold-dim)}
+label{color:var(--muted);font-size:11px;display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono)}
+
+/* layout */
+#app{display:flex;flex-direction:column;height:100vh}
+#hdr{height:var(--hh);flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 14px;z-index:10}
+#menu-btn{background:transparent;color:var(--muted);font-size:16px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:3px;flex-shrink:0}
+#menu-btn:hover{background:var(--surface2);color:var(--text)}
+#hdr-title{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.07em;white-space:nowrap;flex-shrink:0}
+#hdr-ver{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:1px 5px;flex-shrink:0}
+#pw{flex:1;min-width:40px;max-width:240px}
+#pb-bg{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+#pb-fill{height:100%;width:0%;background:var(--gold);transition:width .3s}
+#pb-lbl{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;text-align:right}
+#hdr-r{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}
+#clock{font-family:var(--mono);font-size:12px;color:var(--text);letter-spacing:.05em;min-width:90px;text-align:right}
+#reset-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:4px 10px;border-radius:3px;font-family:var(--mono);letter-spacing:.04em}
+#reset-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* body */
+#body{display:flex;flex:1;overflow:hidden}
+#sidebar{width:var(--sw);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;transition:width .2s,opacity .2s;display:flex;flex-direction:column}
+#sidebar.collapsed{width:0;opacity:0;overflow:hidden}
+.ni{display:flex;align-items:center;gap:9px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);font-family:var(--mono);letter-spacing:.03em;white-space:nowrap;transition:background .12s,color .12s}
+.ni:hover{background:var(--surface2);color:var(--text)}
+.ni.active{background:var(--surface2);color:var(--gold);border-right:2px solid var(--gold)}
+.ni-ico{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+#main{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column}
+.sec{display:none;flex-direction:column;gap:14px;animation:fi .15s ease}
+.sec.active{display:flex}
+@keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px}
+.ct{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.f{display:flex;flex-direction:column;gap:2px}
+.f input,.f select,.f textarea{width:100%}
+.sh{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.sh h2{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);letter-spacing:.06em}
+.sh span{font-size:11px;color:var(--muted)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;border-radius:3px;font-size:11px;font-family:var(--mono);font-weight:600;letter-spacing:.05em;transition:opacity .15s,border-color .15s,color .15s}
+.bg{background:var(--gold);color:#0B0F17}.bg:hover{opacity:.88}
+.bgh{background:transparent;border:1px solid var(--border);color:var(--muted)}.bgh:hover{border-color:var(--gold);color:var(--gold)}
+.bd{background:transparent;border:1px solid var(--border);color:var(--muted)}.bd:hover{border-color:var(--red);color:var(--red)}
+
+/* sd display */
+.sdg{display:grid;grid-template-columns:auto 1fr auto;gap:3px 8px;align-items:center}
+.sl{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right}
+.sv{font-family:var(--mono);font-size:13px;font-weight:600;padding:3px 7px;border-radius:3px;background:var(--surface2);letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.sd{font-size:10px;color:var(--muted)}
+.s3u{color:#E05C5C}.s2u{color:#D4903A}.s1u{color:#5B8FD4}
+.svw{color:#C8A84B;font-size:14px}.s1d{color:#5B8FD4}.s2d{color:#4CAF82}.s3d{color:#4CAF82}
+.sep{grid-column:1/-1;height:1px;background:var(--border);margin:3px 0}
+
+/* checklist */
+.pc{background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:7px}
+.ph{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s}
+.ph:hover{background:var(--surface2)}
+.ph.done{border-left:3px solid var(--green)}
+.pn{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.08em;flex:1}
+.pcnt{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.pt{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;min-width:90px;flex-shrink:0}
+.pb{padding:3px 0 6px;display:none;flex-direction:column}
+.pb.open{display:flex}
+.ci{display:flex;align-items:flex-start;gap:10px;padding:6px 12px;cursor:pointer;transition:background .1s}
+.ci:hover{background:rgba(200,168,75,.04)}
+.ci input[type=checkbox]{appearance:none;-webkit-appearance:none;width:14px;height:14px;border:1px solid var(--border2);background:var(--bg);flex-shrink:0;margin-top:2px;cursor:pointer;position:relative;transition:border-color .15s,background .15s}
+.ci input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
+.ci input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:0;width:5px;height:9px;border:2px solid #0B0F17;border-top:none;border-left:none;transform:rotate(45deg)}
+.ci input[type=checkbox]:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.ci label{font-size:12px;color:var(--text);cursor:pointer;line-height:1.45;flex:1}
+.ci input:checked+label{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--border)}
+.tag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.04em;background:var(--border);padding:1px 5px;margin-right:4px;white-space:nowrap;border-radius:2px}
+.tag.r{background:rgba(224,92,92,.12);color:var(--red)}
+.tag.g{background:rgba(76,175,130,.12);color:var(--green)}
+.tag.a{background:rgba(212,144,58,.12);color:var(--amber)}
+.ii{display:flex;align-items:flex-start;gap:10px;padding:6px 12px}
+.im{font-size:11px;color:var(--red);font-family:var(--mono);flex-shrink:0;margin-top:1px}
+.ii p{font-size:12px;color:var(--text);line-height:1.45}
+.ii p em{font-style:normal;color:var(--muted);font-family:var(--mono);font-size:10px}
+
+/* calc results */
+.rr{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);gap:6px}
+.rr:last-child{border-bottom:none}
+.rl{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;min-width:88px;flex-shrink:0}
+.rv{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;margin-left:auto}
+.rv.gold{color:var(--gold)}.rv.green{color:var(--green)}.rv.red{color:var(--red)}.rv.amber{color:var(--amber)}
+.rb{width:4px;align-self:stretch;flex-shrink:0}
+.vb{margin-top:8px;padding:8px 10px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-align:center}
+.vb.go{background:rgba(76,175,130,.12);color:var(--green);border:1px solid rgba(76,175,130,.25)}
+.vb.nogo{background:rgba(224,92,92,.12);color:var(--red);border:1px solid rgba(224,92,92,.25)}
+.vb.caution{background:rgba(212,144,58,.12);color:var(--amber);border:1px solid rgba(212,144,58,.25)}
+
+/* calc grid */
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:4px}
+.ch{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border)}
+.ctit{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--gold)}
+.csub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto}
+.cb{padding:12px 14px}
+.fr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fr label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;min-width:80px;flex-shrink:0;text-transform:uppercase}
+.fr input,.fr select{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:4px 7px;outline:none;border-radius:2px}
+.fr input:focus,.fr select:focus{border-color:var(--gold-dim)}
+.fr input::placeholder{color:var(--muted);opacity:.5}
+.calc-btn{width:100%;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;color:#0B0F17;background:var(--gold);border:none;padding:7px;cursor:pointer;margin-top:3px;border-radius:2px}
+.calc-btn:hover{opacity:.88}
+.cr{margin-top:10px;display:none;flex-direction:column;gap:0}
+.cr.visible{display:flex}
+
+/* tracker */
+#tp{font-family:var(--mono);font-size:26px;font-weight:600;background:var(--surface2);border:2px solid var(--border);color:var(--text);padding:10px 14px;border-radius:4px;width:100%;text-align:center}
+#tp:focus{border-color:var(--gold)}
+#td2{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:10px}
+.tb{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:7px;text-align:center;transition:border-color .2s,background .2s}
+.tb.ab{background:rgba(200,168,75,.12);border-color:var(--gold)}
+.tbl{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.05em}
+.tbv{font-family:var(--mono);font-size:12px;font-weight:600;margin-top:2px}
+.tbd{font-size:10px;color:var(--muted);margin-top:1px}
+#tsig{margin-top:10px;padding:10px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;text-align:center;display:none}
+#tsig.ss{background:rgba(224,92,92,.15);border:1px solid var(--red);color:var(--red)}
+#tsig.sl{background:rgba(76,175,130,.15);border:1px solid var(--green);color:var(--green)}
+#tsig.sn{background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+
+/* backtest */
+.btt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+.btt th{text-align:left;padding:5px 7px;color:var(--muted);font-size:10px;border-bottom:1px solid var(--border);font-weight:500;letter-spacing:.04em}
+.btt td{padding:5px 7px;border-bottom:1px solid var(--border);color:var(--text)}
+.btt tr:last-child td{border-bottom:none}
+.btt tr:hover td{background:var(--surface2)}
+td.pos{color:var(--green)}td.neg{color:var(--red)}
+.bts{display:flex;gap:12px;flex-wrap:wrap}
+.bts-box{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:7px 12px}
+.bts-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.bts-val{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--gold);margin-top:2px}
+
+/* position */
+#pdis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.pm{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:10px}
+.pm-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pm-v{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:3px}
+
+/* topdown */
+.tdo{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:10px;font-family:var(--mono);font-size:11px;line-height:1.9;white-space:pre-wrap;min-height:180px;max-height:380px;overflow-y:auto}
+
+/* json / csv */
+#jo{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:10px;font-family:var(--mono);font-size:11px;line-height:1.8;white-space:pre-wrap;overflow-y:auto;max-height:500px;color:var(--text)}
+#ci2{width:100%;height:140px;resize:vertical;font-size:11px;line-height:1.6}
+#cr2{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:9px;font-family:var(--mono);font-size:11px;line-height:1.8;white-space:pre-wrap;display:none}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* toast */
+#toast{position:fixed;bottom:18px;right:18px;background:var(--surface);border:1px solid var(--gold);border-radius:4px;padding:9px 14px;font-family:var(--mono);font-size:11px;color:var(--gold);opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+#toast.show{opacity:1}
+
+@media(max-width:680px){
+  #sw{font-size:9px}#hdr-title{font-size:9px}
+  .r2,.r3{grid-template-columns:1fr}
+  #td2{grid-template-columns:repeat(4,1fr)}
+  #pdis{grid-template-columns:1fr 1fr}
+}
+</style>
+
+<div id="app">
+<div id="hdr">
+  <button id="menu-btn" onclick="toggleSB()">☰</button>
+  <span id="hdr-title">◈ ÉTUDE MULTI-INSTRUMENTS · MÉTHODE SALAH</span>
+  <span id="hdr-ver">v3</span>
+  <div id="pw"><div id="pb-bg"><div id="pb-fill"></div></div><div id="pb-lbl">0 / 43</div></div>
+  <div id="hdr-r">
+    <span id="clock">NY --:--:--</span>
+    <button id="reset-btn" onclick="resetDay()">⟳ RESET</button>
+  </div>
+</div>
+<div id="body">
+<nav id="sidebar">
+  <div class="ni active" data-s="session" onclick="nav(this)"><span class="ni-ico">⬇</span>CHARGER SESSION</div>
+  <div class="ni" data-s="json" onclick="nav(this)"><span class="ni-ico">📋</span>JSON CLAUDE</div>
+  <div class="ni" data-s="csv" onclick="nav(this)"><span class="ni-ico">📊</span>SC CSV</div>
+  <div class="ni" data-s="launcher" onclick="nav(this)"><span class="ni-ico">◉</span>SETUP LAUNCHER</div>
+  <div class="ni" data-s="topdown" onclick="nav(this)"><span class="ni-ico">▲</span>TOP-DOWN DALTON</div>
+  <div class="ni" data-s="tracker" onclick="nav(this)"><span class="ni-ico">⊕</span>LIVE TRACKER</div>
+  <div class="ni" data-s="reglages" onclick="nav(this)"><span class="ni-ico">⚙</span>RÉGLAGES IB/OR</div>
+  <div class="ni" data-s="backtest" onclick="nav(this)"><span class="ni-ico">◈</span>BACKTEST SD-2</div>
+  <div class="ni" data-s="position" onclick="nav(this)"><span class="ni-ico">⬡</span>POSITION ACTIVE</div>
+</nav>
+<main id="main">
+
+<!-- ── SESSION ── -->
+<div class="sec active" id="sec-session">
+  <div class="sh"><h2>⬇ CHARGER SESSION</h2><span id="sd-lbl"></span></div>
+  <div class="r2">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card"><div class="ct">AVWAP 18H + SIGMA</div>
+        <div class="r2"><div class="f"><label>AVWAP 18H 👑</label><input id="s-avwap" type="number" step=".25" placeholder="29638.54" oninput="oSI()"></div>
+        <div class="f"><label>Sigma σ</label><input id="s-sigma" type="number" step=".25" placeholder="11.88" oninput="oSI()"></div></div></div>
+      <div class="card"><div class="ct">IB (09h30–10h30)</div>
+        <div class="r2"><div class="f"><label>IB High</label><input id="s-ibh" type="number" step=".25" placeholder="29704" oninput="oSI()"></div>
+        <div class="f"><label>IB Low</label><input id="s-ibl" type="number" step=".25" placeholder="29629" oninput="oSI()"></div></div></div>
+      <div class="card"><div class="ct">J-1 RTH</div>
+        <div class="r3"><div class="f"><label>VAH</label><input id="s-vah" type="number" step=".25" placeholder="29664" oninput="oSI()"></div>
+        <div class="f"><label>VAL</label><input id="s-val" type="number" step=".25" placeholder="29443" oninput="oSI()"></div>
+        <div class="f"><label>POC</label><input id="s-poc" type="number" step=".25" placeholder="29496" oninput="oSI()"></div></div>
+        <div class="r3" style="margin-top:8px"><div class="f"><label>High</label><input id="s-j1h" type="number" step=".25" placeholder="29811.50" oninput="oSI()"></div>
+        <div class="f"><label>Low</label><input id="s-j1l" type="number" step=".25" placeholder="29436.25" oninput="oSI()"></div>
+        <div class="f"><label>Settle</label><input id="s-settle" type="number" step=".25" placeholder="29509.25" oninput="oSI()"></div></div></div>
+      <div class="card"><div class="ct">MONTHLY + OVN</div>
+        <div class="r2"><div class="f"><label>Monthly POC</label><input id="s-mpoc" type="number" step=".25" placeholder="29614.75" oninput="oSI()"></div>
+        <div class="f"><label>Monthly VAH</label><input id="s-mvah" type="number" step=".25" placeholder="30051" oninput="oSI()"></div></div>
+        <div class="r2" style="margin-top:8px"><div class="f"><label>Monthly VAL</label><input id="s-mval" type="number" step=".25" placeholder="29195.75" oninput="oSI()"></div>
+        <div class="f"><label>ALN Pattern</label><select id="s-aln" onchange="oSI()"><option value="">—</option><option>P1 (Outside)</option><option>P2 (Inside)</option><option>P3 (Partial Up)</option><option>P4 (Partial Down)</option></select></div></div>
+        <div class="r2" style="margin-top:8px"><div class="f"><label>OVN High</label><input id="s-ovnh" type="number" step=".25" placeholder="29755" oninput="oSI()"></div>
+        <div class="f"><label>OVN Low</label><input id="s-ovnl" type="number" step=".25" placeholder="29505" oninput="oSI()"></div></div></div>
+      <div class="card"><div class="ct">NOTES</div>
+        <div class="f"><textarea id="s-notes" rows="3" style="width:100%" placeholder="Biais, contexte macro…" oninput="oSI()"></textarea></div></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn bg" onclick="saveSession()">💾 ENREGISTRER</button>
+        <button class="btn bgh" onclick="loadSession()">⬇ CHARGER</button></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card" id="sd-card"><div class="ct">BANDES SD — LIVE</div><div id="sd-dis"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">Entrez AVWAP + Sigma.</span></div></div>
+      <div class="card" id="ib-card"><div class="ct">IB NIVEAUX</div><div id="ib-dis"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">Entrez IB High + Low.</span></div></div>
+      <div class="card"><div class="ct">J-1 SNAPSHOT</div><div id="j1-dis" style="font-family:var(--mono);font-size:12px;line-height:2.1"><span style="color:var(--muted)">Entrez les niveaux J-1.</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── JSON ── -->
+<div class="sec" id="sec-json">
+  <div class="sh"><h2>📋 JSON CLAUDE</h2></div>
+  <div class="card"><div style="display:flex;gap:7px;margin-bottom:10px">
+    <button class="btn bg" onclick="buildJSON()">⟳ GÉNÉRER</button>
+    <button class="btn bgh" onclick="copyJSON()">⎘ COPIER</button></div>
+    <pre id="jo">— Cliquez GÉNÉRER —</pre></div>
+</div>
+
+<!-- ── CSV ── -->
+<div class="sec" id="sec-csv">
+  <div class="sh"><h2>📊 SC CSV</h2></div>
+  <div class="card"><div class="ct">COLLER CSV SIERRA CHART</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:7px">Format: Date,Time,Open,High,Low,Last,Volume,#Trades,BidVol,AskVol,…</p>
+    <textarea id="ci2" placeholder="Coller les données CSV…"></textarea>
+    <div style="display:flex;gap:7px;margin-top:8px">
+      <button class="btn bg" onclick="parseCSV()">⟳ EXTRAIRE</button>
+      <button class="btn bgh" onclick="applyCSV()">→ APPLIQUER SESSION</button>
+      <button class="btn bd" onclick="document.getElementById('ci2').value='';document.getElementById('cr2').style.display='none'">✕</button></div>
+    <pre id="cr2"></pre></div>
+</div>
+
+<!-- ── LAUNCHER (CHECKLIST) ── -->
+<div class="sec" id="sec-launcher">
+  <div class="sh"><h2>◉ SETUP LAUNCHER</h2></div>
+
+  <!-- VEILLE -->
+  <div class="pc"><div class="ph" onclick="tP('veille')" id="hv">
+    <span class="pt">VEILLE · RTH CLOSE</span><span class="pn">Structure Top-Down + Morning Plan</span><span class="pcnt" id="count-veille">0/7</span></div>
+  <div class="pb" id="body-veille">
+    <div class="ci"><input type="checkbox" id="v1"><label for="v1"><span class="tag">MONTHLY</span>OTF Higher / Lower / Balance — Inside mois précédent ?</label></div>
+    <div class="ci"><input type="checkbox" id="v2"><label for="v2"><span class="tag">WEEKLY</span>OTF + Single Prints visibles + Gap non comblé</label></div>
+    <div class="ci"><input type="checkbox" id="v3"><label for="v3"><span class="tag">J-1 RTH</span>High / Low / Settle / VAH / VAL / POC / Type journée / Excès haut ou bas</label></div>
+    <div class="ci"><input type="checkbox" id="v4"><label for="v4"><span class="tag">SD</span>Migration 18h : tracer SD+3 / SD+2 / AVWAP 18H / SD-2 / SD-3 pour demain</label></div>
+    <div class="ci"><input type="checkbox" id="v5"><label for="v5"><span class="tag a">R29</span>Archétype semaine identifié : Chevauchée / Revirement / Piège / Exception / Contrepied</label></div>
+    <div class="ci"><input type="checkbox" id="v6"><label for="v6"><span class="tag g">PLAN</span>Morning Plan rédigé à chaud (Template) — niveaux ★★★ annotés</label></div>
+    <div class="ci"><input type="checkbox" id="v7"><label for="v7"><span class="tag">JOURNAL</span>Journal J-1 rempli : émotions / erreurs / biais <em>(R10)</em></label></div>
+  </div></div>
+
+  <!-- OVN -->
+  <div class="pc"><div class="ph" onclick="tP('ovn')" id="ho">
+    <span class="pt">OVN · 18H → 08H</span><span class="pn">Inventaire Overnight — 78min bars</span><span class="pcnt" id="count-ovn">0/6</span></div>
+  <div class="pb" id="body-ovn">
+    <div class="ci"><input type="checkbox" id="o1"><label for="o1"><span class="tag">GAP</span>OVN High / Low vs J-1 High / Low → Gap Up / Gap Down / Inside</label></div>
+    <div class="ci"><input type="checkbox" id="o2"><label for="o2"><span class="tag a">ALN</span>Pattern identifié : P1 / P2 / P3 (haussier 80.8%) / P4 (ambigu 56%)</label></div>
+    <div class="ci"><input type="checkbox" id="o3"><label for="o3"><span class="tag">INV</span>Inventaire OVN vs Settle : Long / Short / Neutre — aligné avec ALN ?</label></div>
+    <div class="ci"><input type="checkbox" id="o4"><label for="o4"><span class="tag">DELTA</span>Delta cumulé OVN 78min : Ask &gt; Bid = Long / Bid &gt; Ask = Short inventory</label></div>
+    <div class="ci"><input type="checkbox" id="o5"><label for="o5"><span class="tag">POC</span>Monthly POC en OVN : floor (LBF) ou résistance (LAF) ?</label></div>
+    <div class="ci"><input type="checkbox" id="o6"><label for="o6"><span class="tag r">SD-2</span>SD-2 OVN touché → LBF + Delta positif = Long bias RTH <em>(R36)</em></label></div>
+  </div></div>
+
+  <!-- PRÉ-MARKET -->
+  <div class="pc"><div class="ph" onclick="tP('premarket')" id="hp">
+    <span class="pt">PRÉ-MARKET · 08H–09H30</span><span class="pn">Positionnement avant RTH — 30min bars</span><span class="pcnt" id="count-premarket">0/4</span></div>
+  <div class="pb" id="body-premarket">
+    <div class="ci"><input type="checkbox" id="p1"><label for="p1"><span class="tag g">ASK@HIGH</span>Ask@High croissant barre à barre → acheteurs se positionnent → Long bias</label></div>
+    <div class="ci"><input type="checkbox" id="p2"><label for="p2"><span class="tag r">BID@LOW</span>Bid@Low dominant → vendeurs stop-hunting pre-RTH → attendre Low First à l'ouverture</label></div>
+    <div class="ci"><input type="checkbox" id="p3"><label for="p3"><span class="tag">AVWAP</span>Prix vs AVWAP 18H : au-dessus = long bias / en-dessous = short bias</label></div>
+    <div class="ci"><input type="checkbox" id="p4"><label for="p4"><span class="tag a">GAP RTH</span>Gap vs J-1 High ou Low : comblé en pre-market = annulé / persistant = go with <em>(R27)</em></label></div>
+  </div></div>
+
+  <!-- IB -->
+  <div class="pc"><div class="ph" onclick="tP('ib')" id="hi">
+    <span class="pt">IB · 09H30–10H30</span><span class="pn">Classification IB — 2 barres 30min + Delta</span><span class="pcnt" id="count-ib">0/6</span></div>
+  <div class="pb" id="body-ib">
+    <div class="ci"><input type="checkbox" id="i1"><label for="i1"><span class="tag">IB1 09H30</span>High First ou Low First + Delta positif ou négatif</label></div>
+    <div class="ci"><input type="checkbox" id="i2"><label for="i2"><span class="tag">IB2 10H00</span>Close vs midpoint IB + Delta IB2 confirme ou diverge IB1</label></div>
+    <div class="ci"><input type="checkbox" id="i3"><label for="i3"><span class="tag g">CLASS</span>Bull A (Close &gt; AVWAP + Close &gt; Quart Haut + Low First) ou Bear A ou B</label></div>
+    <div class="ci"><input type="checkbox" id="i4"><label for="i4"><span class="tag a">§9</span>NQ + ES même signal IB → conviction / Divergence → caution</label></div>
+    <div class="ci"><input type="checkbox" id="i5"><label for="i5"><span class="tag">AVWAP IB</span>AVWAP IB calculé sur 6 bougies 10min (09:30→10:20) — ratio &gt; 1:1 ?</label></div>
+    <div class="ci"><input type="checkbox" id="i6"><label for="i6"><span class="tag r">EXHAUST</span>Ask@High IB2 vs IB1 : stable ou décroissant sur nouveau High = Poor High en formation</label></div>
+  </div></div>
+
+  <!-- AM -->
+  <div class="pc"><div class="ph" onclick="tP('am')" id="ha">
+    <span class="pt">AM · 10H30–12H00</span><span class="pn">Développement — 19min30sec bars</span><span class="pcnt" id="count-am">0/6</span></div>
+  <div class="pb" id="body-am">
+    <div class="ci"><input type="checkbox" id="a1"><label for="a1"><span class="tag">SD</span>Position vs SD+2 / AVWAP 18H / SD-2 — bande actuelle identifiée</label></div>
+    <div class="ci"><input type="checkbox" id="a2"><label for="a2"><span class="tag r">R34</span>SD+3 touché → Questionable High EXTRÊME → SHORT immédiat</label></div>
+    <div class="ci"><input type="checkbox" id="a3"><label for="a3"><span class="tag r">EXHAUST</span>Ask@High stagne sur 2+ barres consécutives malgré nouveaux Highs → SHORT</label></div>
+    <div class="ci"><input type="checkbox" id="a4"><label for="a4"><span class="tag g">ABSORB</span>Bid@Low thin + Delta positif au Low → absorption → LONG <em>(R36)</em></label></div>
+    <div class="ci"><input type="checkbox" id="a5"><label for="a5"><span class="tag">VOL</span>Volume décroissant barre à barre → épuisement → préparer retournement <em>(R23)</em></label></div>
+    <div class="ci"><input type="checkbox" id="a6"><label for="a6"><span class="tag">POC</span>Monthly POC = magnet dominant — confluence SD-2 + Monthly POC = ★★★</label></div>
+  </div></div>
+
+  <!-- NOON -->
+  <div class="pc"><div class="ph" onclick="tP('noon')" id="hn">
+    <span class="pt">NOON CURVE · 12H00</span><span class="pn">Biais PM — Q2 vs Q1 High (82% fiable)</span><span class="pcnt" id="count-noon">0/4</span></div>
+  <div class="pb" id="body-noon">
+    <div class="ci"><input type="checkbox" id="n1"><label for="n1"><span class="tag g">HAUSSIER</span>Q2 casse Q1 High (sans casser Q1 Low) → PM haussier <strong>82%</strong></label></div>
+    <div class="ci"><input type="checkbox" id="n2"><label for="n2"><span class="tag r">BAISSIER</span>Q2 casse Q1 Low (sans casser Q1 High) → PM baissier <strong>72%</strong></label></div>
+    <div class="ci"><input type="checkbox" id="n3"><label for="n3"><span class="tag">NEUTRE</span>Q2 casse les deux ou aucun → pas d'edge → spectateur</label></div>
+    <div class="ci"><input type="checkbox" id="n4"><label for="n4"><span class="tag a">ALIGN</span>Noon Curve alignée avec IB → conviction++ | Divergente → prudence</label></div>
+  </div></div>
+
+  <!-- E+G -->
+  <div class="pc"><div class="ph" onclick="tP('eg')" id="he">
+    <span class="pt">E+G FRAMEWORK · 13H00</span><span class="pn">Value Area matinée vs close G — Biais PM</span><span class="pcnt" id="count-eg">0/4</span></div>
+  <div class="pb" id="body-eg">
+    <div class="ci"><input type="checkbox" id="e1"><label for="e1"><span class="tag">VALUE E</span>Relever POC / VAH / VAL cumulés A→E (09:30→12:00) — photo de référence matinée</label></div>
+    <div class="ci"><input type="checkbox" id="e2"><label for="e2"><span class="tag">F+G</span>Observer F+G (12:00→13:00) : prix vs Value E → ne PAS agir — phase de test</label></div>
+    <div class="ci"><input type="checkbox" id="e3"><label for="e3"><span class="tag g">CLOSE G</span>Au-dessus VAH + POC monte → HAUSSIER confirmé (H→M)</label></div>
+    <div class="ci"><input type="checkbox" id="e4"><label for="e4"><span class="tag r">CLOSE G</span>En-dessous VAL + POC descend → BAISSIER / Entre VAL-VAH → attendre H ou I</label></div>
+  </div></div>
+
+  <!-- PM -->
+  <div class="pc"><div class="ph" onclick="tP('pm')" id="hm">
+    <span class="pt">PM · 13H00–16H00</span><span class="pn">Exécution — 19min30sec bars</span><span class="pcnt" id="count-pm">0/6</span></div>
+  <div class="pb" id="body-pm">
+    <div class="ci"><input type="checkbox" id="m1"><label for="m1"><span class="tag g">CONV</span>IB + Noon + E+G alignés → conviction max → tenir la position sans doute</label></div>
+    <div class="ci"><input type="checkbox" id="m2"><label for="m2"><span class="tag r">SD+3</span>SD+3 = limite absolue → SHORT obligatoire <em>(R34)</em></label></div>
+    <div class="ci"><input type="checkbox" id="m3"><label for="m3"><span class="tag g">LBF</span>SD-2 + Delta positif + Bid@Low thin → Look Below and Fail → LONG <em>(R36)</em></label></div>
+    <div class="ci"><input type="checkbox" id="m4"><label for="m4"><span class="tag">POC</span>Monthly POC = magnet prioritaire — cible si SD+3 Questionable High</label></div>
+    <div class="ci"><input type="checkbox" id="m5"><label for="m5"><span class="tag">EXHAUST</span>Volume + Delta baissent → épuisement → sécuriser + préparer sortie</label></div>
+    <div class="ci"><input type="checkbox" id="m6"><label for="m6"><span class="tag a">VALUE</span>Réintégration Value Area J-1 → destination VAH ou VAL <em>(R15/16)</em></label></div>
+  </div></div>
+
+  <!-- CLÔTURE -->
+  <div class="pc"><div class="ph" onclick="tP('close')" id="hc">
+    <span class="pt">CLÔTURE · 16H00</span><span class="pn">Bilan + Préparation demain</span><span class="pcnt" id="count-close">0/6</span></div>
+  <div class="pb" id="body-close">
+    <div class="ci"><input type="checkbox" id="c1"><label for="c1"><span class="tag">TYPE</span>Type journée identifié : Trend / Rotational / Balance</label></div>
+    <div class="ci"><input type="checkbox" id="c2"><label for="c2"><span class="tag">EXCÈS</span>Excès haut ou bas formé — Poor High / Poor Low documenté</label></div>
+    <div class="ci"><input type="checkbox" id="c3"><label for="c3"><span class="tag">SETTLE</span>Settle vs AVWAP 18H : sur quelle SD bande ? — migration demain</label></div>
+    <div class="ci"><input type="checkbox" id="c4"><label for="c4"><span class="tag">DELTA</span>Delta total journée : acheteurs ou vendeurs dominants — 5/5 barres 78min ?</label></div>
+    <div class="ci"><input type="checkbox" id="c5"><label for="c5"><span class="tag g">PLAN</span>Morning Plan demain construit MAINTENANT à chaud (Template)</label></div>
+    <div class="ci"><input type="checkbox" id="c6"><label for="c6"><span class="tag">JOURNAL</span>Journal : émotions / erreurs / biais — sur papier, pas en mémoire <em>(R10)</em></label></div>
+  </div></div>
+
+  <!-- INTERDITS -->
+  <div class="pc" style="border-color:rgba(224,92,92,.3)">
+    <div class="ph" onclick="tP('interdits')" style="border-left:3px solid var(--red)">
+      <span class="pn" style="color:var(--red)">🚫 INTERDITS — RÈGLES ABSOLUES</span></div>
+    <div class="pb" id="body-interdits">
+      <div class="ii"><div class="im">❌</div><p>Jamais de graphique &lt; 30 minutes <em>(R3)</em></p></div>
+      <div class="ii"><div class="im">❌</div><p>Jamais shorter un P4 sans confirmation IB — 56% de fiabilité seulement</p></div>
+      <div class="ii"><div class="im">❌</div><p>Jamais trader au milieu de la Value Area <em>(R40)</em></p></div>
+      <div class="ii"><div class="im">❌</div><p>Jamais fader un gap tant qu'il n'est pas comblé + acceptation value opposée <em>(R27)</em></p></div>
+      <div class="ii"><div class="im">❌</div><p>Jamais entrer sur référence mécanique exacte (settle, halfback, VAH/VAL) <em>(R11/12)</em></p></div>
+      <div class="ii"><div class="im">❌</div><p>Jamais attendre 100% de confirmation — 60% suffisent <em>(R9)</em></p></div>
+      <div class="ii"><div class="im">❌</div><p>Si anxieux avant l'ouverture : écran éteint <em>(R7)</em></p></div>
+      <div class="ii"><div class="im">❌</div><p>Deux lows successifs sans excès = ne pas acheter le double bottom <em>(R24)</em></p></div>
+    </div></div>
+</div>
+
+<!-- ── TOP-DOWN ── -->
+<div class="sec" id="sec-topdown">
+  <div class="sh"><h2>▲ TOP-DOWN DALTON</h2></div>
+  <div class="r2">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card"><div class="ct">STRUCTURE HTF</div>
+        <div class="r3">
+          <div class="f"><label>Monthly</label><select id="td-mo"><option>Balance</option><option>OTF Higher</option><option>OTF Lower</option></select></div>
+          <div class="f"><label>Weekly</label><select id="td-we"><option>OTF Higher</option><option>OTF Lower</option><option>Balance</option></select></div>
+          <div class="f"><label>Daily</label><select id="td-da"><option>Balance</option><option>OTF Higher</option><option>OTF Lower</option></select></div>
+        </div></div>
+      <div class="card"><div class="ct">NEWS + ALN</div>
+        <div class="f"><label>News du jour</label><textarea id="td-news" rows="2" style="width:100%" placeholder="• CPI 08h30&#10;• FOMC 14h00"></textarea></div>
+        <div class="r2" style="margin-top:8px">
+          <div class="f"><label>ALN Pattern</label><select id="td-aln"><option>P1 (Outside)</option><option>P2 (Inside)</option><option>P3 (Partial Up)</option><option>P4 (Partial Down)</option></select></div>
+          <div class="f"><label>Probabilité</label><input id="td-prob" placeholder="80.8%"></div>
+        </div></div>
+      <div class="card"><div class="ct">SITUATION + SCÉNARIOS</div>
+        <div class="r2">
+          <div class="f"><label>NQ prix</label><input id="td-nq" type="number" step=".25"></div>
+          <div class="f"><label>ES prix</label><input id="td-es" type="number" step=".25"></div>
+        </div>
+        <div class="r2" style="margin-top:8px">
+          <div class="f"><label>NQ vs AVWAP</label><select id="td-nqa"><option>Au-dessus</option><option>En dessous</option><option>Sur</option></select></div>
+          <div class="f"><label>ES vs AVWAP</label><select id="td-esa"><option>Au-dessus</option><option>En dessous</option><option>Sur</option></select></div>
+        </div>
+        <div class="f" style="margin-top:8px"><label>Scénario LONG</label><input id="td-long" placeholder="LBF SD-2 + Higher Low → AVWAP" style="width:100%"></div>
+        <div class="f" style="margin-top:6px"><label>Scénario SHORT</label><input id="td-short" placeholder="LAF SD+3 + Lower High → AVWAP" style="width:100%"></div>
+        <div class="f" style="margin-top:6px"><label>Règle du jour</label><textarea id="td-rule" rows="2" style="width:100%" placeholder="R34 — SD+3 Questionable High"></textarea></div>
+      </div>
+      <button class="btn bg" onclick="buildTD()">⟳ GÉNÉRER MORNING PLAN</button>
+    </div>
+    <div>
+      <div class="card" style="height:100%"><div class="ct" style="display:flex;justify-content:space-between"><span>MORNING PLAN</span><button class="btn bgh" style="padding:2px 9px;font-size:10px" onclick="copyTD()">⎘ COPIER</button></div>
+        <div class="tdo" id="td-out">— Remplissez et cliquez GÉNÉRER —</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TRACKER ── -->
+<div class="sec" id="sec-tracker">
+  <div class="sh"><h2>⊕ LIVE TRACKER</h2></div>
+  <div class="card"><div class="ct">PRIX ACTUEL</div>
+    <input id="tp" type="number" step=".25" placeholder="29509.25" oninput="updateTracker()">
+    <div id="td2"></div><div id="tsig"></div></div>
+  <div class="card"><div class="ct">NIVEAUX DE RÉFÉRENCE</div>
+    <div id="tlevels" style="font-family:var(--mono);font-size:12px;line-height:2.1"><span style="color:var(--muted)">Chargez une session.</span></div></div>
+</div>
+
+<!-- ── RÉGLAGES ── -->
+<div class="sec" id="sec-reglages">
+  <div class="sh"><h2>⚙ RÉGLAGES IB/OR</h2></div>
+  <div class="cg">
+
+    <!-- SD Bands -->
+    <div class="cc"><div class="ch"><div class="ctit">SD BANDS</div><div class="csub">AVWAP 18H + Sigma</div></div>
+    <div class="cb">
+      <div class="fr"><label>AVWAP 18H</label><input type="number" id="sd-avwap" placeholder="29614.75" step=".25"></div>
+      <div class="fr"><label>Sigma (pts)</label><input type="number" id="sd-sigma" placeholder="96.00" step=".01"></div>
+      <button class="calc-btn" onclick="calcSD()">CALCULER ▶</button>
+      <div class="cr" id="sd-results">
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl">SD+3 ⚠️</div><div class="rv red" id="sd-p3">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--amber)"></div><div class="rl">SD+2</div><div class="rv amber" id="sd-p2">—</div></div>
+        <div class="rr"><div class="rb" style="background:#5A8A6A"></div><div class="rl">SD+1</div><div class="rv" id="sd-p1">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl">AVWAP 👑</div><div class="rv gold" id="sd-0">—</div></div>
+        <div class="rr"><div class="rb" style="background:#5A8A6A"></div><div class="rl">SD-1</div><div class="rv" id="sd-m1">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--amber)"></div><div class="rl">SD-2</div><div class="rv amber" id="sd-m2">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl">SD-3 ⚠️</div><div class="rv red" id="sd-m3">—</div></div>
+      </div></div></div>
+
+    <!-- Risk/RR -->
+    <div class="cc"><div class="ch"><div class="ctit">RISK / R:R</div><div class="csub">NQ $20/pt · ES $50/pt</div></div>
+    <div class="cb">
+      <div class="fr"><label>Instrument</label><select id="rr-instr"><option value="20">NQ ($20/pt)</option><option value="50">ES ($50/pt)</option></select></div>
+      <div class="fr"><label>Entrée</label><input type="number" id="rr-entry" placeholder="29780" step=".25"></div>
+      <div class="fr"><label>Stop</label><input type="number" id="rr-stop" placeholder="29820" step=".25"></div>
+      <div class="fr"><label>Cible</label><input type="number" id="rr-target" placeholder="29614" step=".25"></div>
+      <div class="fr"><label>Contrats</label><input type="number" id="rr-contracts" placeholder="1" step="1" min="1" value="1"></div>
+      <button class="calc-btn" onclick="calcRR()">CALCULER ▶</button>
+      <div class="cr" id="rr-results">
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl">Risque (pts)</div><div class="rv red" id="rr-risk-pts">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl">Gain (pts)</div><div class="rv green" id="rr-gain-pts">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl">R:R ratio</div><div class="rv gold" id="rr-ratio">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl">Risque $</div><div class="rv red" id="rr-risk-usd">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl">Gain $</div><div class="rv green" id="rr-gain-usd">—</div></div>
+        <div id="rr-verdict" class="vb" style="display:none"></div>
+      </div></div></div>
+
+    <!-- IB Setup -->
+    <div class="cc"><div class="ch"><div class="ctit">IB SETUP</div><div class="csub">Scalpel · Niveaux</div></div>
+    <div class="cb">
+      <div class="fr"><label>IB High</label><input type="number" id="ib-high" placeholder="29704" step=".25"></div>
+      <div class="fr"><label>IB Low</label><input type="number" id="ib-low" placeholder="29629" step=".25"></div>
+      <div class="fr"><label>AVWAP IB</label><input type="number" id="ib-avwap" placeholder="29654" step=".25"></div>
+      <button class="calc-btn" onclick="calcIB()">CALCULER ▶</button>
+      <div class="cr" id="ib-results">
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl">LMRG Haut</div><div class="rv green" id="ib-lmrg-h">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl">IB High</div><div class="rv" id="ib-h">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--amber)"></div><div class="rl">Quart Haut 75%</div><div class="rv amber" id="ib-q3">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl">Midpoint</div><div class="rv gold" id="ib-mid">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--amber)"></div><div class="rl">Quart Bas 25%</div><div class="rv amber" id="ib-q1">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl">IB Low</div><div class="rv" id="ib-l">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl">LMRG Bas</div><div class="rv red" id="ib-lmrg-l">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl">IB Range</div><div class="rv" id="ib-range">—</div></div>
+        <div id="ib-verdict" class="vb" style="display:none"></div>
+      </div></div></div>
+
+    <!-- AVWAP IB Scalpel -->
+    <div class="cc"><div class="ch"><div class="ctit">AVWAP IB SCALPEL</div><div class="csub">Bull A / Bear A</div></div>
+    <div class="cb">
+      <div class="fr"><label>Close IB2</label><input type="number" id="sc-close" placeholder="29699" step=".25"></div>
+      <div class="fr"><label>AVWAP IB</label><input type="number" id="sc-avwap" placeholder="29654" step=".25"></div>
+      <div class="fr"><label>IB High</label><input type="number" id="sc-ibh" placeholder="29704" step=".25"></div>
+      <div class="fr"><label>IB Low</label><input type="number" id="sc-ibl" placeholder="29629" step=".25"></div>
+      <div class="fr"><label>Séquence</label><select id="sc-seq"><option value="lowfirst">Low First</option><option value="highfirst">High First</option></select></div>
+      <button class="calc-btn" onclick="calcScalpel()">CLASSIFIER ▶</button>
+      <div class="cr" id="sc-results">
+        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl">Close vs AVWAP</div><div class="rv" id="sc-vs-avwap">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl">Quart Haut</div><div class="rv" id="sc-qh">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl">Midpoint</div><div class="rv" id="sc-mp">—</div></div>
+        <div id="sc-verdict" class="vb" style="display:none"></div>
+      </div></div></div>
+
+  </div>
+</div>
+
+<!-- ── BACKTEST ── -->
+<div class="sec" id="sec-backtest">
+  <div class="sh"><h2>◈ BACKTEST SD-2</h2></div>
+  <div class="r2">
+    <div class="card"><div class="ct">AJOUTER TRADE</div>
+      <div class="r2"><div class="f"><label>Date</label><input id="bt-date" type="date"></div><div class="f"><label>Instrument</label><select id="bt-inst"><option>NQ</option><option>ES</option></select></div></div>
+      <div class="r2" style="margin-top:8px"><div class="f"><label>Setup</label><select id="bt-setup"><option>LBF SD-2</option><option>LAF SD+2</option><option>SHORT SD+3</option><option>LBF SD-3</option><option>Excess RTH</option><option>P3 Bull A</option><option>P4 Bear A</option></select></div>
+      <div class="f"><label>Direction</label><select id="bt-dir"><option>LONG</option><option>SHORT</option></select></div></div>
+      <div class="r3" style="margin-top:8px"><div class="f"><label>Entrée</label><input id="bt-ent" type="number" step=".25"></div><div class="f"><label>Stop</label><input id="bt-stp" type="number" step=".25"></div><div class="f"><label>Sortie</label><input id="bt-ext" type="number" step=".25"></div></div>
+      <div class="f" style="margin-top:8px"><label>Note</label><input id="bt-note" placeholder="Confluences…" style="width:100%"></div>
+      <button class="btn bg" style="width:100%;margin-top:9px" onclick="addBT()">+ AJOUTER</button></div>
+    <div class="card"><div class="ct">STATISTIQUES</div>
+      <div class="bts">
+        <div class="bts-box"><div class="bts-lbl">Trades</div><div class="bts-val" id="bts-t">0</div></div>
+        <div class="bts-box"><div class="bts-lbl">Gagnants</div><div class="bts-val" id="bts-w" style="color:var(--green)">0</div></div>
+        <div class="bts-box"><div class="bts-lbl">% Win</div><div class="bts-val" id="bts-p">—</div></div>
+        <div class="bts-box"><div class="bts-lbl">Gain total</div><div class="bts-val" id="bts-tp">0</div></div>
+        <div class="bts-box"><div class="bts-lbl">Moy/trade</div><div class="bts-val" id="bts-a">—</div></div>
+      </div></div>
+  </div>
+  <div class="card"><div class="ct" style="display:flex;justify-content:space-between"><span>HISTORIQUE</span><button class="btn bd" style="padding:1px 8px;font-size:10px" onclick="clearBT()">✕ TOUT EFFACER</button></div>
+    <div style="overflow-x:auto">
+    <table class="btt" id="bt-table"><thead><tr><th>Date</th><th>Instr</th><th>Setup</th><th>Dir</th><th>Entrée</th><th>Stop</th><th>Sortie</th><th>PnL (pts)</th><th>R:R</th><th>Note</th><th></th></tr></thead><tbody id="bt-body"></tbody></table>
+    </div></div>
+</div>
+
+<!-- ── POSITION ── -->
+<div class="sec" id="sec-position">
+  <div class="sh"><h2>⬡ POSITION ACTIVE</h2></div>
+  <div class="r2">
+    <div class="card"><div class="ct">PARAMÈTRES</div>
+      <div class="r2"><div class="f"><label>Instrument</label><select id="pos-inst" onchange="updPos()"><option>NQ</option><option>ES</option></select></div><div class="f"><label>Direction</label><select id="pos-dir" onchange="updPos()"><option>LONG</option><option>SHORT</option></select></div></div>
+      <div class="r3" style="margin-top:8px"><div class="f"><label>Entrée</label><input id="pos-ent" type="number" step=".25" oninput="updPos()"></div><div class="f"><label>Stop</label><input id="pos-stp" type="number" step=".25" oninput="updPos()"></div><div class="f"><label>Cible</label><input id="pos-tgt" type="number" step=".25" oninput="updPos()"></div></div>
+      <div class="r2" style="margin-top:8px"><div class="f"><label>Prix actuel</label><input id="pos-cur" type="number" step=".25" oninput="updPos()"></div><div class="f"><label>Contrats</label><input id="pos-qty" type="number" step="1" value="1" oninput="updPos()"></div></div>
+      <div style="display:flex;gap:7px;margin-top:10px"><button class="btn bgh" onclick="savePos()">💾 SAUVER</button><button class="btn bd" onclick="clearPos()">✕ FERMER</button></div></div>
+    <div id="pdis">
+      <div class="pm"><div class="pm-l">PnL (pts)</div><div class="pm-v" id="pp-pts" style="color:var(--muted)">—</div></div>
+      <div class="pm"><div class="pm-l">PnL ($)</div><div class="pm-v" id="pp-usd" style="color:var(--muted)">—</div></div>
+      <div class="pm"><div class="pm-l">R:R actuel</div><div class="pm-v" id="pp-rr" style="color:var(--muted)">—</div></div>
+      <div class="pm"><div class="pm-l">Risque (pts)</div><div class="pm-v" id="pp-rpts" style="color:var(--muted)">—</div></div>
+      <div class="pm"><div class="pm-l">Risque ($)</div><div class="pm-v" id="pp-rusd" style="color:var(--muted)">—</div></div>
+      <div class="pm"><div class="pm-l">Target (pts)</div><div class="pm-v" id="pp-tpts" style="color:var(--muted)">—</div></div>
+    </div></div>
+</div>
+
+</main>
+</div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ── KEYS & STATE ──────────────────────────────────────
+let SD={};let csv_parsed={};
+const PHASES=['veille','ovn','premarket','ib','am','noon','eg','pm','close'];
+const PHASE_IDS={veille:['v1','v2','v3','v4','v5','v6','v7'],ovn:['o1','o2','o3','o4','o5','o6'],premarket:['p1','p2','p3','p4'],ib:['i1','i2','i3','i4','i5','i6'],am:['a1','a2','a3','a4','a5','a6'],noon:['n1','n2','n3','n4'],eg:['e1','e2','e3','e4'],pm:['m1','m2','m3','m4','m5','m6'],close:['c1','c2','c3','c4','c5','c6']};
+const ALL_IDS=Object.values(PHASE_IDS).flat();
+
+function todayKey(){return new Date().toISOString().slice(0,10);}
+function storageKey(id){return 'cockpit_'+todayKey()+'_'+id;}
+function skSess(){return 'etude_session_'+todayKey();}
+function skBT(){return 'etude_backtest';}
+function skPos(){return 'etude_position_'+todayKey();}
+
+// ── FORMAT ────────────────────────────────────────────
+function fmt(n){return n.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');}
+function fmtPts(n){return(n>=0?'+':'')+fmt(n)+' pts';}
+function fmtUsd(n){return(n>=0?'+':'-')+'$'+Math.abs(Math.round(n)).toLocaleString();}
+function gv(id){return parseFloat(document.getElementById(id)?.value)||0;}
+
+// ── NAVIGATION ────────────────────────────────────────
+function nav(el){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const s=el.dataset.s;
+  document.querySelectorAll('.sec').forEach(x=>x.classList.remove('active'));
+  document.getElementById('sec-'+s).classList.add('active');
+}
+function toggleSB(){document.getElementById('sidebar').classList.toggle('collapsed');}
+
+// ── CLOCK ─────────────────────────────────────────────
+function updClock(){
+  const ny=new Date().toLocaleString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  document.getElementById('clock').textContent='NY '+ny;
+}
+setInterval(updClock,1000);updClock();
+document.getElementById('sd-lbl').textContent=todayKey();
+
+// ── CHECKLIST ─────────────────────────────────────────
+function loadCBs(){
+  ALL_IDS.forEach(id=>{
+    const cb=document.getElementById(id);
+    if(!cb)return;
+    try{cb.checked=localStorage.getItem(storageKey(id))==='1';}catch(e){}
+  });
+}
+function bindCBs(){
+  ALL_IDS.forEach(id=>{
+    const cb=document.getElementById(id);
+    if(!cb)return;
+    cb.addEventListener('change',function(){
+      try{localStorage.setItem(storageKey(this.id),this.checked?'1':'0');}catch(e){}
+      updProgress();updPhaseCounts();
+    });
+  });
+}
+function updProgress(){
+  const done=ALL_IDS.filter(id=>{try{return localStorage.getItem(storageKey(id))==='1';}catch(e){return false;}}).length;
+  const total=ALL_IDS.length;
+  const pct=Math.round(done/total*100);
+  document.getElementById('pb-fill').style.width=pct+'%';
+  document.getElementById('pb-lbl').textContent=done+' / '+total;
+}
+function updPhaseCounts(){
+  PHASES.forEach(p=>{
+    const ids=PHASE_IDS[p];
+    const done=ids.filter(id=>{try{return localStorage.getItem(storageKey(id))==='1';}catch(e){return false;}}).length;
+    const el=document.getElementById('count-'+p);
+    if(el)el.textContent=done+'/'+ids.length;
+  });
+}
+function tP(phase){
+  const b=document.getElementById('body-'+phase);
+  if(b)b.classList.toggle('open');
+}
+function resetDay(){
+  if(!confirm('Reset toutes les cases du jour ?'))return;
+  ALL_IDS.forEach(id=>{
+    const cb=document.getElementById(id);
+    if(cb)cb.checked=false;
+    try{localStorage.removeItem(storageKey(id));}catch(e){}
+  });
+  updProgress();updPhaseCounts();
+  toast('Jour réinitialisé');
+}
+
+// ── SESSION ───────────────────────────────────────────
+const SF=['avwap','sigma','ibh','ibl','vah','val','poc','j1h','j1l','settle','mpoc','mvah','mval','ovnh','ovnl','aln','notes'];
+function saveSession(){
+  const d={date:todayKey()};
+  SF.forEach(f=>{const el=document.getElementById('s-'+f);if(el)d[f]=el.value;});
+  try{localStorage.setItem(skSess(),JSON.stringify(d));}catch(e){}
+  SD=d;rSD();rIB();rJ1();updTrLevels();toast('Session enregistrée ✓');
+}
+function loadSession(){
+  let d=null;
+  try{const r=localStorage.getItem(skSess());if(r)d=JSON.parse(r);}catch(e){}
+  if(!d){toast('Aucune session sauvegardée');return;}
+  SF.forEach(f=>{const el=document.getElementById('s-'+f);if(el&&d[f]!==undefined)el.value=d[f];});
+  SD=d;rSD();rIB();rJ1();updTrLevels();toast('Session chargée ✓');
+}
+function oSI(){
+  const avwap=gv('s-avwap'),sigma=gv('s-sigma');
+  if(avwap&&sigma){SD.avwap=avwap;SD.sigma=sigma;rSD();}
+  const ibh=gv('s-ibh'),ibl=gv('s-ibl');
+  if(ibh&&ibl){SD.ibh=ibh;SD.ibl=ibl;rIB();}
+  rJ1();
+}
+function rSD(){
+  const a=parseFloat(SD.avwap)||0,s=parseFloat(SD.sigma)||0;
+  if(!a||!s)return;
+  const f=v=>v.toFixed(2);
+  document.getElementById('sd-dis').innerHTML=`<div class="sdg">
+    <span class="sl">SD+3</span><span class="sv s3u">${f(a+3*s)}</span><span class="sd">★★★ R34 SHORT extrême</span>
+    <span class="sl">SD+2</span><span class="sv s2u">${f(a+2*s)}</span><span class="sd">★★★ LAF → SHORT</span>
+    <span class="sl">SD+1</span><span class="sv s1u">${f(a+s)}</span><span class="sd">Résistance</span>
+    <div class="sep"></div>
+    <span class="sl">👑 AVWAP</span><span class="sv svw">${f(a)}</span><span class="sd">Référence principale</span>
+    <div class="sep"></div>
+    <span class="sl">SD-1</span><span class="sv s1d">${f(a-s)}</span><span class="sd">Support</span>
+    <span class="sl">SD-2</span><span class="sv s2d">${f(a-2*s)}</span><span class="sd">★★★ LBF → LONG</span>
+    <span class="sl">SD-3</span><span class="sv s3d">${f(a-3*s)}</span><span class="sd">★★★ Extrême bas</span>
+  </div>`;
+}
+function rIB(){
+  const h=parseFloat(SD.ibh)||0,l=parseFloat(SD.ibl)||0;
+  if(!h||!l)return;
+  const r=h-l,mid=(h+l)/2,q75=l+r*.75,q25=l+r*.25,lh=h+r*.5,ll=l-r*.5;
+  const f=v=>v.toFixed(2);
+  document.getElementById('ib-dis').innerHTML=`<div style="font-family:var(--mono);font-size:12px;line-height:2.1">
+    <span style="color:var(--amber)">LMRG+ ${f(lh)}</span><br>
+    <span style="color:var(--text)">IB High ${f(h)}</span><br>
+    <span style="color:var(--muted)">Q75% ${f(q75)}</span><br>
+    <span style="color:var(--gold)">Mid ${f(mid)}</span><br>
+    <span style="color:var(--muted)">Q25% ${f(q25)}</span><br>
+    <span style="color:var(--text)">IB Low ${f(l)}</span><br>
+    <span style="color:var(--amber)">LMRG- ${f(ll)}</span><br>
+    <span style="color:var(--muted)">Range ${f(r)} pts</span>
+  </div>`;
+}
+function rJ1(){
+  const vah=gv('s-vah'),val=gv('s-val'),poc=gv('s-poc');
+  const j1h=gv('s-j1h'),j1l=gv('s-j1l'),settle=gv('s-settle');
+  if(!vah&&!val)return;
+  const f=v=>v?v.toFixed(2):'—';
+  document.getElementById('j1-dis').innerHTML=
+    `<span style="color:var(--red)">High J-1    ${f(j1h)}</span><br>`+
+    `<span style="color:var(--gold)">VAH J-1     ${f(vah)}</span><br>`+
+    `<span style="color:var(--gold)">POC J-1     ${f(poc)}</span><br>`+
+    `<span style="color:var(--gold)">VAL J-1     ${f(val)}</span><br>`+
+    `<span style="color:var(--green)">Low J-1     ${f(j1l)}</span><br>`+
+    `<span style="color:var(--muted)">Settle      ${f(settle)}</span>`;
+}
+
+// ── JSON ──────────────────────────────────────────────
+function buildJSON(){
+  const d={};SF.forEach(f=>{const el=document.getElementById('s-'+f);if(el)d[f]=el.value;});
+  const checks={};ALL_IDS.forEach(id=>{try{checks[id]=localStorage.getItem(storageKey(id))==='1';}catch(e){checks[id]=false;}});
+  document.getElementById('jo').textContent=JSON.stringify({session:d,checklist:checks,generated:new Date().toISOString()},null,2);
+}
+function copyJSON(){navigator.clipboard.writeText(document.getElementById('jo').textContent).then(()=>toast('Copié ✓')).catch(()=>toast('Copie manuelle nécessaire'));}
+
+// ── CSV ───────────────────────────────────────────────
+function parseCSV(){
+  const raw=document.getElementById('ci2').value.trim();
+  if(!raw){toast('Collez du CSV d\'abord');return;}
+  const lines=raw.split('\n').filter(l=>l.trim());
+  const hdr=lines[0].split(',').map(h=>h.trim());
+  const rows=lines.slice(1).map(l=>l.split(','));
+  const ci=n=>hdr.findIndex(h=>h.toLowerCase().includes(n.toLowerCase()));
+  const iH=ci('High'),iL=ci('Low'),iC=ci('Last'),iB=ci('BidVol'),iA=ci('AskVol');
+  if(iH<0||iL<0){toast('Colonnes High/Low non trouvées');return;}
+  let sH=-Infinity,sL=Infinity,tB=0,tA=0,fc=null,lc=null;
+  rows.forEach(r=>{
+    const h=parseFloat(r[iH]),l=parseFloat(r[iL]),c=iC>=0?parseFloat(r[iC]):null;
+    if(!isNaN(h))sH=Math.max(sH,h);if(!isNaN(l))sL=Math.min(sL,l);
+    if(iB>=0)tB+=parseInt(r[iB])||0;if(iA>=0)tA+=parseInt(r[iA])||0;
+    if(c&&fc===null)fc=c;if(c)lc=c;
+  });
+  csv_parsed={high:sH,low:sL,close:lc,open:fc,bid:tB,ask:tA,delta:tA-tB};
+  const el=document.getElementById('cr2');el.style.display='block';
+  el.textContent=`Session: ${rows.length} barres\nHigh:     ${sH.toFixed(2)}\nLow:      ${sL.toFixed(2)}\nOpen:     ${(fc||0).toFixed(2)}\nClose:    ${(lc||0).toFixed(2)}\nBidVol:   ${tB.toLocaleString()}\nAskVol:   ${tA.toLocaleString()}\nDelta:    ${(tA-tB>0?'+':'')+(tA-tB).toLocaleString()}`;
+}
+function applyCSV(){
+  if(!csv_parsed.high){toast('Parsez le CSV d\'abord');return;}
+  if(csv_parsed.high)document.getElementById('s-j1h').value=csv_parsed.high;
+  if(csv_parsed.low)document.getElementById('s-j1l').value=csv_parsed.low;
+  if(csv_parsed.close)document.getElementById('s-settle').value=csv_parsed.close;
+  oSI();toast('Valeurs appliquées ✓');
+}
+
+// ── TOP-DOWN ──────────────────────────────────────────
+function buildTD(){
+  const v=id=>document.getElementById(id)?.value||'—';
+  const d=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const a=parseFloat(SD.avwap)||gv('s-avwap');
+  const s=parseFloat(SD.sigma)||gv('s-sigma');
+  const vah=gv('s-vah'),val=gv('s-val'),poc=gv('s-poc');
+  const f=n=>n?n.toFixed(2):'—';
+  const out=`☀️ MORNING PLAN NQ100 / ES — ${d}\n\n📅 NEWS DU JOUR\n${v('td-news').split('\n').map(l=>'• '+l).join('\n')}\n\n📊 STRUCTURE\n• Monthly : ${v('td-mo')}\n• Weekly  : ${v('td-we')}\n• Daily   : ${v('td-da')}\n\n🎯 ALN SYSTEM\n• Statut      : ${v('td-aln')}\n• Probabilité : ${v('td-prob')}\n\n🚨 SITUATION LIVE\n• NQ ${v('td-nq')} / ES ${v('td-es')}\n• NQ vs AVWAP : ${v('td-nqa')}\n• ES vs AVWAP : ${v('td-esa')}\n\n📊 ZONES CRITIQUES\n• SD+2 ${s?f(a+2*s):'—'} ★★★ LAF\n• 👑 AVWAP ${f(a)}\n• VAH J-1 ${f(vah)} ★★\n• POC J-1 ${f(poc)} ★\n• VAL J-1 ${f(val)} ★★\n• SD-2 ${s?f(a-2*s):'—'} ★★★ LBF\n\n📈 LONGS\n• ${v('td-long')}\n\n📉 SHORTS\n• ${v('td-short')}\n\n⚠️ RÈGLES\n• ${v('td-rule')}\n\n⏳ RTH Open 09h30 décidera. 🐪`;
+  document.getElementById('td-out').textContent=out;
+}
+function copyTD(){navigator.clipboard.writeText(document.getElementById('td-out').textContent).then(()=>toast('Copié ✓')).catch(()=>toast('Copie manuelle nécessaire'));}
+
+// ── TRACKER ───────────────────────────────────────────
+function updateTracker(){
+  const price=parseFloat(document.getElementById('tp').value)||0;
+  const a=parseFloat(SD.avwap)||0,s=parseFloat(SD.sigma)||0;
+  if(!a||!s||!price)return;
+  const bands=[{l:'SD+3',v:a+3*s,c:'s3u'},{l:'SD+2',v:a+2*s,c:'s2u'},{l:'SD+1',v:a+s,c:'s1u'},{l:'AVWAP',v:a,c:'svw'},{l:'SD-1',v:a-s,c:'s1d'},{l:'SD-2',v:a-2*s,c:'s2d'},{l:'SD-3',v:a-3*s,c:'s3d'}];
+  document.getElementById('td2').innerHTML=bands.map(b=>`<div class="tb ${Math.abs(price-b.v)<s*.45?'ab':''}"><div class="tbl ${b.c}">${b.l}</div><div class="tbv ${b.c}">${b.v.toFixed(2)}</div><div class="tbd">${(price-b.v>0?'+':'')+(price-b.v).toFixed(2)}</div></div>`).join('');
+  const sig=document.getElementById('tsig');
+  if(price>=a+3*s){sig.textContent='🚨 R34 — ABOVE SD+3 — QUESTIONABLE HIGH → SHORT PRIORITAIRE';sig.className='ss';sig.style.display='block';}
+  else if(price<=a-2*s){sig.textContent='✅ R36 — LBF SD-2 + Higher Low → LONG setup';sig.className='sl';sig.style.display='block';}
+  else if(Math.abs(price-a)<s*.25){sig.textContent='⚖ AVWAP 18H 👑 — Zone de décision';sig.className='sn';sig.style.display='block';}
+  else sig.style.display='none';
+}
+function updTrLevels(){
+  const a=parseFloat(SD.avwap)||0,s=parseFloat(SD.sigma)||0;
+  const vah=gv('s-vah'),val=gv('s-val'),poc=gv('s-poc'),mpoc=gv('s-mpoc');
+  if(!a)return;
+  let h='';
+  if(mpoc)h+=`<span style="color:var(--amber)">Monthly POC ${mpoc.toFixed(2)} ★★★</span><br>`;
+  if(vah)h+=`<span style="color:var(--gold)">VAH J-1 ${vah.toFixed(2)}</span><br>`;
+  if(poc)h+=`<span style="color:var(--gold)">POC J-1 ${poc.toFixed(2)}</span><br>`;
+  if(val)h+=`<span style="color:var(--gold)">VAL J-1 ${val.toFixed(2)}</span><br>`;
+  if(s){h+=`<br><span style="color:var(--red)">SD+3 ${(a+3*s).toFixed(2)}</span><br>`;h+=`<span style="color:var(--amber)">SD+2 ${(a+2*s).toFixed(2)}</span><br>`;h+=`<span style="color:var(--gold)">👑 AVWAP ${a.toFixed(2)}</span><br>`;h+=`<span style="color:var(--green)">SD-2 ${(a-2*s).toFixed(2)}</span><br>`;h+=`<span style="color:var(--green)">SD-3 ${(a-3*s).toFixed(2)}</span>`;}
+  document.getElementById('tlevels').innerHTML=h||'<span style="color:var(--muted)">Enregistrez une session.</span>';
+}
+
+// ── CALCULATEURS ──────────────────────────────────────
+function calcSD(){
+  const avwap=parseFloat(document.getElementById('sd-avwap').value);
+  const sigma=parseFloat(document.getElementById('sd-sigma').value);
+  if(isNaN(avwap)||isNaN(sigma)||sigma<=0)return;
+  document.getElementById('sd-p3').textContent=fmt(avwap+3*sigma);
+  document.getElementById('sd-p2').textContent=fmt(avwap+2*sigma);
+  document.getElementById('sd-p1').textContent=fmt(avwap+sigma);
+  document.getElementById('sd-0').textContent=fmt(avwap);
+  document.getElementById('sd-m1').textContent=fmt(avwap-sigma);
+  document.getElementById('sd-m2').textContent=fmt(avwap-2*sigma);
+  document.getElementById('sd-m3').textContent=fmt(avwap-3*sigma);
+  document.getElementById('sd-results').classList.add('visible');
+}
+function calcRR(){
+  const mult=parseFloat(document.getElementById('rr-instr').value);
+  const entry=parseFloat(document.getElementById('rr-entry').value);
+  const stop=parseFloat(document.getElementById('rr-stop').value);
+  const tgt=parseFloat(document.getElementById('rr-target').value);
+  const nb=parseInt(document.getElementById('rr-contracts').value)||1;
+  if(isNaN(entry)||isNaN(stop)||isNaN(tgt))return;
+  const rP=Math.abs(entry-stop),gP=Math.abs(entry-tgt),ratio=gP/rP;
+  const rU=rP*mult*nb,gU=gP*mult*nb;
+  document.getElementById('rr-risk-pts').textContent=fmt(rP)+' pts';
+  document.getElementById('rr-gain-pts').textContent=fmt(gP)+' pts';
+  document.getElementById('rr-ratio').textContent='1 : '+ratio.toFixed(2);
+  document.getElementById('rr-risk-usd').textContent=fmtUsd(-rU);
+  document.getElementById('rr-gain-usd').textContent=fmtUsd(gU);
+  const v=document.getElementById('rr-verdict');v.style.display='block';
+  if(ratio>=2){v.className='vb go';v.textContent='✓ GO — R:R '+ratio.toFixed(2)+' FAVORABLE';}
+  else if(ratio>=1){v.className='vb caution';v.textContent='⚠ CAUTION — R:R '+ratio.toFixed(2)+' LIMITE';}
+  else{v.className='vb nogo';v.textContent='✗ NO-GO — R:R '+ratio.toFixed(2)+' INSUFFISANT';}
+  document.getElementById('rr-results').classList.add('visible');
+}
+function calcIB(){
+  const h=parseFloat(document.getElementById('ib-high').value);
+  const l=parseFloat(document.getElementById('ib-low').value);
+  const av=parseFloat(document.getElementById('ib-avwap').value);
+  if(isNaN(h)||isNaN(l)||h<=l)return;
+  const r=h-l,mid=l+r/2,q3=l+r*.75,q1=l+r*.25,lH=h+r*.5,lL=l-r*.5;
+  document.getElementById('ib-lmrg-h').textContent=fmt(lH);
+  document.getElementById('ib-h').textContent=fmt(h);
+  document.getElementById('ib-q3').textContent=fmt(q3);
+  document.getElementById('ib-mid').textContent=fmt(mid);
+  document.getElementById('ib-q1').textContent=fmt(q1);
+  document.getElementById('ib-l').textContent=fmt(l);
+  document.getElementById('ib-lmrg-l').textContent=fmt(lL);
+  document.getElementById('ib-range').textContent=fmt(r)+' pts';
+  const v=document.getElementById('ib-verdict');v.style.display='block';
+  if(!isNaN(av)){v.className=av>mid?'vb go':'vb nogo';v.textContent=av>mid?'AVWAP '+fmt(av)+' > Mid → LONG bias (Bull A zone)':'AVWAP '+fmt(av)+' < Mid → SHORT bias (Bear A zone)';}
+  else{v.className='vb caution';v.textContent='Entrer AVWAP IB pour le biais';}
+  document.getElementById('ib-results').classList.add('visible');
+}
+function calcScalpel(){
+  const close=parseFloat(document.getElementById('sc-close').value);
+  const avwap=parseFloat(document.getElementById('sc-avwap').value);
+  const ibh=parseFloat(document.getElementById('sc-ibh').value);
+  const ibl=parseFloat(document.getElementById('sc-ibl').value);
+  const seq=document.getElementById('sc-seq').value;
+  if(isNaN(close)||isNaN(avwap)||isNaN(ibh)||isNaN(ibl)||ibh<=ibl)return;
+  const r=ibh-ibl,qh=ibl+r*.75,mid=ibl+r/2;
+  const va=close>avwap?'DESSUS (+'+fmt(close-avwap)+' pts)':'DESSOUS (-'+fmt(avwap-close)+' pts)';
+  document.getElementById('sc-vs-avwap').textContent=va;
+  document.getElementById('sc-vs-avwap').className='rv '+(close>avwap?'green':'red');
+  document.getElementById('sc-qh').textContent=fmt(qh);
+  document.getElementById('sc-mp').textContent=fmt(mid);
+  const v=document.getElementById('sc-verdict');v.style.display='block';
+  const aA=close>avwap,aQ=close>qh,lF=seq==='lowfirst';
+  if(aA&&aQ&&lF){v.className='vb go';v.textContent='✓ BULL A — Pullback AVWAP = LONG setup';}
+  else if(!aA&&!aQ&&!lF){v.className='vb nogo';v.textContent='✗ BEAR A — Remontée AVWAP = SHORT setup';}
+  else if(aA&&!aQ){v.className='vb caution';v.textContent='⚠ BULL B — Signal faible, ratio obligatoire';}
+  else if(!aA&&aQ){v.className='vb caution';v.textContent='⚠ BEAR B — Signal faible, ratio obligatoire';}
+  else{v.className='vb caution';v.textContent='⚠ Ambigu — Attendre confirmation barre suivante';}
+  document.getElementById('sc-results').classList.add('visible');
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){const f=document.activeElement;if(f&&f.closest('#sec-reglages')){const cc=f.closest('.cc');if(cc){const b=cc.querySelector('.calc-btn');if(b)b.click();}}}
+});
+
+// ── BACKTEST ──────────────────────────────────────────
+function loadBT(){let d=[];try{const r=localStorage.getItem(skBT());if(r)d=JSON.parse(r);}catch(e){}return d;}
+function savBT(d){try{localStorage.setItem(skBT(),JSON.stringify(d));}catch(e){}}
+function addBT(){
+  const ent=parseFloat(document.getElementById('bt-ent').value)||0;
+  const stp=parseFloat(document.getElementById('bt-stp').value)||0;
+  const ext=parseFloat(document.getElementById('bt-ext').value)||0;
+  if(!ent||!stp||!ext){toast('Entrée/Stop/Sortie requis');return;}
+  const dir=document.getElementById('bt-dir').value;
+  const pnl=dir==='LONG'?(ext-ent):(ent-ext);
+  const risk=Math.abs(ent-stp),rr=(Math.abs(ext-ent)/risk).toFixed(2);
+  const t={id:Date.now(),date:document.getElementById('bt-date').value||todayKey(),inst:document.getElementById('bt-inst').value,setup:document.getElementById('bt-setup').value,dir,entry:ent,stop:stp,exit:ext,pnl:parseFloat(pnl.toFixed(2)),rr:parseFloat(rr),note:document.getElementById('bt-note').value,win:pnl>0};
+  const d=loadBT();d.unshift(t);savBT(d);rBT();
+  ['bt-ent','bt-stp','bt-ext','bt-note'].forEach(id=>document.getElementById(id).value='');
+  toast('Trade ajouté ✓');
+}
+function rBT(){
+  const d=loadBT();
+  document.getElementById('bt-body').innerHTML=d.map(t=>`<tr>
+    <td>${t.date}</td><td>${t.inst}</td><td>${t.setup}</td>
+    <td style="color:${t.dir==='LONG'?'var(--green)':'var(--red)'}">${t.dir}</td>
+    <td>${t.entry}</td><td>${t.stop}</td><td>${t.exit}</td>
+    <td class="${t.win?'pos':'neg'}">${t.pnl>0?'+':''}${t.pnl}</td>
+    <td>${t.rr}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.note||''}</td>
+    <td><button class="btn bd" style="padding:1px 5px;font-size:10px" onclick="delBT(${t.id})">✕</button></td></tr>`).join('');
+  const wins=d.filter(t=>t.win).length,pts=d.reduce((s,t)=>s+t.pnl,0);
+  document.getElementById('bts-t').textContent=d.length;
+  document.getElementById('bts-w').textContent=wins;
+  document.getElementById('bts-p').textContent=d.length?Math.round(wins/d.length*100)+'%':'—';
+  document.getElementById('bts-tp').textContent=(pts>0?'+':'')+pts.toFixed(0)+' pts';
+  document.getElementById('bts-a').textContent=d.length?(pts/d.length).toFixed(1)+' pts':'—';
+}
+function delBT(id){savBT(loadBT().filter(t=>t.id!==id));rBT();}
+function clearBT(){if(!confirm('Effacer tout le backtest ?'))return;try{localStorage.removeItem(skBT());}catch(e){}rBT();toast('Effacé');}
+
+// ── POSITION ──────────────────────────────────────────
+const PV={NQ:20,ES:50};
+function updPos(){
+  const inst=document.getElementById('pos-inst').value;
+  const dir=document.getElementById('pos-dir').value;
+  const ent=gv('pos-ent'),stp=gv('pos-stp'),tgt=gv('pos-tgt'),cur=gv('pos-cur'),qty=gv('pos-qty')||1;
+  const pv=PV[inst]||20;
+  const risk=Math.abs(ent-stp),tpts=Math.abs(tgt-ent);
+  const pnlPts=cur&&ent?(dir==='LONG'?cur-ent:ent-cur):0;
+  const pnlUsd=pnlPts*pv*qty,rUsd=risk*pv*qty;
+  const col=v=>v>0?'var(--green)':v<0?'var(--red)':'var(--muted)';
+  document.getElementById('pp-pts').textContent=pnlPts?fmtPts(pnlPts):'—';
+  document.getElementById('pp-pts').style.color=col(pnlPts);
+  document.getElementById('pp-usd').textContent=pnlUsd?fmtUsd(pnlUsd):'—';
+  document.getElementById('pp-usd').style.color=col(pnlUsd);
+  document.getElementById('pp-rr').textContent=risk&&cur?(Math.abs(pnlPts/risk)).toFixed(2):'—';
+  document.getElementById('pp-rpts').textContent=risk?risk.toFixed(2)+' pts':'—';
+  document.getElementById('pp-rusd').textContent=rUsd?fmtUsd(-rUsd):'—';
+  document.getElementById('pp-tpts').textContent=tpts?tpts.toFixed(2)+' pts':'—';
+}
+function savePos(){
+  const d={};
+  ['inst','dir','ent','stp','tgt','cur','qty'].forEach(f=>{const el=document.getElementById('pos-'+f);if(el)d[f]=el.value;});
+  try{localStorage.setItem(skPos(),JSON.stringify(d));}catch(e){}
+  toast('Position sauvegardée ✓');
+}
+function clearPos(){
+  ['ent','stp','tgt','cur','qty'].forEach(f=>{const el=document.getElementById('pos-'+f);if(el)el.value='';});
+  try{localStorage.removeItem(skPos());}catch(e){}
+  updPos();toast('Position fermée');
+}
+function loadPos(){
+  let d=null;try{const r=localStorage.getItem(skPos());if(r)d=JSON.parse(r);}catch(e){}
+  if(!d)return;
+  ['inst','dir','ent','stp','tgt','cur','qty'].forEach(f=>{const el=document.getElementById('pos-'+f);if(el&&d[f]!==undefined)el.value=d[f];});
+  updPos();
+}
+
+// ── TOAST ─────────────────────────────────────────────
+let TT;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(TT);TT=setTimeout(()=>el.classList.remove('show'),2400);}
+
+// ── INIT ──────────────────────────────────────────────
+(function(){
+  PHASES.forEach(p=>{const b=document.getElementById('body-'+p);if(b)b.classList.add('open');});
+  document.getElementById('body-interdits').classList.add('open');
+  document.getElementById('bt-date').value=todayKey();
+  loadCBs();bindCBs();updProgress();updPhaseCounts();
+  loadSession();loadPos();rBT();
+})();
+</script>
