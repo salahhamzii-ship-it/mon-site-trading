@@ -1118,12 +1118,34 @@ function loadPos(){
 let TT;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(TT);TT=setTimeout(()=>el.classList.remove('show'),2400);}
 
+// ── TOP-DOWN PERSISTENCE ──────────────────────────────
+const TD_FIELDS=['td-mo','td-we','td-da','td-news','td-aln','td-prob','td-nq','td-es','td-nqa','td-esa','td-long','td-short','td-rule'];
+const skTD=()=>'etude_topdown_'+todayKey();
+function saveTD(){
+  const d={};
+  TD_FIELDS.forEach(id=>{const el=document.getElementById(id);if(el)d[id]=el.value;});
+  try{localStorage.setItem(skTD(),JSON.stringify(d));}catch(e){}
+}
+function loadTD(){
+  let d=null;try{const r=localStorage.getItem(skTD());if(r)d=JSON.parse(r);}catch(e){}
+  if(!d)return;
+  TD_FIELDS.forEach(id=>{const el=document.getElementById(id);if(el&&d[id]!==undefined)el.value=d[id];});
+}
+function bindTD(){
+  TD_FIELDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.addEventListener('input',saveTD);
+    el.addEventListener('change',saveTD);
+  });
+}
+
 // ── INIT ──────────────────────────────────────────────
 (function(){
   PHASES.forEach(p=>{const b=document.getElementById('body-'+p);if(b)b.classList.add('open');});
   document.getElementById('body-interdits').classList.add('open');
   document.getElementById('bt-date').value=todayKey();
   loadCBs();bindCBs();updProgress();updPhaseCounts();
-  loadSession();loadPos();rBT();
+  loadSession();loadPos();rBT();loadTD();bindTD();
 })();
 </script>
