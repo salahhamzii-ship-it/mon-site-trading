@@ -825,3 +825,157 @@ Close = 29 498 (autour du POC 29 508)
 - Close 29 494 = sous VAL composite vendredi (29 532) → fermeture dans tiers bas → biais baissier structurel
 - Gap haut non comblé (29 789→30 057) = aimant haussier dominant
 - Single Prints bas semaine (29 359) = destination si cassure basse (28 959)
+
+---
+
+## PARTIE 18 — ANALYSE COMPLÈTE P3 ET P4 (LABORATOIRE JUIN-JUILLET 2026)
+
+### P3 — PARTIAL ENGULF UP
+
+**Définition stricte**
+- Londres High > Asie High ✅
+- Londres Low > Asie Low ✅
+- Londres étend au-dessus d'Asie, reste au-dessus du Low Asie
+
+**Statistiques validées (19 dates, juin-juillet 2026)**
+| Signal | % |
+| :--- | :--- |
+| Casse High Londres | **80.8%** |
+| Confirmation IB Haussier | **100%** — LE pattern le plus fiable |
+| Séquence High premier | **62%** favorable |
+| Low first | 36.8% (-29.6pp sur edge) |
+
+**Comportement type**
+- AM : London High cassé dans 80.8% des cas
+- PM : si Excess Haut identifié en RTH → Short possible (Règle 13)
+- **Leçon clé :** P3 donne le High AM — l'Excess donne le Short PM. Complémentaires.
+
+**Cas d'école P3 — 20 juillet 2026 (TPO complet)**
+- Asie : High 28 963 / Low 28 709
+- Londres : High 29 109 / Low 28 766 → P3 ✅ (+146H / +57L)
+- IB : High first, Close B > Mid (+41) → Haussier ✅
+- Excess Haut A (29 192) rejeté par B ✅ | Excess Haut F (29 119) rejeté par G ✅
+- Direction PM : baissière via excess → cascade vers 28 767
+- **Leçon :** P3 haussier AM (80.8%), Excess PM donne le Short
+
+**Cas d'école P3 — 21 juillet 2026 (piège)**
+- OVN : Grind haussier, Inventory Long +370 pts | ALN P3 → signal haussier AM
+- IB : Low first + Close > Mid (+52) → Haussier ✅ → High 29 364 validé
+- Excess D (29 320) rejeté par E → signal Short PM
+- Settle 29 311 — cible C1 jamais atteinte → **piège PM**
+- **Leçon piège :** P3 AM + IB Haussier = piège PM possible. Excess D Short mais cible ambiguë si contexte fond fort.
+
+**Cas d'école P3 — 4 août 2026**
+- Asie : High 29 081.75 / Low 28 864.25
+- Londres : High 29 245.75 / Low 29 007.50 → P3 ✅ (+164H / +143L)
+- Inventory Long +337 pts | Excess nocturne Low 20h30 rejeté → Long ✅
+
+---
+
+### P4 — PARTIAL ENGULF DOWN
+
+**Définition stricte**
+- Londres High < Asie High ✅
+- Londres Low < Asie Low ✅
+- Londres reste sous le High Asie mais perce le Low Asie vers le bas
+
+**Statistiques validées**
+| Signal | % |
+| :--- | :--- |
+| Casse Low Londres | **75%** |
+| Casse High Londres | **68.6%** |
+| Casse les deux | **44.6%** |
+| Confirmation IB Baissier | **56%** — quasi coin-flip |
+
+**Comportement type**
+- Signal nocturne baissier, RTH ne confirme que 56% du temps
+- 44% : counter auction (sens inverse)
+- Rare (15%) : Trend Day haussier si counter auction très forte (elongation)
+
+**Plan type sur un P4**
+| # | Trigger | Action | Stop | C1 | C2 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| ① | Casse < Low Londres + ES confirme | Short | Derrière l'Excess | Structure précédente | Plus profond |
+| ② | LBF au-dessus High Londres + ES confirme | Long | Sous l'Excess bas | High Asie | Au-delà |
+| ③ | Prix entre Low et High Londres | Pas de trade | — | — | — |
+
+**Cas d'école P4 — 22 juillet 2026**
+- Asie : High 29 337 / Low 29 140 | Londres : High 29 173 / Low 29 017 → P4 ✅
+- IB : Low first + Close > Mid (+34) → Haussier (contre le P4)
+- Excess Haut B (29 283) rejeté C ✅ | Excess D (29 342) rejeté E ✅ → Short
+- Settle 29 161
+
+**Cas d'école P4 — 23 juillet 2026 (cascade majeure)**
+- Asie : High 29 282 / Low 29 021 | Londres : High 29 137 / Low 28 779 → P4 ✅
+- Excess 21h (22/7) rejeté 21h30 → Short Close 29 176 | Stop 29 273 (97 pts risque)
+- Cascade jusqu'à 28 254 → **+920 pts** | "The key" (28 512) cassée
+
+**Cas d'école P4 — 3 août 2026 (Counter Auction + Elongation)**
+- Asie : High 28 698 / Low 28 471 | Londres : High 28 661 / Low 28 403 → P4 ✅
+- Counter Auction 65% → RTH fait le contraire de l'OVN baissier
+- **Trend Day haussier (15% des cas sur P4)** — elongation confirmée
+- Settle 28 900 ≈ POC (28 891) | Delta fin session : L -419, M -735 → extension fragile
+
+---
+
+### SYNTHÈSE COMPARATIVE P3 vs P4
+
+| Élément | P3 | P4 |
+| :--- | :--- | :--- |
+| Définition | Londres H > Asie H ET L > Asie L | Londres H < Asie H ET L < Asie L |
+| Fréquence | 29% | 21% |
+| Signal nocturne | Haussier | Baissier |
+| Confirmation IB | **100%** | **56%** |
+| Fiabilité | LE plus fiable | Quasi coin-flip |
+| Counter Auction | Peu fréquente | **65%** de rebond |
+| Trend Day rare | Haussier continuité | Haussier contre signal (15%) |
+| Excess complémentaire | Excess Haut PM = Short | Excess Haut RTH = Short si LBF échoue |
+| Rôle système | Contexte AM + timing Excess PM | Contexte ambigu + attendre IB |
+
+---
+
+### LEÇONS COMMUNES P3 ET P4
+
+**1. ALN donne le contexte, pas la certitude**
+- P3 haussier AM → validé 80.8% | P4 baissier → confirmé IB 56%
+- Dans les deux cas : attendre l'IB avant de trader
+
+**2. L'Excess (Règle 13) prime sur le pattern ALN**
+- Sur P3 haussier : Excess Haut RTH → Short valide
+- Sur P4 baissier : Excess Bas OVN → Long valide
+- Pattern ALN = direction probable | Excess = signal d'entrée exact
+
+**3. Règle 17 — L'Excess est universel**
+- Validé P3 : 8/9 sur TPO 19→20 juillet
+- Validé P4 : 8/8 sur TPO 21→22 juillet
+- Asie, Londres ou RTH — mécanisme identique
+
+**4. Triple confluence = conviction maximale**
+> ALN P3/P4 → IB dans le bon sens → Excess rejeté = entrée haute confiance
+
+**5. P4 + Counter Auction = journée à deux visages**
+- 56% IB confirme baissier | 44% RTH renverse
+- Ne jamais shorter aveuglément un P4
+- Si elongation se confirme → rare (15%) mais puissant
+
+**6. "Ajuster en RTH reste possible"**
+- Sur P4 baissier + gap RTH énorme → essentiel du mouvement déjà fait
+- Ajuster taille, sécuriser plutôt qu'attendre passivement
+
+---
+
+### RÉSULTATS PERFORMANCE — CAS DOCUMENTÉS
+
+| Date | Pattern | Setup | Résultat |
+| :--- | :--- | :--- | :--- |
+| 20/7 | P3 | Excess F rejeté G → Short PM | ✅ Cascade vers 28 767 |
+| 21/7 | P3 (piège) | Excess D rejeté E → Short PM | ❌ Settle 29 311, cible non atteinte |
+| 22/7 | P4 | Excess 21h30 → Short Londres | ✅ Tenu jusqu'à RTH Close |
+| 23/7 | P4 | Excess 21h rejeté 21h30 → Short | ✅ Cascade -920 pts |
+| 24/7 | P4 | Excess F rejeté G → Short | ✅ 3/4 cibles atteintes |
+| 3/8 | P4 | Counter Auction → Elongation | ✅ Trend Day validé |
+| 4/8 | P3 | En cours | — |
+
+---
+
+> **En une phrase :** P3 = signal le plus fiable du labo (100% IB) — trader le matin, Excess pour le retournement PM. P4 = ambigu (56%) — toujours attendre l'IB, ne jamais shorter automatiquement, car la counter auction peut produire un Trend Day haussier rare mais réel.
