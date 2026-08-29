@@ -1,0 +1,264 @@
+// =============================================================
+// CAMEL COCKPIT v1.0 — NQ/ES Key Levels
+// Dalton-Salah Method | Bible Traders Tataouine
+// =============================================================
+// Layers:
+//   1. AVWAP anchored 18:00 ET (Globex) + SD±1/±2 bands
+//   2. IB AVWAP (Scalpel — 09:30–10:30) + Bull A / Bear A table
+//   3. Initial Balance H/L + LMRG 1.5x + Halfback IB
+//   4. Previous Day RTH: High, Low, Settle, Halfback
+//   5. Alert conditions: SD+2 Questionable High / SD-2 LBF Zone
+// =============================================================
+//@version=5
+indicator("Camel Cockpit v1 — Dalton-Salah", overlay=true,
+     max_lines_count=100, max_labels_count=100, max_boxes_count=20)
+
+// ─────────────────────────────────────────
+// INPUTS
+// ─────────────────────────────────────────
+g1 = "AVWAP 18H + SD Bands"
+g2 = "IB AVWAP — Scalpel (09:30–10:30)"
+g3 = "Initial Balance"
+g4 = "Previous Day RTH"
+g5 = "Display"
+
+show_avwap  = input.bool(true, "AVWAP 18H + SD±1/±2",     group=g1)
+show_sd2    = input.bool(true, "Fill SD±2 zone (danger)",  group=g1)
+show_ibavwap= input.bool(true, "IB AVWAP (Scalpel)",       group=g2)
+show_ib     = input.bool(true, "IB High/Low + LMRG 1.5x", group=g3)
+show_ibmid  = input.bool(true, "IB Halfback (Mid)",        group=g3)
+show_pd     = input.bool(true, "Prev Day H/L/Settle",      group=g4)
+show_hb     = input.bool(true, "Prev Day Halfback (Trap)", group=g4)
+show_labels = input.bool(true, "Price labels at RTH open", group=g5)
+show_table  = input.bool(true, "Level table (top right)",  group=g5)
+show_bgd    = input.bool(true, "Session background color", group=g5)
+show_alerts = input.bool(true, "Alerts: SD±2 touch",       group=g5)
+
+// ─────────────────────────────────────────
+// SESSION DETECTION (New York / Eastern)
+// ─────────────────────────────────────────
+TZ = "America/New_York"
+
+in_rth      = not na(time("1", "0930-1600", TZ))
+in_ib       = not na(time("1", "0930-1030", TZ))
+in_globex_a = not na(time("1", "1800-1801", TZ))  // 18:00 anchor bar
+
+rth_first   = in_rth and not in_rth[1]
+ib_ended    = not in_ib and in_ib[1]
+
+// ─────────────────────────────────────────
+// TYPICAL PRICE
+// ─────────────────────────────────────────
+tp = (high + low + close) / 3
+
+// ─────────────────────────────────────────
+// 1. AVWAP 18H — Globex anchor
+//    SD formula: sqrt( sum(tp² × vol)/sum(vol) − avwap² )
+// ─────────────────────────────────────────
+var float g_vol  = 0.0
+var float g_pv   = 0.0
+var float g_pv2  = 0.0
+
+// Reset at 18:00 anchor
+if in_globex_a and not in_globex_a[1]
+    g_vol  := 0.0
+    g_pv   := 0.0
+    g_pv2  := 0.0
+
+g_vol  += volume
+g_pv   += tp * volume
+g_pv2  += tp * tp * volume
+
+avwap18 = g_vol > 0 ? g_pv / g_vol : na
+float sd18 = na
+if not na(avwap18) and g_vol > 0
+    float var18 = g_pv2 / g_vol - avwap18 * avwap18
+    sd18 := var18 > 0 ? math.sqrt(var18) : na
+
+sdp2 = not na(sd18) ? avwap18 + 2.0 * sd18 : na
+sdp1 = not na(sd18) ? avwap18 + 1.0 * sd18 : na
+sdm1 = not na(sd18) ? avwap18 - 1.0 * sd18 : na
+sdm2 = not na(sd18) ? avwap18 - 2.0 * sd18 : na
+
+// ─────────────────────────────────────────
+// 2. IB AVWAP — Scalpel (09:30–10:30)
+//    Locked after 10:30, holds rest of session
+// ─────────────────────────────────────────
+var float ib_vol  = 0.0
+var float ib_pv   = 0.0
+var float ib_av   = na
+var bool  ib_done = false
+
+if rth_first
+    ib_vol  := 0.0
+    ib_pv   := 0.0
+    ib_av   := na
+    ib_done := false
+
+if in_ib
+    ib_vol += volume
+    ib_pv  += tp * volume
+
+if ib_ended and not ib_done
+    ib_av   := ib_vol > 0 ? ib_pv / ib_vol : na
+    ib_done := true
+
+// Extend IB AVWAP through session
+ib_avwap_plot = ib_done ? ib_av : na
+
+// ─────────────────────────────────────────
+// 3. INITIAL BALANCE H/L + LMRG + MID
+// ─────────────────────────────────────────
+var float ibH = na
+var float ibL = na
+
+if rth_first
+    ibH := high
+    ibL := low
+
+if in_ib
+    ibH := math.max(ibH, high)
+    ibL := math.min(ibL, low)
+
+ib_ready  = ib_done and not na(ibH)
+ib_rng    = ibH - ibL
+lmrg_up   = ibH + ib_rng * 0.5   // 1.5x IB extension up
+lmrg_dn   = ibL - ib_rng * 0.5   // 1.5x IB extension down
+ib_mid    = (ibH + ibL) / 2.0
+
+// Bull A / Bear A classification (at IB close)
+float close_ib = na
+if ib_ended
+    close_ib := close
+
+ib_quart_top = na(ib_av) ? na : ib_av + (ibH - ib_av) * 0.5
+ib_quart_bot = na(ib_av) ? na : ib_av - (ib_av - ibL) * 0.5
+
+// ─────────────────────────────────────────
+// 4. PREVIOUS DAY RTH — H / L / Settle / Halfback
+// ─────────────────────────────────────────
+pdH = request.security(syminfo.tickerid, "D", high[1],  lookahead=barmerge.lookahead_on)
+pdL = request.security(syminfo.tickerid, "D", low[1],   lookahead=barmerge.lookahead_on)
+pdC = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
+pdHB = (pdH + pdL) / 2.0
+
+// ─────────────────────────────────────────
+// PLOTS — SD BANDS
+// ─────────────────────────────────────────
+C_RED    = color.new(#FF3B3B, 0)
+C_ORG    = color.new(#FF9500, 40)
+C_YEL    = color.new(#FFD700, 0)
+C_TEA    = color.new(#00CCAA, 40)
+C_GRN    = color.new(#00E676, 0)
+C_BLU    = color.new(#2196F3, 0)
+C_BLU_L  = color.new(#2196F3, 65)
+C_PUR    = color.new(#9C27B0, 30)
+C_PUR_L  = color.new(#9C27B0, 65)
+C_FCH    = color.new(#E91E8C, 0)
+C_WHT    = color.new(color.white, 0)
+
+p_sdp2  = plot(show_avwap ? sdp2 : na,    "SD+2 — Questionable High", C_RED,   1)
+p_sdp1  = plot(show_avwap ? sdp1 : na,    "SD+1",                     C_ORG,   1)
+p_avwap = plot(show_avwap ? avwap18 : na, "AVWAP 18H ★★★",            C_YEL,   2)
+p_sdm1  = plot(show_avwap ? sdm1 : na,    "SD-1",                     C_TEA,   1)
+p_sdm2  = plot(show_avwap ? sdm2 : na,    "SD-2 — LBF Zone",          C_GRN,   1)
+
+// Danger zones fill
+if show_sd2
+    fill(p_sdp2, p_sdp1, color.new(color.red,   94))
+    fill(p_sdm1, p_sdm2, color.new(color.green, 94))
+
+// ─────────────────────────────────────────
+// PLOTS — IB AVWAP SCALPEL
+// ─────────────────────────────────────────
+plot(show_ibavwap ? ib_avwap_plot : na, "IB AVWAP (Scalpel)", C_WHT, 2, plot.style_stepline)
+
+// ─────────────────────────────────────────
+// PLOTS — INITIAL BALANCE
+// ─────────────────────────────────────────
+plot(show_ib and ib_ready ? ibH     : na, "IB High",         C_BLU,   2, plot.style_stepline)
+plot(show_ib and ib_ready ? ibL     : na, "IB Low",          C_BLU,   2, plot.style_stepline)
+plot(show_ib and ib_ready ? lmrg_up : na, "LMRG Up (1.5x)", C_BLU_L, 1, plot.style_stepline)
+plot(show_ib and ib_ready ? lmrg_dn : na, "LMRG Dn (1.5x)", C_BLU_L, 1, plot.style_stepline)
+plot(show_ibmid and ib_ready ? ib_mid : na, "IB Mid (Halfback)", color.new(#2196F3, 55), 1, plot.style_circles)
+
+// ─────────────────────────────────────────
+// PLOTS — PREVIOUS DAY RTH
+// ─────────────────────────────────────────
+plot(show_pd ? pdH  : na, "Prev Day High",    C_PUR,   1, plot.style_stepline)
+plot(show_pd ? pdL  : na, "Prev Day Low",     C_PUR,   1, plot.style_stepline)
+plot(show_pd ? pdC  : na, "Prev Settle ★★★", C_FCH,   2, plot.style_stepline)
+plot(show_hb ? pdHB : na, "Prev Halfback (R11 Trap)", C_PUR_L, 1, plot.style_circles)
+
+// ─────────────────────────────────────────
+// BACKGROUND HIGHLIGHTS
+// ─────────────────────────────────────────
+bgcolor(show_bgd and in_ib  ? color.new(color.blue,  95) : na, title="IB Window (9:30–10:30)")
+bgcolor(show_bgd and in_rth and not in_ib ? color.new(color.gray, 98) : na, title="RTH Session")
+
+// ─────────────────────────────────────────
+// LABELS AT RTH OPEN
+// ─────────────────────────────────────────
+if show_labels and rth_first
+    _fmt = format.mintick
+    if not na(sdp2)
+        label.new(bar_index, sdp2,    "SD+2  " + str.tostring(sdp2, _fmt),    xloc.bar_index, yloc.price, color.new(#FF3B3B,80), label.style_label_left, color.red,    size.small)
+    if not na(sdp1)
+        label.new(bar_index, sdp1,    "SD+1  " + str.tostring(sdp1, _fmt),    xloc.bar_index, yloc.price, color.new(#FF9500,80), label.style_label_left, color.orange, size.small)
+    if not na(avwap18)
+        label.new(bar_index, avwap18, "AVWAP " + str.tostring(avwap18, _fmt), xloc.bar_index, yloc.price, color.new(#FFD700,80), label.style_label_left, color.yellow, size.small)
+    if not na(sdm1)
+        label.new(bar_index, sdm1,    "SD-1  " + str.tostring(sdm1, _fmt),    xloc.bar_index, yloc.price, color.new(#00CCAA,80), label.style_label_left, color.teal,   size.small)
+    if not na(sdm2)
+        label.new(bar_index, sdm2,    "SD-2  " + str.tostring(sdm2, _fmt),    xloc.bar_index, yloc.price, color.new(#00E676,80), label.style_label_left, color.green,  size.small)
+    if not na(pdC)
+        label.new(bar_index, pdC,     "SETTLE " + str.tostring(pdC, _fmt),    xloc.bar_index, yloc.price, color.new(#E91E8C,80), label.style_label_left, color.fuchsia, size.small)
+    if not na(pdHB)
+        label.new(bar_index, pdHB,    "HB(trap) " + str.tostring(pdHB, _fmt), xloc.bar_index, yloc.price, color.new(#9C27B0,80), label.style_label_left, color.purple, size.small)
+
+// ─────────────────────────────────────────
+// LEVEL TABLE — top right dashboard
+// ─────────────────────────────────────────
+if show_table and barstate.islast
+    var table t = table.new(position.top_right, 2, 12,
+         bgcolor=color.new(color.black, 75), border_color=color.new(color.gray, 60), border_width=1, frame_color=color.new(color.gray,50), frame_width=1)
+
+    _h = (c, txt) =>
+        table.cell(t, 0, 0, txt, text_color=color.new(color.white,0), bgcolor=color.new(c, 60), text_size=size.small)
+        table.cell(t, 1, 0, "",  bgcolor=color.new(c, 60))
+
+    _row = (row, lbl, val, c) =>
+        table.cell(t, 0, row, lbl, text_color=color.new(c, 0), text_size=size.small, text_halign=text.align_left,  bgcolor=color.new(color.black, 80))
+        table.cell(t, 1, row, not na(val) ? str.tostring(val, format.mintick) : "—",
+             text_color=color.new(c, 0), text_size=size.small, text_halign=text.align_right, bgcolor=color.new(color.black, 80))
+
+    table.cell(t, 0, 0,  "🐪 CAMEL COCKPIT",  text_color=color.white, bgcolor=color.new(color.black,50), text_size=size.small)
+    table.cell(t, 1, 0,  syminfo.ticker,       text_color=color.new(color.gray,0), bgcolor=color.new(color.black,50), text_size=size.small)
+
+    _row(1,  "SD+2  ★★★ Q.High", sdp2,    color.red)
+    _row(2,  "SD+1",              sdp1,    color.orange)
+    _row(3,  "AVWAP 18H  ★★★",  avwap18, color.yellow)
+    _row(4,  "SD-1",              sdm1,    color.teal)
+    _row(5,  "SD-2  ★★★ LBF",   sdm2,    color.green)
+    _row(6,  "── IB ──────────", na,      color.new(color.gray,30))
+    _row(7,  "IB High",           ibH,     color.blue)
+    _row(8,  "IB AVWAP (Scalpel)",ib_av,  color.white)
+    _row(9,  "IB Low",            ibL,     color.blue)
+    _row(10, "── Prev Day ────", na,      color.new(color.gray,30))
+    _row(11, "Settle ★★★",       pdC,     color.fuchsia)
+
+// ─────────────────────────────────────────
+// ALERTS
+// ─────────────────────────────────────────
+// SD+2 touch → Questionable High (R34)
+alert_sdp2_touch = show_alerts and not na(sdp2) and high >= sdp2 and high[1] < sdp2[1]
+// SD-2 touch → Questionable Low / LBF zone (R35)
+alert_sdm2_touch = show_alerts and not na(sdm2) and low <= sdm2 and low[1] > sdm2[1]
+// Price crosses AVWAP 18H
+alert_avwap_x_up = show_alerts and not na(avwap18) and close > avwap18 and close[1] <= avwap18[1]
+alert_avwap_x_dn = show_alerts and not na(avwap18) and close < avwap18 and close[1] >= avwap18[1]
+
+alertcondition(alert_sdp2_touch, "SD+2 Touch — Questionable High (R34)", "🔴 SD+2 touched — Questionable High. Watch for LAF / rejection. R34.")
+alertcondition(alert_sdm2_touch, "SD-2 Touch — LBF Zone (R35)",          "🟢 SD-2 touched — LBF Zone. Watch for Look Below and Fail. R35-R36.")
+alertcondition(alert_avwap_x_up, "Price crossed AVWAP 18H → Up",        "⬆️ Close crossed above AVWAP 18H. Bullish structure.")
+alertcondition(alert_avwap_x_dn, "Price crossed AVWAP 18H → Down",      "⬇️ Close crossed below AVWAP 18H. Bearish structure.")
