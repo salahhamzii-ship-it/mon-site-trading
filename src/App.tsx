@@ -14,8 +14,8 @@ import CockpitApp from './pages/CockpitApp'
 export default function App() {
   return (
     <Routes>
-      {/* Cockpit — full-screen, no Layout wrapper */}
-      <Route path="/cockpit" element={<CockpitApp />} />
+      {/* Cockpit v3 — full-screen, no Layout wrapper */}
+      <Route path="/cockpit" element={<iframe src="/cockpit-v3.html" style={{width:'100vw',height:'100vh',border:'none',display:'block'}} title="Cockpit v3" />} />
 
       <Route path="/" element={<Layout />}>
         <Route index element={<Dashboard />} />
