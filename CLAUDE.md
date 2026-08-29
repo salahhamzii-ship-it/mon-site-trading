@@ -1435,3 +1435,117 @@ Balancement +/- 30 pts pendant 15h. SD±2 ne dépassent pas 30 pts de l'AVWAP �
 
 **En une phrase :** SD+3 + volume décroissant + delta effondré = short. Pas de débat.
 
+
+---
+
+## PARTIE 23 — NQ 30MIN BID/ASK FOOTPRINT — FORMAT SIERRA CHART (28/08/2026)
+
+### Colonnes exactes — Chart 30min avec études
+`Date, Time, Open, High, Low, Last, Volume, #Trades, OHLC, HLC, HL, BidVol, AskVol, [Pullback Divider], [POC Extension = AskVol@High], [Bid&AskVol@High/Low = BidVol@Low négatif], [Price at Min Highlight], [Price at Max Highlight], [Clock], [Difference = DELTA], [Bid], [Ask]`
+
+**Colonnes utiles :**
+| Col | Nom Sierra Chart | Lecture |
+| :--- | :--- | :--- |
+| 12 | BidVol | Volume côté vendeur (agressif) |
+| 13 | AskVol | Volume côté acheteur (agressif) |
+| 15 | POC Extension → **AskVol@High** | Ask agressif au HIGH de la barre |
+| 16 | Bid&Ask@High/Low → **BidVol@Low** (négatif) | Bid agressif au LOW de la barre |
+| 17 | Price at Min Highlight | Prix avec activité MINIMALE (zone pauvre) |
+| 18 | Price at Max Highlight | Prix avec activité MAXIMALE (HVN) |
+| 20 | Difference → **DELTA** = AskVol − BidVol | Balance acheteurs/vendeurs par barre |
+
+**Colonnes vides / non utilisées :**
+- Col 14 : Pullback Column Divider = séparateur visuel → 0
+- Col 19 : Clock → 0
+- Col 21-22 : Bid/Ask snapshot au moment de l'export → constant, non analytique
+
+---
+
+### Données 30min — 09:00 → 11:00 (28/08/2026)
+| Heure | High | Low | Close | Vol | BidVol | AskVol | Ask@High | Bid@Low | Price@Min | Price@Max | **Delta** |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 09:00 pré-mkt | 29 681.75 | 29 622.00 | 29 628.00 | 8 841 | 4 471 | 4 370 | **54** | -71 | 29 680.50 | 29 656.25 | **-101** |
+| 09:30 IB1 | 29 703.25 | 29 562.75 | 29 629.00 | 61 367 | 31 250 | 30 117 | **63** | -73 | 29 702.75 | 29 696.25 | **-1 133** |
+| 10:00 IB2 | 29 706.00 | 29 505.00 | 29 653.50 | 73 418 | 36 441 | 36 977 | **107** | -109 | 29 701.75 | 29 608.00 | **+536** |
+| 10:30 post-IB | 29 799.00 | 29 632.00 | 29 796.50 | 49 735 | 24 352 | 25 383 | **107** | -179 | 29 798.75 | 29 790.00 | **+1 031** |
+| **11:00 TOP** | **29 811.50** | 29 735.25 | 29 782.75 | **33 992** | 16 967 | 17 025 | **107** | **-179** | **29 748.00** | **29 800.00** | **+58** |
+
+---
+
+### ★★★★★ LECTURE FOOTPRINT — LE TOP EN 5 SIGNAUX
+
+#### Signal 1 — Delta effondré
+| Barre | Vol | Delta | Ratio Delta/Vol |
+| :--- | :--- | :--- | :--- |
+| 10:30 | 49 735 | +1 031 | 2.1% |
+| **11:00** | **33 992** | **+58** | **0.17%** |
+
+→ Sur 33 992 contrats échangés, seulement 58 de différence côté acheteur. **Marché parfaitement à l'équilibre au sommet = plus personne n'achète vraiment.**
+
+#### Signal 2 — Ask@High ne progresse pas
+| Barre | High | Ask@High | Lecture |
+| :--- | :--- | :--- | :--- |
+| 09:30 | 29 703 | **63** | Achat très mince au High IB1 |
+| 10:00 | 29 706 | **107** | Un peu plus |
+| 10:30 | **29 799** | **107** | Nouveau High +93 pts — **même 107 contrats** |
+| **11:00** | **29 811** | **107** | **Nouveau High ALL-TIME — toujours 107** ★★★★★ |
+
+→ Price monte de 29706 → 29811 (+105 pts) mais les acheteurs agressifs au High stagnent à 107. **Le High est creux. C'est un Poor High (Règle 13 — Excess).**
+
+#### Signal 3 — Price at Max (HVN) éloigné du High
+| Barre | High | Price@Max (HVN) | Écart |
+| :--- | :--- | :--- | :--- |
+| 11:00 | **29 811.50** | **29 800.00** | **-11.50 pts** |
+
+→ Le maximum d'activité est à 29 800. Le High à 29 811.50 est **au-delà du HVN** = zone de prix avec volume quasi nul = print isolé = **Excess confirmé**.
+
+#### Signal 4 — Price at Min (LVN) trop proche du Close
+| Barre | High | Price@Min (LVN) | Close | Note |
+| :--- | :--- | :--- | :--- | :--- |
+| 11:00 | 29 811.50 | **29 748.00** | 29 782.75 | LVN interne très visible |
+
+→ LVN à 29 748 = single print zone interne. Le marché va y retourner dès la barre suivante.
+
+#### Signal 5 — Volume décroissant barre à barre
+| Barre | Vol | Note |
+| :--- | :--- | :--- |
+| 10:00 | 73 418 | Maximum journée |
+| 10:30 | 49 735 | -32% |
+| **11:00** | **33 992** | **-32% encore** → 3 barres décroissantes |
+
+→ R14 (Barres 78min) étendu aux 30min : volume décroissant = épuisement directionnel.
+
+---
+
+### ★★★ RÈGLE IB BID/ASK 30MIN
+
+**Classification IB avec delta :**
+| Condition | Signal | Action |
+| :--- | :--- | :--- |
+| IB1 delta < 0 fort + Low First + Close mid | Stop-hunt → attendre IB2 | Ne pas shorter |
+| IB2 delta > 0 + Close > midpoint IB | **Bull A delta-confirmé** | GO WITH UP |
+| IB2 delta < 0 + Close < midpoint IB | **Bear A delta-confirmé** | GO WITH DOWN |
+| Ask@High IB2 < Ask@High IB1 | Faiblesse haussière | Caution |
+| Ask@High stagne barre N+1 et N+2 | **Exhaustion = Short** | SHORT |
+
+**Vendredi 28/08 — Application :**
+```
+09:30 IB1 : delta -1133 + Low First 29562 + Close 29629 = Stop-hunt → attendre
+10:00 IB2 : delta +536 + Close 29653 > midpoint (29633) = Bull A confirmé → Long bias
+10:30 : delta +1031 + Close 29796 = GO WITH → tenir long
+11:00 : Ask@High = 107 (identique à 10:30 + 10:00) + Delta +58 = VIDE → SHORT
+```
+
+---
+
+### SYNTHÈSE — LE CADRE MULTI-TIMEFRAME FINAL
+
+| Phase | Timeframe | Colonnes clés |
+| :--- | :--- | :--- |
+| OVN structure | 78min | BidVol, AskVol, Delta cumulé → inventaire |
+| Pre-market | 30min | Delta + Ask@High → qui se positionne |
+| IB (09:30→10:30) | 30min | Delta IB1 vs IB2 + Close vs midpoint → Bull A/Bear A |
+| RTH | 19m30s | SD+3 + Delta + Ask@High → setup exhaustion |
+
+**En une phrase** : Le 30min IB dit QUI prend le contrôle. Le 19m30s RTH dit QUAND le contrôle s'épuise. Le 78min OVN dit QUI arrive avec quel inventaire. Trois lentilles, une décision.
+
