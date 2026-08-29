@@ -546,6 +546,28 @@ export default function Calculateur() {
       alnFiab:      '80.8',
     },
   }
+  const TD_SESSION_DATE = '2026-08-29'
+  const SESSION_TD: Partial<TD> = {
+    // MONTHLY NQ Août 2026 (Sierra Chart · Partie 19)
+    mHigh: '30343',     mLow: '28313.50',  mPoc: '29614.75',
+    mOtf:  'Neutral',   mVah: '30038.75',  mVal: '28617.75',
+    // WEEKLY NQ composite 4 semaines 8/3→8/28 (Sierra Chart)
+    wHigh: '30343',     wLow: '28946',     wPoc: '29533.50',
+    wOtf:  'Lower',     wVah: '30141.25',  wVal: '29135.50',
+    // COMPOSITE SEMAINE (4 semaines Sierra Chart)
+    csVah: '30141.25',  csVal: '29135.50', csPoc: '29533.50',
+    // COMPOSITE RTH 2 jours (27-28/08)
+    crVah: '29709',     crVal: '29532',    crPoc: '29619',
+    // PROFILS TPO OVN 27/08 18h → 28/08 09h30
+    tpoOvnH: '29707',  tpoOvnL: '29578.25', pocMig: 'Stable',
+    // DAILY BARS J-1 (28/08)
+    excess: true,  poorHigh: false, poorLow: false, gapDay: false,
+    // ÉVÉNEMENTS semaine 1/09
+    events: 'Lundi 1 sept — Fête du Travail US (marché FERMÉ)\nMardi 2 sept — RTH open · OVN dimanche soir déterminant',
+    // MES LIGNES WE
+    lignes: '★★★ 29 849 — résistance haute balance daily\n★★★ 29 443 — pivot SD-2 / Single Print semaine\n★★★ 28 990 — support bas balance\n★★ POC weekly 29 533\n★★ Gap non comblé 29 789 → 30 057',
+  }
+
   const applySessionData = useCallback((forceOverwrite = false) => {
     setII(prev => {
       const next = { ...prev }
@@ -563,9 +585,24 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const applySessionTD = useCallback((forceOverwrite = false) => {
+    setTd(prev => {
+      const next = { ...prev }
+      for (const k of Object.keys(SESSION_TD) as (keyof TD)[]) {
+        const val = SESSION_TD[k]
+        if (val === undefined) continue
+        if (!forceOverwrite && prev[k] !== undefined && prev[k] !== '' && prev[k] !== false) continue
+        ;(next as Record<string, unknown>)[k] = val
+      }
+      return next
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     const etDate = new Intl.DateTimeFormat('en-CA', { timeZone:'America/New_York' }).format(new Date())
     if (etDate === SESSION_DATE) applySessionData()
+    if (etDate === TD_SESSION_DATE) applySessionTD()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -3433,8 +3470,9 @@ export default function Calculateur() {
       {/* Top-Down Dalton */}
       {!isSimple && tdOpen && (
         <div style={{ border:`1px solid ${C.brd}`, borderRadius:4, overflow:'hidden' }}>
-          <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.gold}`, background:'rgba(201,168,76,0.05)', borderBottom:`1px solid ${C.brd}` }}>
+          <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.gold}`, background:'rgba(201,168,76,0.05)', borderBottom:`1px solid ${C.brd}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <span style={orb(8.5, 900, { color:C.gold, letterSpacing:'0.22em' })}>◈ TOP-DOWN DALTON · CONTEXTE MARCHÉ</span>
+            <button onClick={()=>applySessionTD(true)} style={{ padding:'3px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:7, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.35)', color:C.gold }}>⟳ CHARGER 29/08</button>
           </div>
           <div style={{ padding:'10px 12px', background:C.sur }}>
             {renderTD()}
