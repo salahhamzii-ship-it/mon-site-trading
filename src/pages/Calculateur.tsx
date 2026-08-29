@@ -432,6 +432,8 @@ export default function Calculateur() {
   const [posDir,   setPosDir]   = useState<'LONG'|'SHORT'>('LONG')
 
   const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
+  const [calc, setCalc] = useState({ avwap:'', sigma:'', rrEntry:'', rrStop:'', rrTarget:'', rrContracts:'1', ibH:'', ibL:'', ibAvwap:'', scClose:'', scAvwap:'', scIbh:'', scIbl:'', scSeq:'' })
+  const upCalc = (k: keyof typeof calc, v: string) => setCalc(p=>({...p,[k]:v}))
   const sdTouchRef = useRef<Record<Tab,{sp2:boolean;sm2:boolean}>>({NQ:{sp2:false,sm2:false},ES:{sp2:false,sm2:false},GC:{sp2:false,sm2:false},CL:{sp2:false,sm2:false}})
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -2678,7 +2680,98 @@ export default function Calculateur() {
     )
   }
 
-  const renderSettings = () => (
+  const renderSettings = () => {
+    const cv = (s:string) => parseFloat(s)||0
+    // SD Band calc
+    const cAvwap = cv(calc.avwap), cSigma = cv(calc.sigma)
+    const sdBands = cAvwap && cSigma ? {
+      sp3: +(cAvwap+3*cSigma).toFixed(2), sp2: +(cAvwap+2*cSigma).toFixed(2), sp1: +(cAvwap+cSigma).toFixed(2),
+      sm1: +(cAvwap-cSigma).toFixed(2),   sm2: +(cAvwap-2*cSigma).toFixed(2), sm3: +(cAvwap-3*cSigma).toFixed(2)
+    } : null
+    // R/R calc
+    const rEnt=cv(calc.rrEntry), rStp=cv(calc.rrStop), rTgt=cv(calc.rrTarget), rCtr=cv(calc.rrContracts)||1
+    const rDir = rEnt&&rStp ? (rEnt>rStp?'LONG':'SHORT') : ''
+    const rRisk = Math.abs(rEnt-rStp), rGain = Math.abs(rTgt-rEnt)
+    const rRR = rRisk>0&&rGain>0 ? (rGain/rRisk).toFixed(2) : null
+    const rUsd = rRisk>0&&rTgt ? (rDir==='LONG'?(rTgt-rEnt):(rEnt-rTgt))*rCtr*(tab==='ES'?50:20) : null
+    // IB AVWAP Scalpel
+    const ibH=cv(calc.ibH), ibL=cv(calc.ibL), ibA=cv(calc.ibAvwap)
+    const ibRange = ibH&&ibL ? ibH-ibL : 0
+    const ibMid   = ibH&&ibL ? +((ibH+ibL)/2).toFixed(2) : 0
+    const ibExt1H = ibH&&ibRange ? +(ibH+ibRange*0.5).toFixed(2) : 0
+    const ibExt1L = ibL&&ibRange ? +(ibL-ibRange*0.5).toFixed(2) : 0
+    const ibAvwapBias = ibA&&ibH&&ibL ? (ibA>ibMid?'BULL (AVWAP > Mid IB)':'BEAR (AVWAP < Mid IB)') : ''
+    // SD Scalpel
+    const scC=cv(calc.scClose), scA=cv(calc.scAvwap), scH=cv(calc.scIbh), scL=cv(calc.scIbl), scS=calc.scSeq
+    let scVerdict='', scColor=C.muted
+    if(scC&&scA&&scH&&scL&&scS){
+      const aboveAvwap=scC>scA, insideIB=scC>=scL&&scC<=scH
+      if(aboveAvwap&&insideIB&&scS==='Higher'){scVerdict='GO LONG · LBF SD-2';scColor=C.up}
+      else if(!aboveAvwap&&insideIB&&scS==='Lower'){scVerdict='GO SHORT · LAF SD+2';scColor=C.down}
+      else if(insideIB){scVerdict='CAUTION · Attendre confirmation';scColor=C.amber}
+      else{scVerdict='NO-GO · Prix hors IB';scColor=C.down}
+    }
+    return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+    {/* ─── CALCULATEURS MÉTHODE SALAH ─── */}
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:10 }}>
+      <Sec title="SD BANDS · AVWAP 18H + SIGMA" col={C.gold}>
+        <G2 ch={<><F l="AVWAP 18H 👑" v={calc.avwap} s={v=>upCalc('avwap',v)} /><F l="Sigma σ" v={calc.sigma} s={v=>upCalc('sigma',v)} /></>}/>
+        {sdBands ? (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:4, marginTop:4 }}>
+            {([['SD+3','SHORT R34',C.down,sdBands.sp3],['SD+2','LAF',C.down,sdBands.sp2],['SD+1','',C.muted,sdBands.sp1],['SD-1','',C.muted,sdBands.sm1],['SD-2','LBF R36',C.up,sdBands.sm2],['SD-3','LBF extrême',C.up,sdBands.sm3]] as [string,string,string,number][]).map(([lbl,sub,col2,val])=>(
+              <div key={lbl} style={{ textAlign:'center', padding:'5px 3px', borderRadius:3, background:'rgba(0,0,0,0.2)', border:`1px solid ${col2}22` }}>
+                <div style={jb(7,400,{color:col2,letterSpacing:'0.08em'})}>{lbl}</div>
+                <div style={orb(11,900,{color:col2})}>{val}</div>
+                {sub&&<div style={jb(7,400,{color:col2,opacity:0.7})}>{sub}</div>}
+              </div>
+            ))}
+          </div>
+        ) : <span style={jb(10,400,{color:'rgba(136,153,187,0.35)'})}>Entrer AVWAP + Sigma</span>}
+      </Sec>
+
+      <Sec title="RISK / REWARD · CALCULATEUR" col={C.teal}>
+        <G3 ch={<><F l="Entrée" v={calc.rrEntry} s={v=>upCalc('rrEntry',v)} /><F l="Stop" v={calc.rrStop} s={v=>upCalc('rrStop',v)} /><F l="Target" v={calc.rrTarget} s={v=>upCalc('rrTarget',v)} /></>}/>
+        <G2 ch={<><F l="Contrats" v={calc.rrContracts} s={v=>upCalc('rrContracts',v)} /><F l="Direction" ro dv={rDir||'—'} /></>}/>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:4 }}>
+          {rRR && <div style={{ padding:'5px 10px', borderRadius:3, background:'rgba(0,0,0,0.25)', border:`1px solid ${C.teal}33` }}>
+            <div style={jb(7,400,{color:C.muted})}>R:R</div>
+            <div style={orb(16,900,{color:C.teal})}>1:{rRR}</div>
+          </div>}
+          {rUsd!=null && <div style={{ padding:'5px 10px', borderRadius:3, background:'rgba(0,0,0,0.25)', border:`1px solid ${rUsd>=0?C.up:C.down}33` }}>
+            <div style={jb(7,400,{color:C.muted})}>PnL</div>
+            <div style={orb(16,900,{color:rUsd>=0?C.up:C.down})}>{rUsd>=0?'+':''}{Math.round(rUsd).toLocaleString()}$</div>
+          </div>}
+        </div>
+      </Sec>
+
+      <Sec title="IB AVWAP SCALPEL" col={C.amber}>
+        <G3 ch={<><F l="IB High" v={calc.ibH} s={v=>upCalc('ibH',v)} /><F l="IB Low" v={calc.ibL} s={v=>upCalc('ibL',v)} /><F l="AVWAP IB" v={calc.ibAvwap} s={v=>upCalc('ibAvwap',v)} /></>}/>
+        {ibRange>0 && (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:4, marginTop:4 }}>
+            {([['Ext 1 H','',C.amber,ibExt1H],['IB High','',C.gold,ibH],['Mid IB','',C.muted,ibMid],['AVWAP IB','',C.teal,ibA||0],['IB Low','',C.gold,ibL],['Ext 1 L','',C.amber,ibExt1L]] as [string,string,string,number][]).map(([lbl,,col2,val])=>(
+              <div key={lbl} style={{ textAlign:'center', padding:'5px 3px', borderRadius:3, background:'rgba(0,0,0,0.2)' }}>
+                <div style={jb(7,400,{color:C.muted})}>{lbl}</div>
+                <div style={orb(11,900,{color:col2})}>{val||'—'}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {ibAvwapBias && <div style={{ marginTop:4, padding:'4px 8px', borderRadius:3, background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.2)' }}><span style={jb(10,700,{color:C.gold})}>{ibAvwapBias}</span></div>}
+      </Sec>
+
+      <Sec title="SD SCALPEL · VERDICT" col={scVerdict.startsWith('GO L')?C.up:scVerdict.startsWith('GO S')?C.down:scVerdict.startsWith('CAU')?C.amber:C.muted}>
+        <G2 ch={<><F l="Close SC" v={calc.scClose} s={v=>upCalc('scClose',v)} /><F l="AVWAP 18H" v={calc.scAvwap} s={v=>upCalc('scAvwap',v)} /></>}/>
+        <G2 ch={<><F l="IBH" v={calc.scIbh} s={v=>upCalc('scIbh',v)} /><F l="IBL" v={calc.scIbl} s={v=>upCalc('scIbl',v)} /></>}/>
+        <F l="Séquence IB" v={calc.scSeq} s={v=>upCalc('scSeq',v)} opts={['','Higher','Lower','Neutral']} />
+        {scVerdict ? (
+          <div style={{ marginTop:6, padding:'8px 12px', borderRadius:3, background:`${scColor}18`, border:`1px solid ${scColor}55`, textAlign:'center' }}>
+            <div style={orb(10,900,{color:scColor,letterSpacing:'0.12em'})}>{scVerdict}</div>
+          </div>
+        ) : <span style={jb(10,400,{color:'rgba(136,153,187,0.35)'})}>Remplir tous les champs</span>}
+      </Sec>
+    </div>
+    {/* ─── CONFIG CHART (existant) ─── */}
     <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:10 }}>
       <Sec title="IB · INITIAL BALANCE">
         <G2 ch={<><F l="IB Line Offset" v={cfg.ibOffset} s={v=>upC('ibOffset',v)} /><F l="Table Text Size" v={cfg.ibTextSize} s={v=>upC('ibTextSize',v)} /></>}/>
@@ -2715,7 +2808,9 @@ export default function Calculateur() {
         <G2 ch={<><F l="Rotation Color" v={cfg.rotColor} s={v=>upC('rotColor',v)} t="text" /><Ck l="Show Labels" v={cfg.showORLbl} s={v=>upC('showORLbl',v)} /></>}/>
       </Sec>
     </div>
+    </div>
   )
+  }
 
   const renderBacktest = () => {
     const wins   = btTrades.filter(t => t.win)
