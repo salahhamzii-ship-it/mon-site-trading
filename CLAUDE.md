@@ -801,3 +801,27 @@ Close = 29 498 (autour du POC 29 508)
 
 **En une ligne :**
 > À la clôture, vous savez tout. Le lendemain matin, vous avez oublié la moitié.
+
+---
+
+## PARTIE 17 — COMPOSITE WEEKLY + DAILY (28/08/2026)
+
+### Composite Weekly NQ (3 semaines OTF Lower : 9/16/23 août)
+- Grand Range : **30 355 → 28 943** (1 412 pts)
+- Semaine précédente VAH : **29 549** | VAL : **29 074** | POC : **29 227**
+- Settle vendredi : **29 495** → sous VAH semaine précédente (29 549)
+
+### Composite Daily — 2 jours balance (Jeudi 27/08 + Vendredi 28/08)
+
+| | Jeudi 27/08 | Vendredi 28/08 |
+| :--- | :--- | :--- |
+| VAH | **29 635** | **29 709** |
+| VAL | **29 516** | **29 532** |
+| POC | **29 568** | **29 619** |
+| Low | 29 400 | 29 435 |
+| Close | — | **29 494** |
+
+- Balance 2 jours : High **29 817** → Low **29 400**
+- Close 29 494 = sous VAL composite vendredi (29 532) → fermeture dans tiers bas → biais baissier structurel
+- Gap haut non comblé (29 789→30 057) = aimant haussier dominant
+- Single Prints bas semaine (29 359) = destination si cassure basse (28 959)
