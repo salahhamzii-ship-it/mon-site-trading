@@ -9,7 +9,6 @@ import Stats from './pages/Stats'
 import SessionAnalyzer from './pages/SessionAnalyzer'
 import GEXPanel from './pages/GEXPanel'
 import Calculateur from './pages/Calculateur'
-import CockpitApp from './pages/CockpitApp'
 
 export default function App() {
   return (
