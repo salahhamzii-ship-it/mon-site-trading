@@ -221,6 +221,9 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
       <div class="card"><div class="ct">AVWAP 18H + SIGMA</div>
         <div class="r2"><div class="f"><label>AVWAP 18H 👑</label><input id="s-avwap" type="number" step=".25" placeholder="29638.54" oninput="oSI()"></div>
         <div class="f"><label>Sigma σ</label><input id="s-sigma" type="number" step=".25" placeholder="11.88" oninput="oSI()"></div></div></div>
+      <div class="card"><div class="ct" style="color:var(--blue)">ES · AVWAP 18H + SIGMA</div>
+        <div class="r2"><div class="f"><label>ES AVWAP 18H 👑</label><input id="s-es-avwap" type="number" step=".25" placeholder="5285.50" oninput="oSI()"></div>
+        <div class="f"><label>ES Sigma σ</label><input id="s-es-sigma" type="number" step=".25" placeholder="8.25" oninput="oSI()"></div></div></div>
       <div class="card"><div class="ct">IB (09h30–10h30)</div>
         <div class="r2"><div class="f"><label>IB High</label><input id="s-ibh" type="number" step=".25" placeholder="29704" oninput="oSI()"></div>
         <div class="f"><label>IB Low</label><input id="s-ibl" type="number" step=".25" placeholder="29629" oninput="oSI()"></div></div></div>
@@ -406,6 +409,13 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
 <!-- ── TOP-DOWN ── -->
 <div class="sec" id="sec-topdown">
   <div class="sh"><h2>▲ TOP-DOWN DALTON</h2></div>
+  <!-- NQ / ES SD levels row -->
+  <div class="r2">
+    <div class="card"><div class="ct" style="display:flex;align-items:center;gap:6px">NQ · SD BANDS <span style="font-size:9px;color:var(--muted)">(depuis session)</span></div>
+      <div id="td-nq-sd" style="font-family:var(--mono);font-size:11px;line-height:2"><span style="color:var(--muted)">Chargez session NQ.</span></div></div>
+    <div class="card"><div class="ct" style="display:flex;align-items:center;gap:6px;color:var(--blue)">ES · SD BANDS <span style="font-size:9px;color:var(--muted)">(depuis session)</span></div>
+      <div id="td-es-sd" style="font-family:var(--mono);font-size:11px;line-height:2"><span style="color:var(--muted)">Entrez ES AVWAP + Sigma dans CHARGER SESSION.</span></div></div>
+  </div>
   <div class="r2">
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="card"><div class="ct">STRUCTURE HTF</div>
@@ -673,23 +683,31 @@ function resetDay(){
 }
 
 // ── SESSION ───────────────────────────────────────────
-const SF=['avwap','sigma','ibh','ibl','vah','val','poc','j1h','j1l','settle','mpoc','mvah','mval','ovnh','ovnl','aln','notes'];
+const SF=['avwap','sigma','es-avwap','es-sigma','ibh','ibl','vah','val','poc','j1h','j1l','settle','mpoc','mvah','mval','ovnh','ovnl','aln','notes'];
 function saveSession(){
   const d={date:todayKey()};
   SF.forEach(f=>{const el=document.getElementById('s-'+f);if(el)d[f]=el.value;});
   try{localStorage.setItem(skSess(),JSON.stringify(d));}catch(e){}
-  SD=d;rSD();rIB();rJ1();updTrLevels();toast('Session enregistrée ✓');
+  if(d['es-avwap'])SD.es_avwap=parseFloat(d['es-avwap']);
+  if(d['es-sigma'])SD.es_sigma=parseFloat(d['es-sigma']);
+  rSD();rIB();rJ1();updTrLevels();updTD_SD();toast('Session enregistrée ✓');
 }
 function loadSession(){
   let d=null;
   try{const r=localStorage.getItem(skSess());if(r)d=JSON.parse(r);}catch(e){}
   if(!d){toast('Aucune session sauvegardée');return;}
   SF.forEach(f=>{const el=document.getElementById('s-'+f);if(el&&d[f]!==undefined)el.value=d[f];});
-  SD=d;rSD();rIB();rJ1();updTrLevels();toast('Session chargée ✓');
+  SD=d;
+  if(d['es-avwap'])SD.es_avwap=parseFloat(d['es-avwap']);
+  if(d['es-sigma'])SD.es_sigma=parseFloat(d['es-sigma']);
+  rSD();rIB();rJ1();updTrLevels();updTD_SD();toast('Session chargée ✓');
 }
 function oSI(){
   const avwap=gv('s-avwap'),sigma=gv('s-sigma');
-  if(avwap&&sigma){SD.avwap=avwap;SD.sigma=sigma;rSD();}
+  if(avwap&&sigma){SD.avwap=avwap;SD.sigma=sigma;rSD();updTD_SD();}
+  const ea=gv('s-es-avwap'),es=gv('s-es-sigma');
+  if(ea)SD.es_avwap=ea;if(es)SD.es_sigma=es;
+  if(ea&&es)updTD_SD();
   const ibh=gv('s-ibh'),ibl=gv('s-ibl');
   if(ibh&&ibl){SD.ibh=ibh;SD.ibl=ibl;rIB();}
   rJ1();
@@ -785,15 +803,45 @@ function applyCSV(){
 }
 
 // ── TOP-DOWN ──────────────────────────────────────────
+function updTD_SD(){
+  const a=parseFloat(SD.avwap)||0,s=parseFloat(SD.sigma)||0;
+  const ea=parseFloat(SD.es_avwap)||0,es=parseFloat(SD.es_sigma)||0;
+  const f=n=>n.toFixed(2);
+  const mkRow=(lbl,val,cls)=>`<span style="color:var(--muted)">${lbl}</span><span style="color:${cls};font-weight:600;float:right">${val}</span><br>`;
+  if(a&&s){
+    document.getElementById('td-nq-sd').innerHTML=
+      mkRow('SD+3 ⚠️ R34 SHORT',f(a+3*s),'var(--red)')+
+      mkRow('SD+2 ★★★ LAF',f(a+2*s),'var(--amber)')+
+      mkRow('SD+1',f(a+s),'var(--blue)')+
+      mkRow('👑 AVWAP 18H',f(a),'var(--gold)')+
+      mkRow('SD-1',f(a-s),'var(--blue)')+
+      mkRow('SD-2 ★★★ LBF',f(a-2*s),'var(--green)')+
+      mkRow('SD-3',f(a-3*s),'var(--green)');
+  }
+  if(ea&&es){
+    document.getElementById('td-es-sd').innerHTML=
+      mkRow('SD+3 ⚠️ R34 SHORT',f(ea+3*es),'var(--red)')+
+      mkRow('SD+2 ★★★ LAF',f(ea+2*es),'var(--amber)')+
+      mkRow('SD+1',f(ea+es),'var(--blue)')+
+      mkRow('👑 AVWAP 18H',f(ea),'var(--gold)')+
+      mkRow('SD-1',f(ea-es),'var(--blue)')+
+      mkRow('SD-2 ★★★ LBF',f(ea-2*es),'var(--green)')+
+      mkRow('SD-3',f(ea-3*es),'var(--green)');
+  }
+}
 function buildTD(){
   const v=id=>document.getElementById(id)?.value||'—';
   const d=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   const a=parseFloat(SD.avwap)||gv('s-avwap');
   const s=parseFloat(SD.sigma)||gv('s-sigma');
+  const ea=parseFloat(SD.es_avwap)||0,es=parseFloat(SD.es_sigma)||0;
   const vah=gv('s-vah'),val=gv('s-val'),poc=gv('s-poc');
   const f=n=>n?n.toFixed(2):'—';
-  const out=`☀️ MORNING PLAN NQ100 / ES — ${d}\n\n📅 NEWS DU JOUR\n${v('td-news').split('\n').map(l=>'• '+l).join('\n')}\n\n📊 STRUCTURE\n• Monthly : ${v('td-mo')}\n• Weekly  : ${v('td-we')}\n• Daily   : ${v('td-da')}\n\n🎯 ALN SYSTEM\n• Statut      : ${v('td-aln')}\n• Probabilité : ${v('td-prob')}\n\n🚨 SITUATION LIVE\n• NQ ${v('td-nq')} / ES ${v('td-es')}\n• NQ vs AVWAP : ${v('td-nqa')}\n• ES vs AVWAP : ${v('td-esa')}\n\n📊 ZONES CRITIQUES\n• SD+2 ${s?f(a+2*s):'—'} ★★★ LAF\n• 👑 AVWAP ${f(a)}\n• VAH J-1 ${f(vah)} ★★\n• POC J-1 ${f(poc)} ★\n• VAL J-1 ${f(val)} ★★\n• SD-2 ${s?f(a-2*s):'—'} ★★★ LBF\n\n📈 LONGS\n• ${v('td-long')}\n\n📉 SHORTS\n• ${v('td-short')}\n\n⚠️ RÈGLES\n• ${v('td-rule')}\n\n⏳ RTH Open 09h30 décidera. 🐪`;
+  const nqZones=s?`• SD+3 ${f(a+3*s)} ★★★ R34 SHORT\n• SD+2 ${f(a+2*s)} ★★★ LAF\n• 👑 AVWAP NQ ${f(a)}\n• VAH J-1 ${f(vah)} ★★\n• POC J-1 ${f(poc)} ★\n• VAL J-1 ${f(val)} ★★\n• SD-2 ${f(a-2*s)} ★★★ LBF\n• SD-3 ${f(a-3*s)}`:'(charger session NQ)';
+  const esZones=ea&&es?`• SD+3 ${f(ea+3*es)} ★★★ R34 SHORT\n• SD+2 ${f(ea+2*es)} ★★★ LAF\n• 👑 AVWAP ES ${f(ea)}\n• SD-2 ${f(ea-2*es)} ★★★ LBF\n• SD-3 ${f(ea-3*es)}`:'(charger session ES)';
+  const out=`☀️ MORNING PLAN NQ100 / ES — ${d}\n\n📅 NEWS DU JOUR\n${v('td-news').split('\n').map(l=>'• '+l).join('\n')}\n\n📊 STRUCTURE\n• Monthly : ${v('td-mo')}\n• Weekly  : ${v('td-we')}\n• Daily   : ${v('td-da')}\n\n🎯 ALN SYSTEM\n• Statut      : ${v('td-aln')}\n• Probabilité : ${v('td-prob')}\n\n🚨 SITUATION LIVE\n• NQ ${v('td-nq')} / ES ${v('td-es')}\n• NQ vs AVWAP : ${v('td-nqa')}\n• ES vs AVWAP : ${v('td-esa')}\n\n📊 ZONES CRITIQUES — NQ\n${nqZones}\n\n📊 ZONES CRITIQUES — ES\n${esZones}\n\n📈 LONGS\n• ${v('td-long')}\n\n📉 SHORTS\n• ${v('td-short')}\n\n⚠️ RÈGLES\n• ${v('td-rule')}\n\n⏳ RTH Open 09h30 décidera. 🐪`;
   document.getElementById('td-out').textContent=out;
+  updTD_SD();
 }
 function copyTD(){navigator.clipboard.writeText(document.getElementById('td-out').textContent).then(()=>toast('Copié ✓')).catch(()=>toast('Copie manuelle nécessaire'));}
 
