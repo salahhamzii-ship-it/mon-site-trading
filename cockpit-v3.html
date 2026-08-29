@@ -264,13 +264,19 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
 <!-- ── CSV ── -->
 <div class="sec" id="sec-csv">
   <div class="sh"><h2>📊 SC CSV</h2></div>
-  <div class="card"><div class="ct">COLLER CSV SIERRA CHART</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:7px">Format: Date,Time,Open,High,Low,Last,Volume,#Trades,BidVol,AskVol,…</p>
-    <textarea id="ci2" placeholder="Coller les données CSV…"></textarea>
+  <div class="card"><div class="ct">CHARGER NQ CSV</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:9px">Format Sierra Chart : Date,Time,Open,High,Low,Last,Volume,#Trades,BidVol,AskVol</p>
+    <div style="display:flex;gap:7px;margin-bottom:9px">
+      <label style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:3px;font-size:11px;font-family:var(--mono);font-weight:600;letter-spacing:.05em;background:var(--gold);color:#0B0F17;cursor:pointer">
+        📁 CHARGER NQ CSV<input type="file" accept=".csv,.txt" style="display:none" onchange="loadCSVFile(this)">
+      </label>
+      <button class="btn bgh" onclick="document.getElementById('ci2').value='';document.getElementById('cr2').style.display='none'">✕ VIDER</button>
+    </div>
+    <textarea id="ci2" placeholder="Ou coller les données CSV ici…" style="height:120px"></textarea>
     <div style="display:flex;gap:7px;margin-top:8px">
       <button class="btn bg" onclick="parseCSV()">⟳ EXTRAIRE</button>
       <button class="btn bgh" onclick="applyCSV()">→ APPLIQUER SESSION</button>
-      <button class="btn bd" onclick="document.getElementById('ci2').value='';document.getElementById('cr2').style.display='none'">✕</button></div>
+    </div>
     <pre id="cr2"></pre></div>
 </div>
 
@@ -736,6 +742,13 @@ function buildJSON(){
 function copyJSON(){navigator.clipboard.writeText(document.getElementById('jo').textContent).then(()=>toast('Copié ✓')).catch(()=>toast('Copie manuelle nécessaire'));}
 
 // ── CSV ───────────────────────────────────────────────
+function loadCSVFile(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{document.getElementById('ci2').value=e.target.result;toast('CSV chargé — '+f.name);};
+  r.readAsText(f);
+  inp.value='';
+}
 function parseCSV(){
   const raw=document.getElementById('ci2').value.trim();
   if(!raw){toast('Collez du CSV d\'abord');return;}
