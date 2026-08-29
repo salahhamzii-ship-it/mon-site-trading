@@ -24,8 +24,10 @@ import asyncio
 import json
 import re
 import sys
+import threading
 from datetime import date as date_t, timedelta
 from pathlib import Path
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 try:
     import websockets
@@ -49,12 +51,21 @@ FILES = {
 RTH_START = {'NQ': '09:30', 'ES': '09:30', 'GC': '08:20', 'CL': '09:00'}
 RTH_END   = {'NQ': '16:00', 'ES': '16:00', 'GC': '13:30', 'CL': '14:30'}
 
-WS_HOST   = 'localhost'
+WS_HOST   = '0.0.0.0'
 WS_PORT   = 8765
-REFRESH_S = 10          # rafraîchissement CSV (secondes)
-VPS_PUSH_URL = 'http://2.29.3.199:8767/update'  # '' pour désactiver
+HTTP_PORT = 8766
+REFRESH_S = 10
+
+# Dossier de réception des CSV envoyés par send_csv.bat depuis Windows
+import sys as _sys, os as _os
+if _sys.platform != 'win32':
+    _UPLOAD_DIR = '/tmp/sc-bridge'
+    _os.makedirs(_UPLOAD_DIR, exist_ok=True)
+    FILES = {k: f"{_UPLOAD_DIR}/{k}.csv" for k in ('NQ','ES','GC','CL')}
+del _sys, _os
 
 CLIENTS: set = set()
+LAST_MSG: str = '{}'    # dernier payload JSON (partagé WS + HTTP)
 
 # ─── UTILITAIRES TEMPS ────────────────────────────────────────────────────────
 
@@ -146,6 +157,7 @@ def parse_csv(filepath: str, diag: bool = False) -> list:
     idx_high = find('high', 'haut', 'plus haut')
     idx_low  = find('low', 'bas', 'plus bas')
     idx_last = find('last', 'close', 'clôture', 'cloture', 'dernier', 'cloture')
+    idx_vol  = find('volume', 'vol', 'totalvolume', 'total volume')
     idx_vwap = find('vwap', 'vwap(daily)', 'dailyvwap', 'vwap daily')
     idx_sp1  = find('sd+1', 'sd +1', 'vwap sd+1', '+1sd', 'upper1', 'upper band 1', 'upperband1', 'bande+1', 'bande +1')
     idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd', 'lower1', 'lower band 1', 'lowerband1', 'bande-1', 'bande -1')
@@ -164,6 +176,25 @@ def parse_csv(filepath: str, diag: bool = False) -> list:
         idx_open = 2; idx_high = 3; idx_low = 4; idx_last = 5
         if diag:
             print("  [DIAG] OHLC non trouvés par nom → fallback positionnel SC (col 2-5)")
+
+    # Volume : fallback positionnel même quand OHLC trouvé par nom (col 6 = Volume en SC standard)
+    if idx_vol < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 7:
+        idx_vol = 6
+
+    # VWAP/SD positional fallback pour exports Sierra Chart multi-études (40+ colonnes)
+    # Sierra Chart : col 14 = VWAP session cumulatif 18h, cols 15-18 = SD ±1/±2
+    if idx_vwap < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 15:
+        idx_vwap = 14
+        if diag:
+            print("  [DIAG] VWAP non trouvé par nom → fallback positionnel col 14")
+    if idx_sp1 < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 16:
+        idx_sp1 = 15
+    if idx_sm1 < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 17:
+        idx_sm1 = 16
+    if idx_sp2 < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 18:
+        idx_sp2 = 17
+    if idx_sm2 < 0 and idx_date == 0 and idx_time == 1 and len(hdrs) >= 19:
+        idx_sm2 = 18
 
     if diag:
         print(f"  [DIAG] idx_date={idx_date}  idx_time={idx_time}  "
@@ -216,6 +247,7 @@ def parse_csv(filepath: str, diag: bool = False) -> list:
             'high':    get(cols, idx_high),
             'low':     get(cols, idx_low),
             'close':   get(cols, idx_last),
+            'vol':     get(cols, idx_vol),
             'vwap':    get(cols, idx_vwap),
             'sd1h':    get(cols, idx_sp1),
             'sd1l':    get(cols, idx_sm1),
@@ -282,6 +314,52 @@ def session_split(rows: list, instr: str) -> tuple:
     j1    = sessions[-2] if len(sessions) >= 2 else []
     return today, j1
 
+def compute_vwap(bars: list) -> str:
+    """VWAP ancré au début de la liste : Σ(typical_price × volume) / Σ(volume).
+    Si pas de volume, utilise le VWAP Sierra Chart exporté (dernière barre avec valeur non nulle).
+    """
+    cum_pv = 0.0
+    cum_v  = 0.0
+    sc_vwap = ''
+    for r in bars:
+        try:
+            h = float(r['high']); l = float(r['low']); c = float(r['close'])
+            v = float(r.get('vol', '') or 0)
+            tp = (h + l + c) / 3
+            if v > 0:
+                cum_pv += tp * v
+                cum_v  += v
+        except (ValueError, TypeError):
+            pass
+        vv = r.get('vwap', '') or ''
+        try:
+            if vv and float(vv) > 0:
+                sc_vwap = f"{float(vv):.2f}"
+        except (ValueError, TypeError):
+            pass
+    if cum_v > 0:
+        return f"{cum_pv / cum_v:.2f}"
+    return sc_vwap   # fallback : VWAP exporté par Sierra Chart
+
+def atr_auto(all_rows: list, instr: str, n: int = 10) -> str:
+    """Moyenne des ranges RTH des n dernières sessions (High - Low)."""
+    dates = sorted({r['date'] for r in all_rows if r['date'] is not None}, reverse=True)
+    ranges = []
+    for d in dates:
+        rth = filter_rth([r for r in all_rows if r['date'] == d], instr)
+        if not rth:
+            continue
+        try:
+            h = max(float(r['high']) for r in rth if r.get('high'))
+            l = min(float(r['low'])  for r in rth if r.get('low') and float(r['low']) > 0)
+            if h > l:
+                ranges.append(h - l)
+        except (ValueError, TypeError):
+            pass
+        if len(ranges) >= n:
+            break
+    return f"{sum(ranges)/len(ranges):.2f}" if ranges else ''
+
 def build_payload(instr: str, all_rows: list) -> dict:
     now    = now_et()
     today  = now.date()
@@ -295,16 +373,19 @@ def build_payload(instr: str, all_rows: list) -> dict:
         today_all  = [r for r in all_rows if r['date'] == today]   # OVN + RTH
         today_rows = filter_rth(today_all, instr)                   # RTH only
         j1_rows    = filter_rth([r for r in all_rows if r['date'] == j1_d], instr)
-        # OVN sessions pour ALN : Asia (J-1 18h → today 02h), London (today 02h-08h)
+        # OVN : Asie (J-1 18h→today 02h) + Londres (today 02h→08h)
         asia_j1     = [r for r in all_rows if r['date'] == j1_d and t2m(r['time']) >= t2m('18:00')]
         asia_today  = [r for r in all_rows if r['date'] == today  and t2m(r['time']) <  t2m('02:00')]
         bars_asia   = asia_j1 + asia_today
         bars_london = [r for r in all_rows if r['date'] == today
                        and t2m('02:00') <= t2m(r['time']) < t2m('08:00')]
+        # Pré-RTH : 08h→09h30 (NQ/ES)
+        bars_pre    = [r for r in all_rows if r['date'] == today
+                       and t2m('08:00') <= t2m(r['time']) < t2m(RTH_START[instr])]
     else:
         today_rows, j1_rows = session_split(all_rows, instr)
         today_all = today_rows
-        bars_asia = bars_london = []
+        bars_asia = bars_london = bars_pre = []
 
     last_j1  = j1_rows[-1]  if j1_rows  else {}
     first_j1 = j1_rows[0]   if j1_rows  else {}
@@ -319,20 +400,82 @@ def build_payload(instr: str, all_rows: list) -> dict:
     else:
         last_val = all_rows[-1]['close'] if all_rows else ''
 
+    # OVN VWAP ancré à 18h : calculé depuis les barres OVN via OHLCV
+    all_ovn = bars_asia + bars_london + bars_pre
+    ovn_vwap = compute_vwap(all_ovn) if all_ovn else compute_vwap(today_all)
+
+    # Asia High/Low pour envoi direct
+    asia_hs = [float(r['high']) for r in bars_asia if r.get('high')]
+    asia_ls = [float(r['low'])  for r in bars_asia if r.get('low') and float(r['low'])>0]
+    asia_high  = f"{max(asia_hs):.2f}" if asia_hs else ''
+    asia_low   = f"{min(asia_ls):.2f}" if asia_ls else ''
+    asia_close = bars_asia[-1]['close'] if bars_asia else ''
+
+    # London High/Low
+    lon_hs = [float(r['high']) for r in bars_london if r.get('high')]
+    lon_ls = [float(r['low'])  for r in bars_london if r.get('low') and float(r['low'])>0]
+    lon_high  = f"{max(lon_hs):.2f}" if lon_hs else ''
+    lon_low   = f"{min(lon_ls):.2f}" if lon_ls else ''
+    lon_close = bars_london[-1]['close'] if bars_london else ''
+
+    # OVN agrégat (Asia + London + Pré-RTH)
+    ovn_hs  = [float(r['high']) for r in all_ovn if r.get('high')]
+    ovn_ls  = [float(r['low'])  for r in all_ovn if r.get('low') and float(r['low']) > 0]
+    ovn_high  = f"{max(ovn_hs):.2f}"  if ovn_hs  else ''
+    ovn_low   = f"{min(ovn_ls):.2f}"  if ovn_ls  else ''
+    ovn_close = all_ovn[-1]['close']   if all_ovn else ''
+
+    # OVN POC/VAH/VAL : dernière barre OVN avec valeur non nulle
+    def _last_nonempty(bars, key):
+        for r in reversed(bars):
+            v = (r.get(key) or '').strip()
+            try:
+                if v and float(v) > 0: return f"{float(v):.2f}"
+            except (ValueError, TypeError):
+                pass
+        return ''
+
+    ovn_poc  = _last_nonempty(all_ovn, 'tpo_poc')
+    ovn_vah  = _last_nonempty(all_ovn, 'tpo_vah')
+    ovn_val  = _last_nonempty(all_ovn, 'tpo_val')
+    ovn_sd1h = _last_nonempty(all_ovn, 'sd1h')
+    ovn_sd1l = _last_nonempty(all_ovn, 'sd1l')
+    ovn_sd2h = _last_nonempty(all_ovn, 'sd2h')
+    ovn_sd2l = _last_nonempty(all_ovn, 'sd2l')
+
     return {
-        'last':      last_val,
+        'last':       last_val,
         # J-1 aggregates
-        'j1_high':   agg_high(j1_rows),
-        'j1_low':    agg_low(j1_rows),
-        'j1_open':   first_j1.get('open', ''),
-        'j1_settle': last_j1.get('close', ''),
-        'poc':       last_j1.get('tpo_poc', ''),
-        'vah':       last_j1.get('tpo_vah', ''),
-        'val':       last_j1.get('tpo_val', ''),
+        'j1_high':    agg_high(j1_rows),
+        'j1_low':     agg_low(j1_rows),
+        'j1_open':    first_j1.get('open', ''),
+        'j1_settle':  last_j1.get('close', ''),
+        'poc':        last_j1.get('tpo_poc', ''),
+        'vah':        last_j1.get('tpo_vah', ''),
+        'val':        last_j1.get('tpo_val', ''),
+        # OVN calculés
+        'ovn_vwap':   ovn_vwap,
+        'atr_auto':   atr_auto(all_rows, instr),
+        'asia_high':  asia_high,
+        'asia_low':   asia_low,
+        'asia_close': asia_close,
+        'lon_high':   lon_high,
+        'lon_low':    lon_low,
+        'lon_close':  lon_close,
+        # OVN agrégat
+        'ovn_high':   ovn_high,
+        'ovn_low':    ovn_low,
+        'ovn_close':  ovn_close,
+        'ovn_poc':    ovn_poc,
+        'ovn_vah':    ovn_vah,
+        'ovn_val':    ovn_val,
+        'ovn_sd1h':   ovn_sd1h,
+        'ovn_sd1l':   ovn_sd1l,
+        'ovn_sd2h':   ovn_sd2h,
+        'ovn_sd2l':   ovn_sd2l,
         # Barres détaillées
         'bars_today':  [bar_dict(r) for r in sorted(today_rows, key=lambda r: t2m(r['time']))],
         'bars_j1':     [bar_dict(r) for r in sorted(j1_rows,    key=lambda r: t2m(r['time']))],
-        # OVN sessions pour ALN (Asia garde l'ordre chronologique J-1→today)
         'bars_asia':   [bar_dict(r) for r in bars_asia],
         'bars_london': [bar_dict(r) for r in bars_london],
     }
@@ -373,13 +516,72 @@ def build_message() -> str:
         print(f"  {instr}: {len(bt)} barres today / {len(bj)} barres J-1  last={data[instr]['last']}")
     return json.dumps(data)
 
+# ─── SERVEUR HTTP (proxy Vercel) ──────────────────────────────────────────────
+
+class _HttpHandler(BaseHTTPRequestHandler):
+    INSTRUMENTS = {'NQ', 'ES', 'GC', 'CL'}
+
+    def do_GET(self):
+        if self.path == '/data':
+            body = LAST_MSG.encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif self.path == '/health':
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'ok')
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_POST(self):
+        # /upload/NQ, /upload/ES, /upload/GC, /upload/CL
+        parts = self.path.strip('/').split('/')
+        if len(parts) == 2 and parts[0] == 'upload' and parts[1].upper() in self.INSTRUMENTS:
+            instr = parts[1].upper()
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                import tempfile, shutil
+                dest = FILES.get(instr, f'/tmp/sc-bridge/{instr}.csv')
+                Path(dest).parent.mkdir(parents=True, exist_ok=True)
+                # Écriture atomique via fichier temporaire
+                tmp = dest + '.tmp'
+                Path(tmp).write_bytes(body)
+                shutil.move(tmp, dest)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"ok":true}')
+                print(f"  [upload] {instr} {len(body)} octets")
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(f'{{"error":"{e}"}}'.encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, *args): pass
+
+def _start_http():
+    server = HTTPServer(('0.0.0.0', HTTP_PORT), _HttpHandler)
+    print(f"SC Bridge HTTP http://0.0.0.0:{HTTP_PORT}/data")
+    server.serve_forever()
+
 # ─── SERVEUR WEBSOCKET ────────────────────────────────────────────────────────
 
 async def handler(ws: WebSocketServerProtocol) -> None:
+    global LAST_MSG
     CLIENTS.add(ws)
     print(f"[+] Client connecté ({len(CLIENTS)} actif(s))")
     try:
         msg = build_message()
+        LAST_MSG = msg
         await ws.send(msg)
         async for _ in ws:
             pass
@@ -389,45 +591,23 @@ async def handler(ws: WebSocketServerProtocol) -> None:
         CLIENTS.discard(ws)
         print(f"[-] Client déconnecté ({len(CLIENTS)} actif(s))")
 
-async def push_to_vps(msg: str) -> None:
-    """Pousse les données vers le receiver HTTP sur VPS."""
-    if not VPS_PUSH_URL:
-        return
-    import urllib.request
-    loop = asyncio.get_event_loop()
-    def _push():
-        try:
-            req = urllib.request.Request(
-                VPS_PUSH_URL,
-                data=msg.encode('utf-8'),
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
-            with urllib.request.urlopen(req, timeout=5):
-                pass
-            print(f"  [VPS] Push OK")
-        except Exception as e:
-            print(f"  [VPS] Push failed: {e}")
-    await loop.run_in_executor(None, _push)
-
-
 async def broadcast_loop() -> None:
+    global LAST_MSG
     while True:
         await asyncio.sleep(REFRESH_S)
-        print(f"\n[{now_et().strftime('%H:%M:%S')}] Rafraîchissement...")
+        print(f"\n[{now_et().strftime('%H:%M:%S')}] Rafraîchissement ({len(CLIENTS)} client(s))...")
         try:
             msg = build_message()
-            # Push vers VPS (pour Vercel proxy)
-            await push_to_vps(msg)
-            # Broadcast aux clients WebSocket locaux
-            if CLIENTS:
-                results = await asyncio.gather(
-                    *[ws.send(msg) for ws in list(CLIENTS)],
-                    return_exceptions=True
-                )
-                for r in results:
-                    if isinstance(r, Exception):
-                        print(f"  [WARN] Envoi WS échoué : {r}")
+            LAST_MSG = msg
+            if not CLIENTS:
+                continue
+            results = await asyncio.gather(
+                *[ws.send(msg) for ws in list(CLIENTS)],
+                return_exceptions=True
+            )
+            for r in results:
+                if isinstance(r, Exception):
+                    print(f"  [WARN] Envoi échoué : {r}")
         except Exception as e:
             print(f"  [ERR] broadcast: {e}")
 
@@ -439,6 +619,7 @@ async def main() -> None:
         status = "OK" if exists else "absent (ignoré)"
         print(f"  {k}: {v}  [{status}]")
     print()
+    threading.Thread(target=_start_http, daemon=True).start()
     async with websockets.serve(handler, WS_HOST, WS_PORT):
         await broadcast_loop()
 

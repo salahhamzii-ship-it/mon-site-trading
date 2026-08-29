@@ -20,13 +20,18 @@ interface Instr {
   lastPx: string
   rOpen: string; rHigh: string; rLow: string; rSettle: string; rVah: string; rVal: string; rPoc: string
   oHigh: string; oLow: string; oClose: string
-  ibHigh: string; ibLow: string; ibClose: string; ibOrdre: string; ibClass: string
+  ovnPoc: string; ovnVah: string; ovnVal: string
+  ovnSd1h: string; ovnSd1l: string; ovnSd2h: string; ovnSd2l: string
+  ibHigh: string; ibLow: string; ibClose: string; ibAvwap: string; ibOrdre: string; ibClass: string
   orbHigh: string; orbLow: string; orbClose: string
   vwap18h: string; atr: string
   asiaHigh: string; asiaLow: string; asiaClose: string
   londonHigh: string; londonLow: string; londonClose: string
   alnPattern: Pat; alnFiab: string
   boxHigh: string; boxLow: string
+  box3: string; box4: string; box5: string; box6: string
+  gapHigh: string; gapLow: string
+  ibrExt1H: string; ibrExt1L: string
   rSignal: string; rFiab: string; rEntry: string; rStop: string; rC1: string; rC2: string
   _liveDay: string
 }
@@ -64,12 +69,17 @@ interface ScBar { time:string; open:string; high:string; low:string; close:strin
 const mkI = (): Instr => ({
   lastPx:'', rOpen:'', rHigh:'', rLow:'', rSettle:'', rVah:'', rVal:'', rPoc:'',
   oHigh:'', oLow:'', oClose:'',
-  ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'', ibClass:'',
+  ovnPoc:'', ovnVah:'', ovnVal:'',
+  ovnSd1h:'', ovnSd1l:'', ovnSd2h:'', ovnSd2l:'',
+  ibHigh:'', ibLow:'', ibClose:'', ibAvwap:'', ibOrdre:'', ibClass:'',
   orbHigh:'', orbLow:'', orbClose:'',
   vwap18h:'', atr:'',
   asiaHigh:'', asiaLow:'', asiaClose:'', londonHigh:'', londonLow:'', londonClose:'',
   alnPattern:'', alnFiab:'',
   boxHigh:'', boxLow:'',
+  box3:'', box4:'', box5:'', box6:'',
+  gapHigh:'', gapLow:'',
+  ibrExt1H:'', ibrExt1L:'',
   rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'',
   _liveDay: ''
 })
@@ -114,7 +124,7 @@ function sanitizeInstr(instr: Instr): Instr {
 
   if (isNewRTHDay || badScale) {
     return { ...instr,
-      ibHigh:'', ibLow:'', ibClose:'', ibOrdre:'' as never, ibClass:'',
+      ibHigh:'', ibLow:'', ibClose:'', ibAvwap:'', ibOrdre:'' as never, ibClass:'',
       orbHigh:'', orbLow:'', orbClose:'',
       rSignal:'', rFiab:'', rEntry:'', rStop:'', rC1:'', rC2:'',
     }
@@ -282,7 +292,7 @@ function buildDist(letters: TpoLetter[], tick: number): Map<number, number> {
   return dist
 }
 
-const LS_KEY = 'cmc-calc-v1'
+const LS_KEY = 'cmc-calc-v3'
 const loadLS = () => { try { const r=localStorage.getItem(LS_KEY); return r?JSON.parse(r):null } catch { return null } }
 
 const iS = (ro:boolean):CSSProperties => ({ width:'100%', background: ro ? 'rgba(201,168,76,0.07)' : '#1a2236', border:`1px solid ${ro ? 'rgba(201,168,76,0.30)' : 'rgba(201,168,76,0.30)'}`, borderRadius:3, padding:'6px 10px', minHeight:32, fontSize:14, fontWeight:500, color: ro ? C.gold : '#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', boxShadow:'inset 0 1px 3px rgba(0,0,0,0.35)' })
@@ -400,7 +410,14 @@ export default function Calculateur() {
   const [tpoLettersJ1,setTpoLettersJ1]= useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLettersJ1??mkTpoLetters() })
   const [showSaved,   setShowSaved]   = useState(false)
   const [csvMsg,      setCsvMsg]      = useState<{text:string;ok:boolean}|null>(null)
-  const [wsSc,        setWsSc]        = useState<'live'|'off'>('off')
+  const [jsonModal,   setJsonModal]   = useState(false)
+  const [jsonText,    setJsonText]    = useState('')
+  const [jsonAnalyse, setJsonAnalyse] = useState<{direction:string;setup:string;alertes:string[]}|null>(null)
+  const [csvScModal,  setCsvScModal]  = useState(false)
+  const [csvScTab,    setCsvScTab]    = useState<Tab>('NQ')   // tab verrouillé à l'ouverture
+  const [csvScText,   setCsvScText]   = useState('')
+  const [csvScErr,    setCsvScErr]    = useState('')
+  // bridge supprimé — mode saisie manuelle uniquement
   const [nyTime,      setNyTime]      = useState('')
   const [btOpen,   setBtOpen]   = useState(false)
   const [btBars,   setBtBars]   = useState<BtBar[]>([])
@@ -414,9 +431,10 @@ export default function Calculateur() {
   const [posSize,  setPosSize]  = useState('1')
   const [posDir,   setPosDir]   = useState<'LONG'|'SHORT'>('LONG')
 
+  const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
+  const sdTouchRef = useRef<Record<Tab,{sp2:boolean;sm2:boolean}>>({NQ:{sp2:false,sm2:false},ES:{sp2:false,sm2:false},GC:{sp2:false,sm2:false},CL:{sp2:false,sm2:false}})
   const saveTimer       = useRef<ReturnType<typeof setTimeout>>(undefined)
   const csvTimer        = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const bridgePollTimer = useRef<ReturnType<typeof setInterval>>(undefined)
   const mounted         = useRef(false)
   const btCsvRef        = useRef<HTMLInputElement|null>(null)
 
@@ -433,13 +451,126 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
-  // SC Bridge — HTTP polling vers Vercel proxy (évite mixed-content ws:// sur HTTPS)
-  useEffect(() => {
-    const BRIDGE_URL = 'https://salah-tataouine-terminal.vercel.app/api/bridge-data'
+  // Données session — auto-appliquées au mount si date ET correspond
+  const SESSION_DATE = '2026-08-28'
+  const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
+    NQ: {
+      // J-1 RTH
+      rOpen:        '29524',
+      rHigh:        '29725',
+      rLow:         '29401',
+      rSettle:      '29691',
+      rVah:         '29646',
+      rVal:         '29532',
+      rPoc:         '29590',
+      // VWAP / SD 18h
+      atr:          '30',
+      vwap18h:      '29622',
+      ovnSd1h:      '29652',
+      ovnSd1l:      '29592',
+      ovnSd2h:      '29682',
+      ovnSd2l:      '29562',
+      // OVN agrégé 18h–09h30
+      oHigh:        '29707.00',
+      oLow:         '29578.25',
+      oClose:       '29659.00',
+      // Asie 18h–02h
+      asiaHigh:     '29707.00',
+      asiaLow:      '29592.00',
+      asiaClose:    '29598.25',
+      // Londres 02h–08h30
+      londonHigh:   '29665.00',
+      londonLow:    '29578.25',
+      londonClose:  '29659.00',
+      // IB 09h30–10h30
+      ibHigh:       '29713.00',
+      ibLow:        '29505.00',
+      ibClose:      '29680.00',
+      ibAvwap:      '29628.86',
+      ibOrdre:      'HL',
+      // ORB 09h30–09h50
+      orbHigh:      '29703.25',
+      orbLow:       '29562.75',
+      orbClose:     '29629.00',
+      // BOX RTH J-1
+      boxHigh:      '29725',
+      boxLow:       '29401',
+      // ALN
+      alnPattern:   'P3',
+      alnFiab:      '80.8',
+    },
+    ES: {
+      // J-1 RTH
+      rOpen:        '7716.25',
+      rHigh:        '7755.50',
+      rLow:         '7702.75',
+      rSettle:      '7741.25',
+      rVah:         '7748',
+      rVal:         '7728',
+      rPoc:         '7738',
+      // VWAP / SD 18h
+      vwap18h:      '7742',
+      ovnSd1h:      '7746',
+      ovnSd1l:      '7738',
+      ovnSd2h:      '7750',
+      ovnSd2l:      '7734',
+      // OVN agrégé 18h–09h30
+      oHigh:        '7751.25',
+      oLow:         '7727.25',
+      oClose:       '7749.75',
+      // Asie 18h–02h
+      asiaHigh:     '7747.50',
+      asiaLow:      '7727.25',
+      asiaClose:    '7731.75',
+      // Londres 02h–08h30
+      londonHigh:   '7751.25',
+      londonLow:    '7731.00',
+      londonClose:  '7749.75',
+      // IB 09h30–10h30
+      ibHigh:       '7760.50',
+      ibLow:        '7726.50',
+      ibClose:      '7752.50',
+      ibAvwap:      '7743.38',
+      ibOrdre:      'HL',
+      // ORB 09h30–09h50
+      orbHigh:      '7751.25',
+      orbLow:       '7727.25',
+      orbClose:     '7749.75',
+      // BOX RTH J-1
+      boxHigh:      '7755.50',
+      boxLow:       '7702.75',
+      // ALN
+      alnPattern:   'P3',
+      alnFiab:      '80.8',
+    },
+  }
+  const applySessionData = useCallback((forceOverwrite = false) => {
+    setII(prev => {
+      const next = { ...prev }
+      for (const t of ['NQ','ES','GC','CL'] as Tab[]) {
+        const patch = SESSION_DATA[t]; if (!patch) continue
+        const cur = next[t]
+        const merged: Record<string, string> = {}
+        for (const k of Object.keys(patch) as (keyof Instr)[]) {
+          if (forceOverwrite || !cur[k]) merged[k] = (patch as Record<string,string>)[k] ?? ''
+        }
+        next[t] = { ...cur, ...(merged as Partial<Instr>) }
+      }
+      return next
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const applyData = (data: Record<string, any>) => {
-      try {
+  useEffect(() => {
+    const etDate = new Intl.DateTimeFormat('en-CA', { timeZone:'America/New_York' }).format(new Date())
+    if (etDate === SESSION_DATE) applySessionData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // SC Bridge — traitement données (partagé WS + HTTP polling)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // @ts-ignore — bridge désactivé, fonction conservée pour réactivation future
+  const processScData = (data: Record<string, any>) => {
 
             // --- Instr fields (live prices + IB/ORB + J-1) ---
             setII(prev => {
@@ -464,13 +595,14 @@ export default function Calculateur() {
                 sv('rVah',    d.vah)
                 sv('rVal',    d.val)
 
+                // Day-reset detection (scoped to whole instrument block)
+                const todayISO = new Date().toISOString().slice(0, 10)
+                const isNewDay = cur._liveDay !== todayISO
+                if (isNewDay) u._liveDay = todayISO
+
                 // IB + ORB from bars_today
                 if (Array.isArray(d.bars_today) && d.bars_today.length) {
                   const bars: ScBar[] = d.bars_today
-                  // Day-reset: if bars are from a new day, force-update all intraday fields
-                  const todayISO = new Date().toISOString().slice(0, 10)
-                  const isNewDay = cur._liveDay !== todayISO
-                  if (isNewDay) u._liveDay = todayISO
                   const [ibTA, ibTB] = IB_BAR_TIMES[t]
                   const barA = bars.find(b=>b.time===ibTA)
                   const barB = bars.find(b=>b.time===ibTB)
@@ -507,10 +639,16 @@ export default function Calculateur() {
                     sv('orbLow',   pf(orbBar.low)>0   ? pf(orbBar.low).toFixed(2) : '', isNewDay)
                     sv('orbClose', pf(orbBar.close)>0 ? pf(orbBar.close).toFixed(2) : '', isNewDay)
                   }
-                  // VWAP session = last bar's vwap
+                  // VWAP session RTH = last bar's vwap (fallback si pas d'OVN vwap)
                   const lastBar = bars[bars.length-1]
-                  if (lastBar?.vwap) sv('vwap18h', lastBar.vwap, isNewDay)
+                  if (lastBar?.vwap && !d.ovn_vwap) sv('vwap18h', lastBar.vwap, isNewDay)
                 }
+
+                // OVN VWAP calculé par le bridge (18h→maintenant) — toujours force-update
+                if (d.ovn_vwap) sv('vwap18h', String(d.ovn_vwap), true)
+
+                // ATR auto calculé par le bridge (moyenne ranges RTH 10 sessions)
+                if (d.atr_auto) sv('atr', String(d.atr_auto), false) // ne pas écraser saisie manuelle
 
                 // J-1 open/high/low/settle from bars_j1
                 if (Array.isArray(d.bars_j1) && d.bars_j1.length) {
@@ -528,25 +666,48 @@ export default function Calculateur() {
                   }
                 }
 
-                // Asia + London OVN bars → ALN fields (all instruments, NQ priority)
-                if (Array.isArray(d.bars_asia) && d.bars_asia.length) {
+                // Asia High/Low/Close directs depuis le bridge (force sur nouveau jour)
+                if (d.asia_high) sv('asiaHigh',  String(d.asia_high),  isNewDay)
+                if (d.asia_low)  sv('asiaLow',   String(d.asia_low),   isNewDay)
+                if (d.asia_close)sv('asiaClose', String(d.asia_close), isNewDay)
+                // Fallback bars_asia si les champs directs ne sont pas dispo
+                if (!d.asia_high && Array.isArray(d.bars_asia) && d.bars_asia.length) {
                   const bars: ScBar[] = d.bars_asia
                   const hs = bars.map(b=>pf(b.high)).filter(v=>v>0)
                   const ls = bars.map(b=>pf(b.low)).filter(v=>v>0)
-                  if (hs.length) sv('asiaHigh',  Math.max(...hs).toFixed(2))
-                  if (ls.length) sv('asiaLow',   Math.min(...ls).toFixed(2))
+                  if (hs.length) sv('asiaHigh',  Math.max(...hs).toFixed(2), isNewDay)
+                  if (ls.length) sv('asiaLow',   Math.min(...ls).toFixed(2), isNewDay)
                   const last = bars[bars.length-1]
-                  if (last?.close) sv('asiaClose', last.close)
+                  if (last?.close) sv('asiaClose', last.close, isNewDay)
                 }
-                if (Array.isArray(d.bars_london) && d.bars_london.length) {
+
+                // London High/Low/Close directs depuis le bridge
+                if (d.lon_high) sv('londonHigh',  String(d.lon_high),  isNewDay)
+                if (d.lon_low)  sv('londonLow',   String(d.lon_low),   isNewDay)
+                if (d.lon_close)sv('londonClose', String(d.lon_close), isNewDay)
+                if (!d.lon_high && Array.isArray(d.bars_london) && d.bars_london.length) {
                   const bars: ScBar[] = d.bars_london
                   const hs = bars.map(b=>pf(b.high)).filter(v=>v>0)
                   const ls = bars.map(b=>pf(b.low)).filter(v=>v>0)
-                  if (hs.length) sv('londonHigh',  Math.max(...hs).toFixed(2))
-                  if (ls.length) sv('londonLow',   Math.min(...ls).toFixed(2))
+                  if (hs.length) sv('londonHigh',  Math.max(...hs).toFixed(2), isNewDay)
+                  if (ls.length) sv('londonLow',   Math.min(...ls).toFixed(2), isNewDay)
                   const last = bars[bars.length-1]
-                  if (last?.close) sv('londonClose', last.close)
+                  if (last?.close) sv('londonClose', last.close, isNewDay)
                 }
+
+                // OVN agrégat (Asia + London + Pré-RTH) depuis le bridge
+                if (d.ovn_high)  sv('oHigh',   String(d.ovn_high),  isNewDay)
+                if (d.ovn_low)   sv('oLow',    String(d.ovn_low),   isNewDay)
+                if (d.ovn_close) sv('oClose',  String(d.ovn_close), isNewDay)
+                // OVN POC/VAH/VAL (Profile de volume OVN)
+                if (d.ovn_poc)   sv('ovnPoc',  String(d.ovn_poc),   isNewDay)
+                if (d.ovn_vah)   sv('ovnVah',  String(d.ovn_vah),   isNewDay)
+                if (d.ovn_val)   sv('ovnVal',  String(d.ovn_val),   isNewDay)
+                // OVN SD bands (Sierra Chart col 15-18)
+                if (d.ovn_sd1h)  sv('ovnSd1h', String(d.ovn_sd1h),  true)
+                if (d.ovn_sd1l)  sv('ovnSd1l', String(d.ovn_sd1l),  true)
+                if (d.ovn_sd2h)  sv('ovnSd2h', String(d.ovn_sd2h),  true)
+                if (d.ovn_sd2l)  sv('ovnSd2l', String(d.ovn_sd2l),  true)
 
                 if (Object.keys(u).length) { next[t] = { ...cur, ...u }; changed = true }
               }
@@ -584,29 +745,8 @@ export default function Calculateur() {
             }
             fillRth(setRthRows,    'bars_today')
             fillRth(setRthRowsJ1,  'bars_j1')
+  }
 
-      } catch(e) { console.warn('SC Bridge:', e) }
-    }
-
-    const poll = async () => {
-      try {
-        const r = await fetch(BRIDGE_URL, { cache: 'no-store' })
-        if (!r.ok) throw new Error('offline')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = await r.json() as Record<string, any>
-        if (data?.error) throw new Error('offline')
-        setWsSc('live')
-        applyData(data)
-      } catch {
-        setWsSc('off')
-      }
-    }
-
-    poll()
-    bridgePollTimer.current = setInterval(poll, 10_000)
-    return () => clearInterval(bridgePollTimer.current)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useEffect(() => {
     const fmt = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })
@@ -615,6 +755,25 @@ export default function Calculateur() {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [])
+
+  // SD+2 / SD-2 touch → reject detection (alerte persistante 3 min)
+  useEffect(() => {
+    const lp = pf(II[tab].lastPx)
+    if (!lp) return
+    const vw = pf(II[tab].vwap18h), at = pf(II[tab].atr)
+    const sp2n = pf(II[tab].ovnSd2h) || (vw>0&&at>0 ? vw+2*at : 0)
+    const sm2n = pf(II[tab].ovnSd2l) || (vw>0&&at>0 ? vw-2*at : 0)
+    if (!sp2n && !sm2n) return
+    const tch = tab==='NQ' ? 6 : tab==='ES' ? 2.5 : tab==='GC' ? 4 : 2
+    const rej = tch * 2
+    const cur = sdTouchRef.current[tab]
+    if (sp2n > 0 && Math.abs(lp - sp2n) <= tch) { cur.sp2 = true }
+    if (sm2n > 0 && Math.abs(lp - sm2n) <= tch) { cur.sm2 = true }
+    const sp2Rej = cur.sp2 && sp2n > 0 && (sp2n - lp) >= rej
+    const sm2Rej = cur.sm2 && sm2n > 0 && (lp - sm2n) >= rej
+    if (sp2Rej) { cur.sp2 = false; setSdReject(p => ({ ...p, sp2: Date.now() })) }
+    if (sm2Rej) { cur.sm2 = false; setSdReject(p => ({ ...p, sm2: Date.now() })) }
+  }, [II[tab].lastPx, II[tab].vwap18h, II[tab].atr, II[tab].ovnSd2h, II[tab].ovnSd2l, tab])
 
   // Auto-reload silencieux quand une nouvelle version est déployée
   useEffect(() => {
@@ -664,6 +823,82 @@ export default function Calculateur() {
   const upTD = <K extends keyof TD>(k:K, v:TD[K]) => setTd(p=>({...p,[k]:v}))
   const upI  = (t:Tab, k:keyof Instr, v:string)   => setII(p=>({...p,[t]:{...p[t],[k]:v}}))
   const upC  = <K extends keyof Cfg>(k:K, v:Cfg[K]) => setCfg(p=>({...p,[k]:v}))
+
+  const [jsonError, setJsonError] = useState('')
+  const parseCsvSc = () => {
+    setCsvScErr('')
+    const target = csvScTab  // tab verrouillé à l'ouverture du modal — jamais le tab actuel
+    const lines = csvScText.trim().split('\n').filter(l => l.trim())
+    if (lines.length < 1) { setCsvScErr('Colle au moins une ligne de données'); return }
+    // Auto-detect delimiter: count separators on first line
+    const first = lines[0]
+    const cS = (first.match(/;/g)||[]).length
+    const cT = (first.match(/\t/g)||[]).length
+    const cC = (first.match(/,/g)||[]).length
+    const sep = cS > cC && cS > cT ? ';' : cT > cC ? '\t' : ','
+    const split = (s: string) => s.split(sep).map(c => c.trim().replace(/^"|"$/g,''))
+    // Skip header if first column of first row is not a number (date string)
+    const firstCols = split(lines[0])
+    const isHeader = isNaN(parseFloat(firstCols[2]))
+    const dataLines = isHeader ? lines.slice(1) : lines
+    if (!dataLines.length) { setCsvScErr('Aucune donnée après l\'entête'); return }
+    const last = split(dataLines[dataLines.length - 1])
+    const g = (i: number) => { const v = parseFloat(last[i]); return isNaN(v) || v === 0 ? 0 : v }
+    const f = (v: number) => v > 0 ? fmt2(v) : ''
+    // Colonnes Sierra Chart OVN 30min (0-indexed, date+time = col 0+1 séparés) :
+    // 2=open 3=high 4=low 5=close | 14=VWAP_session | 15=SD+1H 16=SD-1L 17=SD+2H 18=SD-2L
+    const close = g(5)
+    const vwap  = g(14)
+    const sd1h  = g(15); const sd1l = g(16)
+    const sd2h  = g(17); const sd2l = g(18)
+    const sepName = sep === ',' ? 'virgule' : sep === ';' ? 'point-virgule' : 'tabulation'
+    if (!close) { setCsvScErr(`Colonne close (col 5) introuvable — délimiteur détecté: ${sepName} — vérifier le format ${target}`); return }
+    setII(prev => ({
+      ...prev,
+      [target]: {
+        ...prev[target],
+        lastPx:  f(close) || prev[target].lastPx,
+        vwap18h: f(vwap)  || prev[target].vwap18h,
+        ovnSd1h: f(sd1h)  || prev[target].ovnSd1h,
+        ovnSd1l: f(sd1l)  || prev[target].ovnSd1l,
+        ovnSd2h: f(sd2h)  || prev[target].ovnSd2h,
+        ovnSd2l: f(sd2l)  || prev[target].ovnSd2l,
+      }
+    }))
+    showCsvMsg(`✓ Import ${target} — ${dataLines.length} lignes (${sepName}) · VWAP ${f(vwap)||'—'} · SD+1 ${f(sd1h)||'—'} / SD-1 ${f(sd1l)||'—'}`, true)
+    setCsvScModal(false); setCsvScText('')
+  }
+
+  const loadJsonClaude = () => {
+    setJsonError('')
+    try {
+      const trimmed = jsonText.trim()
+      if (!trimmed) { setJsonError('Colle le JSON avant de charger'); return }
+      const data = JSON.parse(trimmed)
+      const t: Tab = (['NQ','ES','GC','CL'].includes(data.tab) ? data.tab : tab) as Tab
+      const fields: (keyof Instr)[] = ['lastPx','rOpen','rHigh','rLow','rSettle','rVah','rVal','rPoc',
+        'ovnSd1h','ovnSd1l','ovnSd2h','ovnSd2l','vwap18h','atr',
+        'ibHigh','ibLow','orbHigh','orbLow','gapHigh','gapLow',
+        'ibrExt1H','ibrExt1L','box3','box4','box5','box6',
+        'oHigh','oLow','asiaHigh','asiaLow','londonHigh','londonLow',
+        'ovnVah','ovnVal','ovnPoc',
+        'rSignal','rFiab','rEntry','rStop','rC1','rC2']
+      setII(prev => {
+        const updated = { ...prev[t] }
+        fields.forEach(f => { if (data[f] !== undefined) (updated as Record<string,string>)[f] = String(data[f]) })
+        return { ...prev, [t]: updated }
+      })
+      if (t !== tab) setTab(t)
+      if (data._analyse) setJsonAnalyse(data._analyse)
+      setJsonModal(false)
+      setJsonText('')
+      setCsvMsg({ text: `✓ JSON Claude chargé sur ${t} — ${data._analyse?.direction||''}`, ok: true })
+      setTimeout(() => setCsvMsg(null), 8000)
+    } catch(e) {
+      const msg = e instanceof SyntaxError ? `JSON invalide : ${e.message}` : String(e)
+      setJsonError(msg)
+    }
+  }
 
   const upRthRow  = (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRows(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
   const upRthRowJ1= (t:Tab, id:string, k:keyof RthRow, v:string) => setRthRowsJ1(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
@@ -737,6 +972,26 @@ export default function Calculateur() {
         if (last.tpoPoc) upI(t,'rPoc',last.tpoPoc)
         if (last.tpoVah) upI(t,'rVah',last.tpoVah)
         if (last.tpoVal) upI(t,'rVal',last.tpoVal)
+        // Auto-compute session stats depuis les barres RTH J-1
+        const first = rows[0]
+        const allH = rows.map(r=>pf(r.high)).filter(v=>v>0)
+        const allL = rows.map(r=>pf(r.low)).filter(v=>v>0)
+        const statsUp: Partial<Instr> = {}
+        if (first.open)  statsUp.rOpen   = first.open
+        if (last.last)   statsUp.rSettle = last.last
+        if (allH.length) statsUp.rHigh   = String(Math.max(...allH))
+        if (allL.length) statsUp.rLow    = String(Math.min(...allL))
+        // VWAP + SD depuis la dernière barre du CSV J-1 → écrase toujours (valeurs fraîches)
+        const vwapJ1 = pf(last.vwap)
+        if (vwapJ1 > 0) {
+          statsUp.vwap18h = String(vwapJ1)
+          // SD+1/SD-1/SD+2/SD-2 depuis les colonnes du CSV (même fichier, même session)
+          const sd1h = pf(last.sp1); if (sd1h > 0) statsUp.ovnSd1h = String(sd1h)
+          const sd1l = pf(last.sm1); if (sd1l > 0) statsUp.ovnSd1l = String(sd1l)
+          const sd2h = pf(last.sp2); if (sd2h > 0) statsUp.ovnSd2h = String(sd2h)
+          const sd2l = pf(last.sm2); if (sd2l > 0) statsUp.ovnSd2l = String(sd2l)
+        }
+        if (Object.keys(statsUp).length) setII(prev=>({...prev,[t]:{...prev[t],...statsUp}}))
 
         // ---- Auto-compute IB and ORB from CSV rows ----
         const t2m = (s:string) => { const [h,m] = s.split(':').map(Number); return h*60+(m||0) }
@@ -856,6 +1111,166 @@ export default function Calculateur() {
     return d>0 ? 'LONG' : 'SHORT'
   }, [I.oClose, I.rSettle])
 
+  const ovnBias = useMemo(() => {
+    const oc=pf(I.oClose), poc=pf(I.ovnPoc)
+    if (!oc||!poc) return ''
+    const diff = oc - poc
+    if (Math.abs(diff) < 2) return 'NEUTRE'
+    return diff > 0 ? 'HAUSSIER' : 'BAISSIER'
+  }, [I.oClose, I.ovnPoc])
+
+  // ── Détection setups OVN en temps réel ──────────────────────────────────────
+  type OvnAlert = {
+    type: string; dir: 'LONG'|'SHORT'
+    entry: string; stop: string; c1: string; c2: string
+    desc: string; col: string; sdConfirm: boolean; confirmLabels: string[]
+  }
+  const ovnAlerts = useMemo((): OvnAlert[] => {
+    const px    = pf(I.lastPx)
+    const oL    = pf(I.oLow),       oH    = pf(I.oHigh),   oC = pf(I.oClose)
+    const aL    = pf(I.asiaLow),    aH    = pf(I.asiaHigh)
+    const lonL  = pf(I.londonLow),  lonC  = pf(I.londonClose)
+    const vval  = pf(I.ovnVal),     vvah  = pf(I.ovnVah),  vpoc = pf(I.ovnPoc)
+    const atr   = pf(I.atr)
+    const vw = pf(I.vwap18h), at = pf(I.atr)
+    const sd1l  = pf(I.ovnSd1l) || (vw>0&&at>0 ? vw-at   : 0)
+    const sd2l  = pf(I.ovnSd2l) || (vw>0&&at>0 ? vw-2*at : 0)
+    const sd1h  = pf(I.ovnSd1h) || (vw>0&&at>0 ? vw+at   : 0)
+    const sd2h  = pf(I.ovnSd2h) || (vw>0&&at>0 ? vw+2*at : 0)
+    if (!px || !oL || !oH || !vpoc) return []
+    const thr = atr > 0 ? atr * 0.15 : (tab==='NQ'?20 : tab==='ES'?3 : tab==='GC'?8 : 2)
+    const alerts: OvnAlert[] = []
+
+    // ── 1. OVN LOW BOUNCE / VAL RETEST ───────────────────────────────────────
+    // Conditions : London Low ≈ Asia Low (±15 pts) + faux break sous VAL + Close > VAL
+    const valRef  = vval > 0 ? vval : oL
+    const londonRejectsAsiaLow = aL > 0 && lonL > 0 && Math.abs(lonL - aL) <= 15
+    const fauxBreakLow = oL > 0 && vval > 0 && oL < vval          // OVN Low < VAL = faux break
+    const closeAboveVal = (lonC > 0 ? lonC : oC) > valRef         // Close revenu > VAL
+    // Confirmation SD : OVN Low dans zone SD-1 ou SD-2
+    const sdLowConfirm: string[] = []
+    if (sd1l > 0 && oL >= sd1l - thr && oL <= sd1l + thr) sdLowConfirm.push('SD −1')
+    if (sd2l > 0 && oL >= sd2l - thr && oL <= sd2l + thr) sdLowConfirm.push('SD −2')
+    const pxNearLow = px <= valRef + thr * 3 && px >= oL - thr * 2
+    if (pxNearLow && (londonRejectsAsiaLow || fauxBreakLow || closeAboveVal)) {
+      alerts.push({
+        type:'OVN LOW BOUNCE',
+        dir:'LONG',
+        entry: fmt2(valRef),
+        stop:  fmt2(oL - thr * 2),
+        c1:    vpoc > 0 ? fmt2(vpoc) : '',
+        c2:    vvah > 0 ? fmt2(vvah) : '',
+        desc:  londonRejectsAsiaLow
+          ? 'London Low = Asia Low — faux break VAL + rebond'
+          : fauxBreakLow && closeAboveVal
+            ? 'Cassure sous VAL OVN absorbée — retour structure'
+            : 'Prix sur VAL OVN / bas session OVN',
+        col:   C.up,
+        sdConfirm: sdLowConfirm.length > 0,
+        confirmLabels: sdLowConfirm,
+      })
+    }
+
+    // ── 2. OVN HIGH FADE / VAH RETEST ────────────────────────────────────────
+    const vahRef = vvah > 0 ? vvah : oH
+    const londonRejectsAsiaHigh = aH > 0 && pf(I.londonHigh) > 0 && Math.abs(pf(I.londonHigh) - aH) <= 15
+    const fauxBreakHigh = oH > 0 && vvah > 0 && oH > vvah
+    const sdHighConfirm: string[] = []
+    if (sd1h > 0 && oH >= sd1h - thr && oH <= sd1h + thr) sdHighConfirm.push('SD +1')
+    if (sd2h > 0 && oH >= sd2h - thr && oH <= sd2h + thr) sdHighConfirm.push('SD +2')
+    const pxNearHigh = px >= vahRef - thr * 3 && px <= oH + thr * 2
+    if (pxNearHigh && (londonRejectsAsiaHigh || fauxBreakHigh)) {
+      alerts.push({
+        type:'OVN HIGH FADE',
+        dir:'SHORT',
+        entry: fmt2(vahRef),
+        stop:  fmt2(oH + thr * 2),
+        c1:    vpoc > 0 ? fmt2(vpoc) : '',
+        c2:    vval > 0 ? fmt2(vval) : '',
+        desc:  londonRejectsAsiaHigh ? 'London High = Asia High — rejet VAH OVN' : 'Faux break VAH OVN — retour structure',
+        col:   C.down,
+        sdConfirm: sdHighConfirm.length > 0,
+        confirmLabels: sdHighConfirm,
+      })
+    }
+
+    // ── 3. POC RETEST BULL ────────────────────────────────────────────────────
+    if (px >= vpoc - thr && px <= vpoc + thr && oC >= vpoc) {
+      alerts.push({
+        type:'POC RETEST BULL',
+        dir:'LONG',
+        entry: fmt2(vpoc),
+        stop:  fmt2(vpoc - thr * 2),
+        c1:    vvah > 0 ? fmt2(vvah) : fmt2(oH),
+        c2:    fmt2(oH),
+        desc:  'Retour sur POC OVN — biais haussier confirmé',
+        col:   C.up,
+        sdConfirm: false,
+        confirmLabels: [],
+      })
+    }
+
+    // ── 4. POC RETEST BEAR ────────────────────────────────────────────────────
+    if (px >= vpoc - thr && px <= vpoc + thr && oC <= vpoc) {
+      alerts.push({
+        type:'POC RETEST BEAR',
+        dir:'SHORT',
+        entry: fmt2(vpoc),
+        stop:  fmt2(vpoc + thr * 2),
+        c1:    vval > 0 ? fmt2(vval) : fmt2(oL),
+        c2:    fmt2(oL),
+        desc:  'Retour sur POC OVN — biais baissier confirmé',
+        col:   C.down,
+        sdConfirm: false,
+        confirmLabels: [],
+      })
+    }
+
+    // ── 5. SD-2 BREAK + RETEST → SHORT ───────────────────────────────────────
+    // OVN Low a cassé sous SD-2 → prix revient sur SD-2 par dessous → rejet = SHORT
+    // Méthode Salah : pas d'entrée sur simple contact SD — attendre BREAK+RETEST+REJECT
+    if (sd2l > 0 && oL > 0 && oL < sd2l) {
+      const pxRetestSd2l = px >= sd2l - thr && px <= sd2l + thr * 2.5
+      if (pxRetestSd2l) {
+        alerts.push({
+          type: 'SD-2 RETEST',
+          dir: 'SHORT',
+          entry: fmt2(sd2l),
+          stop:  fmt2(sd2l + thr * 3),
+          c1:    fmt2(oL),
+          c2:    vpoc > 0 ? fmt2(vpoc) : '',
+          desc:  `Low ${fmt2(oL)} a cassé SD-2 → retest ${fmt2(sd2l)} par dessous — ATTENDRE rejet`,
+          col:   C.down,
+          sdConfirm: true,
+          confirmLabels: ['BREAK', 'RETEST'],
+        })
+      }
+    }
+
+    // ── 6. SD+2 BREAK + RETEST → LONG ────────────────────────────────────────
+    // OVN High a cassé au-dessus SD+2 → prix revient sur SD+2 par dessus → rejet = LONG
+    if (sd2h > 0 && oH > 0 && oH > sd2h) {
+      const pxRetestSd2h = px >= sd2h - thr * 2.5 && px <= sd2h + thr
+      if (pxRetestSd2h) {
+        alerts.push({
+          type: 'SD+2 RETEST',
+          dir: 'LONG',
+          entry: fmt2(sd2h),
+          stop:  fmt2(sd2h - thr * 3),
+          c1:    fmt2(oH),
+          c2:    vpoc > 0 ? fmt2(vpoc) : '',
+          desc:  `High ${fmt2(oH)} a cassé SD+2 → retest ${fmt2(sd2h)} par dessus — ATTENDRE rejet`,
+          col:   C.up,
+          sdConfirm: true,
+          confirmLabels: ['BREAK', 'RETEST'],
+        })
+      }
+    }
+
+    return alerts
+  }, [I.lastPx, I.oLow, I.oHigh, I.oClose, I.asiaLow, I.asiaHigh, I.londonLow, I.londonHigh, I.londonClose, I.ovnVal, I.ovnVah, I.ovnPoc, I.ovnSd1l, I.ovnSd2l, I.ovnSd1h, I.ovnSd2h, I.atr, I.vwap18h, tab])
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const orbPos = useMemo(() => {
     const px=pf(I.lastPx), oh=pf(I.orbHigh), ol=pf(I.orbLow)
     if (!px||!oh||!ol) return ''
@@ -876,11 +1291,16 @@ export default function Calculateur() {
     const orbH2 = pf(I.orbHigh), orbL2 = pf(I.orbLow)
 
     let ib = 0, ibCls = ''
-    if (mid2>0 && ibC2>0) {
-      if      (ibC2>mid2 && I.ibOrdre==='LH') { ibCls='Bull A'; ib= 1 }
-      else if (ibC2>mid2 && I.ibOrdre==='HL') { ibCls='Bull B'; ib= 1 }
-      else if (ibC2<mid2 && I.ibOrdre==='HL') { ibCls='Bear A'; ib=-1 }
-      else if (ibC2<mid2 && I.ibOrdre==='LH') { ibCls='Bear B'; ib=-1 }
+    const ibAv2 = pf(I.ibAvwap)
+    const avwapRef = ibAv2 > 0 ? ibAv2 : mid2
+    const ibRng2 = ibH2 - ibL2
+    const quartHaut = ibRng2 > 0 ? ibH2 - ibRng2 / 4 : 0
+    const quartBas  = ibRng2 > 0 ? ibL2 + ibRng2 / 4 : 0
+    if (avwapRef > 0 && ibC2 > 0) {
+      if      (ibC2 > avwapRef && ibC2 >= quartHaut && I.ibOrdre==='LH') { ibCls='Bull A'; ib= 1 }
+      else if (ibC2 > avwapRef)                                            { ibCls='Bull B'; ib= 1 }
+      else if (ibC2 < avwapRef && ibC2 <= quartBas  && I.ibOrdre==='HL') { ibCls='Bear A'; ib=-1 }
+      else if (ibC2 < avwapRef)                                            { ibCls='Bear B'; ib=-1 }
     }
 
     let vwap = 0
@@ -1013,7 +1433,6 @@ export default function Calculateur() {
     const settle = pf(I.rSettle) || pf(I.oClose)
     const ibH  = pf(I.ibHigh), ibL = pf(I.ibLow)
     const rH   = pf(I.rHigh),  rL  = pf(I.rLow)
-    const rO   = pf(I.rOpen)
 
     const lvs: { label:string; price:number }[] = []
 
@@ -1026,10 +1445,19 @@ export default function Calculateur() {
     }
     if (td.poorHigh && rH > 0) lvs.push({ label:`Poor High J-1 · ${I.rHigh}`, price:rH })
     if (td.poorLow  && rL > 0) lvs.push({ label:`Poor Low J-1 · ${I.rLow}`,   price:rL })
-    if (td.gapDay && rO > 0 && settle > 0) {
-      const gH = Math.max(rO, settle), gL = Math.min(rO, settle)
-      lvs.push({ label:`Gap Zone Haut · ${fmt2(gH)}`, price:gH })
-      lvs.push({ label:`Gap Zone Bas · ${fmt2(gL)}`,  price:gL })
+    // Dalton: gap = mesuré depuis le HIGH ou LOW de J-1, pas depuis le settle
+    // Gap UP  : open session > rHigh → fill target = rHigh
+    // Gap DOWN: open session < rLow  → fill target = rLow
+    if (td.gapDay && rH > 0) {
+      const oC = pf(I.oClose) || pf(I.oHigh) || settle
+      if (rL > 0 && oC > 0 && oC < rL) {
+        lvs.push({ label:`Gap DOWN · Fill → J-1 Low ${I.rLow}`, price:rL })
+      } else if (oC > rH) {
+        lvs.push({ label:`Gap UP · Fill → J-1 High ${I.rHigh}`, price:rH })
+      } else {
+        lvs.push({ label:`Gap Ref J-1 High · ${I.rHigh}`, price:rH })
+        if (rL > 0) lvs.push({ label:`Gap Ref J-1 Low · ${I.rLow}`, price:rL })
+      }
     }
     if (td.excess) {
       if (rH > 0) lvs.push({ label:`Excess High · ${I.rHigh}`, price:rH })
@@ -1064,7 +1492,7 @@ export default function Calculateur() {
       }
     })
     return out
-  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rOpen, I.rSettle, I.oClose, I.atr, I.ibHigh, I.ibLow, I.boxHigh, I.boxLow])
+  }, [tab, td.lignes, td.poorHigh, td.poorLow, td.gapDay, td.excess, I.lastPx, I.rHigh, I.rLow, I.rSettle, I.oClose, I.oHigh, I.atr, I.ibHigh, I.ibLow, I.boxHigh, I.boxLow])
 
   const tpoAnalysis = useMemo(() => {
     const letters = tpoLetters[tab]
@@ -1230,7 +1658,8 @@ export default function Calculateur() {
   const vw18  = pf(I.vwap18h)
   const oMid  = td.tpoOvnH&&td.tpoOvnL ? fmt2((pf(td.tpoOvnH)+pf(td.tpoOvnL))/2) : '—'
 
-  const hasP9  = tab === 'NQ' || tab === 'ES'
+  const hasP9    = tab === 'NQ' || tab === 'ES'
+  const isSimple = tab === 'GC' || tab === 'CL'
 
   const renderTD = () => (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -1264,7 +1693,13 @@ export default function Calculateur() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:8 }}>
         <Sec title="DAILY BARS" col={C.down} mini>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-            <Ck l="Gap"       v={td.gapDay}   s={v=>upTD('gapDay',v)} />
+            <Ck l={(() => {
+              const oC = pf(I.oClose) || pf(I.oHigh)
+              const rH2 = pf(I.rHigh), rL2 = pf(I.rLow)
+              if (oC > 0 && rH2 > 0 && oC > rH2) return `Gap ▲ +${fmt2(oC - rH2)}`
+              if (oC > 0 && rL2 > 0 && oC < rL2) return `Gap ▼ −${fmt2(rL2 - oC)}`
+              return 'Gap'
+            })()} v={td.gapDay} s={v=>upTD('gapDay',v)} />
             <Ck l="Excess"    v={td.excess}   s={v=>upTD('excess',v)} />
             <Ck l="Poor High" v={td.poorHigh} s={v=>upTD('poorHigh',v)} />
             <Ck l="Poor Low"  v={td.poorLow}  s={v=>upTD('poorLow',v)} />
@@ -1613,18 +2048,122 @@ export default function Calculateur() {
 
             {/* OVN aggregate */}
             <div style={{ border:`1px solid ${ovnCol}22`, borderRadius:3, overflow:'hidden' }}>
-              {subHdr('OVN 18H–08H', ovnCol)}
+              {subHdr('OVN 18H–09H30', ovnCol)}
               <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:6, background:C.sur }}>
                 <G3 ch={<>
                   <F l="High"  v={inst.oHigh}  s={v=>upI(t2,'oHigh',v)} />
                   <F l="Low"   v={inst.oLow}   s={v=>upI(t2,'oLow',v)} />
                   <F l="Close" v={inst.oClose} s={v=>upI(t2,'oClose',v)} />
                 </>}/>
-                <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                <G3 ch={<>
+                  <F l="POC OVN" v={inst.ovnPoc} s={v=>upI(t2,'ovnPoc',v)} />
+                  <F l="VAH OVN" v={inst.ovnVah} s={v=>upI(t2,'ovnVah',v)} />
+                  <F l="VAL OVN" v={inst.ovnVal} s={v=>upI(t2,'ovnVal',v)} />
+                </>}/>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:2 }}>
                   <span style={jb(8,400,{color:C.muted})}>vs Settle :</span>
                   {ovnVsS ? <Pill label={ovnVsS} col={ovnVsS==='LONG'?C.up:ovnVsS==='SHORT'?C.down:C.muted} />
                            : <span style={jb(8,400,{color:'rgba(136,153,187,0.35)'})}>—</span>}
+                  <span style={{ flex:1 }}/>
+                  <span style={jb(8,400,{color:C.muted})}>Biais OVN :</span>
+                  {ovnBias ? <Pill label={ovnBias} col={ovnBias==='HAUSSIER'?C.up:ovnBias==='BAISSIER'?C.down:C.muted} />
+                           : <span style={jb(8,400,{color:'rgba(136,153,187,0.35)'})}>—</span>}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── OVN INVENTORY (vs Settle Dalton) ──────────────────── */}
+          {(() => {
+            const oc = pf(inst.oClose), se = pf(inst.rSettle)
+            if (!oc || !se) return null
+            const delta = oc - se
+            if (Math.abs(delta) < 1) return null
+            const isLong = delta > 0
+            const col = isLong ? C.up : C.down
+            const inv = isLong ? 'LONG' : 'SHORT'
+            const arrow = isLong ? '↓' : '↑'
+            const implication = isLong
+              ? 'Contre-auction vendeuse probable au RTH open'
+              : 'Contre-auction acheteuse probable au RTH open'
+            const pts = (isLong ? '+' : '') + fmt2(delta) + ' pts'
+            return (
+              <div style={{ border:`2px solid ${col}`, borderRadius:3, overflow:'hidden' }}>
+                <div style={{ padding:'6px 12px', background:`${col}14`, borderBottom:`1px solid ${col}30`, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                  <span style={{ width:8, height:8, borderRadius:'50%', background:col, flexShrink:0 }}/>
+                  <span style={orb(9,900,{color:col,letterSpacing:'0.20em'})}>OVN INVENTORY</span>
+                  <Pill label={inv} col={col} />
+                  <span style={orb(11,900,{color:col,fontVariantNumeric:'tabular-nums'})}>{pts}</span>
+                  <span style={{ flex:1 }}/>
+                  <span style={orb(10,900,{color:col,letterSpacing:'0.16em'})}>75% COUNTER AUCTION {arrow}</span>
+                </div>
+                <div style={{ padding:'8px 12px', background:C.sur, display:'flex', alignItems:'center', gap:12 }}>
+                  <span style={jb(8,400,{color:C.muted})}>OVN Close</span>
+                  <span style={orb(12,700,{color:'#eef',fontVariantNumeric:'tabular-nums'})}>{fmt2(oc)}</span>
+                  <span style={jb(8,400,{color:C.muted})}>J-1 Settle</span>
+                  <span style={orb(12,700,{color:'#eef',fontVariantNumeric:'tabular-nums'})}>{fmt2(se)}</span>
+                  <span style={{ flex:1 }}/>
+                  <span style={jb(8,500,{color:col,fontStyle:'italic'})}>{implication}</span>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* ── Alertes setups OVN ─────────────────────────────────── */}
+          {ovnAlerts.map((a, i) => (
+            <div key={i} style={{ border:`2px solid ${a.col}`, borderRadius:3, overflow:'hidden', animation:'pulseBorder 1.4s infinite' }}>
+              <div style={{ padding:'6px 12px', background:`${a.col}14`, borderBottom:`1px solid ${a.col}30`, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ width:8, height:8, borderRadius:'50%', background:a.col, flexShrink:0, animation:'pulseDot 1.2s infinite' }}/>
+                <span style={orb(9,900,{color:a.col,letterSpacing:'0.20em'})}>{a.type}</span>
+                <Pill label={a.dir} col={a.col} />
+                <span style={{ flex:1 }}/>
+                <span style={jb(8,400,{color:'rgba(136,153,187,0.80)',fontStyle:'italic'})}>{a.desc}</span>
+              </div>
+              <div style={{ padding:'8px 12px', background:C.sur, display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
+                {[
+                  { l:'ENTRÉE', v:a.entry, c:a.col },
+                  { l:'STOP',   v:a.stop,  c:C.down },
+                  { l:'C1',     v:a.c1,    c:C.up },
+                  { l:'C2',     v:a.c2,    c:'#00cc66' },
+                ].map(({l,v,c})=>(
+                  <div key={l} style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center', padding:'7px 4px', background:`${c}20`, borderRadius:3, border:`1px solid ${c}55` }}>
+                    <span style={jb(7,700,{color:c,letterSpacing:'0.10em'})}>{l}</span>
+                    <span style={orb(13,900,{color:'#ffffff',fontVariantNumeric:'tabular-nums'})}>{v||'—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* VWAP 18h + SD bands */}
+          <div style={{ border:`1px solid rgba(201,168,76,0.18)`, borderRadius:3, overflow:'hidden' }}>
+            <div style={{ display:'flex', alignItems:'center' }}>
+              {subHdr('VWAP 18H · BANDES SD', C.gold)}
+              <button
+                onClick={()=>{ ['vwap18h','ovnSd1h','ovnSd1l','ovnSd2h','ovnSd2l'].forEach(k=>upI(t2,k as keyof Instr,'')) }}
+                title="Vider VWAP + SD uniquement (sans toucher au reste)"
+                style={{ marginLeft:'auto', marginRight:10, padding:'2px 8px', border:'1px solid rgba(255,80,80,0.45)', borderRadius:2, background:'rgba(255,80,80,0.10)', color:'#ff6060', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:7, fontWeight:700, letterSpacing:'0.10em', whiteSpace:'nowrap' }}
+              >✕ VIDER</button>
+            </div>
+            <div style={{ padding:'8px 10px', background:C.sur }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:4 }}>
+                {[
+                  { l:'VWAP 18H', k:'vwap18h', c:C.gold },
+                  { l:'SD +1',    k:'ovnSd1h', c:C.up },
+                  { l:'SD −1',    k:'ovnSd1l', c:C.down },
+                  { l:'SD +2',    k:'ovnSd2h', c:'#00cc66' },
+                  { l:'SD −2',    k:'ovnSd2l', c:'#ff6666' },
+                ].map(({l,k,c})=>(
+                  <div key={k} style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center', padding:'6px 4px', background:'rgba(10,14,24,0.6)', borderRadius:3, border:`1px solid ${c}22` }}>
+                    <span style={jb(7,400,{color:C.muted,letterSpacing:'0.08em'})}>{l}</span>
+                    <input
+                      value={(inst as unknown as Record<string,string>)[k]||''}
+                      onChange={e=>upI(t2,k as keyof Instr,e.target.value)}
+                      style={{ width:'100%', background:'transparent', border:'none', outline:'none', textAlign:'center', fontFamily:'"JetBrains Mono",monospace', fontSize:10, fontWeight:600, color:c, padding:0 }}
+                      placeholder="—"
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -1665,7 +2204,25 @@ export default function Calculateur() {
     )
   }
 
-  const renderInstr = () => (
+  const renderSimpleInstr = () => (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      <Sec title={`DAILY OHLC · ${tab}`} col={col}>
+        <G4 ch={<>
+          <F l="Open"  v={I.rOpen}   s={v=>upI(tab,'rOpen',v)}   />
+          <F l="High"  v={I.rHigh}   s={v=>upI(tab,'rHigh',v)}   />
+          <F l="Low"   v={I.rLow}    s={v=>upI(tab,'rLow',v)}    />
+          <F l="Close" v={I.rSettle} s={v=>upI(tab,'rSettle',v)} />
+        </>}/>
+        <div style={{ marginTop:4 }}>
+          <F l="Dernier prix" v={I.lastPx} s={v=>upI(tab,'lastPx',v)} />
+        </div>
+      </Sec>
+    </div>
+  )
+
+  const renderInstr = () => {
+    if (isSimple) return renderSimpleInstr()
+    return (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title="RTH J-1" col={col}>
@@ -1677,7 +2234,7 @@ export default function Calculateur() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title={`IB · ${IB_H[tab]}`} col={col}>
           <G4 ch={<><F l="IB High" v={I.ibHigh} s={v=>upI(tab,'ibHigh',v)} /><F l="IB Low" v={I.ibLow} s={v=>upI(tab,'ibLow',v)} /><F l="IB Close" v={I.ibClose} s={v=>upI(tab,'ibClose',v)} /><F l="IB Mid" ro dv={ibMid} /></>}/>
-          <G2 ch={<><F l="Ordre HL" v={I.ibOrdre} s={v=>upI(tab,'ibOrdre',v)} opts={['HL','LH']} /><F l="Classification" v={I.ibClass} s={v=>upI(tab,'ibClass',v)} opts={['Normal','Wide IB','Narrow IB','Rotational']} /></>}/>
+          <G3 ch={<><F l="IB AVWAP" v={I.ibAvwap} s={v=>upI(tab,'ibAvwap',v)} /><F l="Ordre HL" v={I.ibOrdre} s={v=>upI(tab,'ibOrdre',v)} opts={['HL','LH']} /><F l="Classification" v={I.ibClass} s={v=>upI(tab,'ibClass',v)} opts={['Normal','Wide IB','Narrow IB','Rotational']} /></>}/>
         </Sec>
         <Sec title={`ORB · ${OR_H[tab]}`} col={col}>
           <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
@@ -1690,6 +2247,73 @@ export default function Calculateur() {
         </Sec>
       </div>
 
+      {/* ── IB AVWAP SCALPEL (Méthode Salah) ──────────────────────── */}
+      {(() => {
+        const ibH3 = pf(I.ibHigh), ibL3 = pf(I.ibLow), ibC3 = pf(I.ibClose)
+        const ibAv3 = pf(I.ibAvwap)
+        const mid3 = ibH3>0&&ibL3>0 ? (ibH3+ibL3)/2 : 0
+        const avRef = ibAv3>0 ? ibAv3 : mid3
+        if (!avRef || !ibC3) return null
+        const rng3 = ibH3 - ibL3
+        const qH = rng3>0 ? ibH3 - rng3/4 : 0
+        const qL = rng3>0 ? ibL3 + rng3/4 : 0
+        let cls = ''
+        if      (ibC3 > avRef && qH>0 && ibC3 >= qH && I.ibOrdre==='LH') cls = 'Bull A'
+        else if (ibC3 > avRef)                                              cls = 'Bull B'
+        else if (ibC3 < avRef && qL>0 && ibC3 <= qL && I.ibOrdre==='HL') cls = 'Bear A'
+        else if (ibC3 < avRef)                                              cls = 'Bear B'
+        if (!cls) return null
+        const isBull = cls.startsWith('Bull')
+        const isA = cls.endsWith('A')
+        const col = isBull ? C.up : C.down
+        const colB = isA ? col : C.amber
+        const setup = isA
+          ? (isBull ? `Pullback → AVWAP (${fmt2(avRef)}) → rebond → LONG` : `Remontée → AVWAP (${fmt2(avRef)}) → rejet → SHORT`)
+          : (isBull ? `Signal faible — attendre pullback AVWAP (${fmt2(avRef)}) + rebond` : `Signal faible — attendre remontée AVWAP (${fmt2(avRef)}) + rejet`)
+        const target = isBull
+          ? (ibH3>0 ? `Cible : IB High ${fmt2(ibH3)}` : '')
+          : (ibL3>0 ? `Cible : IB Low ${fmt2(ibL3)}` : '')
+        const fiabTxt = isA ? '★★★ SIGNAL FORT' : '★★ SIGNAL FAIBLE'
+        const ordre = I.ibOrdre==='LH' ? 'Low First' : I.ibOrdre==='HL' ? 'High First' : ''
+        return (
+          <div style={{ border:`2px solid ${colB}`, borderRadius:3, overflow:'hidden' }}>
+            <div style={{ padding:'6px 12px', background:`${colB}14`, borderBottom:`1px solid ${colB}30`, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+              <span style={{ width:8, height:8, borderRadius:'50%', background:colB, flexShrink:0 }}/>
+              <span style={orb(9,900,{color:colB,letterSpacing:'0.18em'})}>IB AVWAP SCALPEL</span>
+              <Pill label={cls} col={colB} />
+              {ordre && <span style={jb(8,500,{color:'rgba(136,153,187,0.7)'})}>{ordre}</span>}
+              <span style={{ flex:1 }}/>
+              <span style={orb(8,700,{color:colB,letterSpacing:'0.12em'})}>{fiabTxt}</span>
+            </div>
+            <div style={{ padding:'8px 12px', background:C.sur, display:'flex', flexDirection:'column', gap:6 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={jb(7,400,{color:C.muted})}>IB AVWAP</span>
+                  <span style={orb(12,700,{color:'#eef',fontVariantNumeric:'tabular-nums'})}>{ibAv3>0?fmt2(ibAv3):fmt2(mid3)}{ibAv3===0?' (mid)':''}</span>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={jb(7,400,{color:C.muted})}>IB Close</span>
+                  <span style={orb(12,700,{color:colB,fontVariantNumeric:'tabular-nums'})}>{fmt2(ibC3)}</span>
+                </div>
+                {qH>0&&<div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={jb(7,400,{color:C.muted})}>Q. Haut</span>
+                  <span style={orb(10,600,{color:'rgba(136,153,187,0.8)',fontVariantNumeric:'tabular-nums'})}>{fmt2(qH)}</span>
+                </div>}
+                {qL>0&&<div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                  <span style={jb(7,400,{color:C.muted})}>Q. Bas</span>
+                  <span style={orb(10,600,{color:'rgba(136,153,187,0.8)',fontVariantNumeric:'tabular-nums'})}>{fmt2(qL)}</span>
+                </div>}
+                <span style={{ flex:1 }}/>
+                <div style={{ textAlign:'right' }}>
+                  <div style={jb(8,600,{color:colB})}>{setup}</div>
+                  {target&&<div style={jb(7,400,{color:C.muted,marginTop:2})}>{target}</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* BOX RTH */}
       <Sec title="BOX RTH · ZONE BALANCÉE" col="#00d4ff">
         <div style={{ display:'flex', gap:8, alignItems:'flex-end', flexWrap:'wrap' }}>
@@ -1697,6 +2321,26 @@ export default function Calculateur() {
             <G3 ch={<><F l="BOX High" v={I.boxHigh} s={v=>upI(tab,'boxHigh',v)} /><F l="BOX Low" v={I.boxLow} s={v=>upI(tab,'boxLow',v)} /><F l="BOX Mid" ro dv={boxMid||'—'} /></>}/>
           </div>
           {cSig.boxPos && <Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'} />}
+        </div>
+      </Sec>
+
+      {/* BOX LEVELS + GAP + IBR */}
+      <Sec title="BOX · GAP · IBR EXT" col={C.amber}>
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          <G4 ch={<>
+            <F l="BOX 6" v={I.box6} s={v=>upI(tab,'box6',v)} />
+            <F l="BOX 5" v={I.box5} s={v=>upI(tab,'box5',v)} />
+            <F l="BOX 4" v={I.box4} s={v=>upI(tab,'box4',v)} />
+            <F l="BOX 3" v={I.box3} s={v=>upI(tab,'box3',v)} />
+          </>}/>
+          <G2 ch={<>
+            <F l="GAP OPEN HAUT" v={I.gapHigh} s={v=>upI(tab,'gapHigh',v)} />
+            <F l="GAP OPEN BAS"  v={I.gapLow}  s={v=>upI(tab,'gapLow',v)} />
+          </>}/>
+          <G2 ch={<>
+            <F l="IBR Ext 1 Haut" v={I.ibrExt1H} s={v=>upI(tab,'ibrExt1H',v)} />
+            <F l="IBR Ext 1 Bas"  v={I.ibrExt1L} s={v=>upI(tab,'ibrExt1L',v)} />
+          </>}/>
         </div>
       </Sec>
 
@@ -1809,48 +2453,130 @@ export default function Calculateur() {
       {renderRth()}
       {renderTPO()}
     </div>
-  )
+  )}
 
   const renderTracker = () => {
+    const sdThr = tab==='NQ' ? 6 : tab==='ES' ? 2.5 : tab==='GC' ? 4 : 2
     const sdHit = (level:string) => {
-      const lv = pf(level); return lp>0 && lv>0 && Math.abs(lp-lv)<0.5
+      const lv = pf(level); return lp>0 && lv>0 && Math.abs(lp-lv)<=sdThr
     }
-    const items: [string,string,string,number][] = [
-      ['LAST',    I.lastPx||'—',   C.gold,  20],
-      ['HIGH J-1',I.rHigh||'—',   C.up,    14],
-      ['LOW J-1', I.rLow||'—',    C.down,  14],
-      ['OVN MID', oMid,            C.amber, 14],
-      ['VWAP 18h',I.vwap18h||'—', C.teal,  14],
-      ['POC J-1', I.rPoc||'—',    C.gold,  14],
-      ['VAH J-1', I.rVah||'—',    C.gold,  14],
-      ['VAL J-1', I.rVal||'—',    C.gold,  14],
-    ]
-    const sdItems: [string,string][] = [
-      ['SD +2', sdVals.sp2],
-      ['SD +1', sdVals.sp1],
-      ['SD -1', sdVals.sm1],
-      ['SD -2', sdVals.sm2],
-    ]
+    const ALERT_TTL = 3 * 60 * 1000
+    const sp2Alert = sdReject.sp2 > 0 && (Date.now() - sdReject.sp2) < ALERT_TTL
+    const sm2Alert = sdReject.sm2 > 0 && (Date.now() - sdReject.sm2) < ALERT_TTL
+
+    // ── Prix Échelle ──
+    type LvlE = { label:string; val:number; col:string }
+    const ladder: LvlE[] = []
+    const addL = (label:string, valStr:string, col:string) => {
+      const v = pf(valStr); if (v>0) ladder.push({label, val:v, col})
+    }
+    addL('SD +2',    sdVals.sp2,  '#ff4444')
+    addL('SD +1',    sdVals.sp1,  C.amber)
+    addL('HIGH J-1', I.rHigh,     C.up)
+    addL('VAH J-1',  I.rVah,      C.gold)
+    addL('VWAP 18h', I.vwap18h,   C.teal)
+    addL('OVN HIGH', I.oHigh,     C.up)
+    addL('POC J-1',  I.rPoc,      C.gold)
+    addL('OVN MID',  oMid,        C.amber)
+    addL('IB HIGH',  I.ibHigh,    '#00d4ff')
+    addL('IB LOW',   I.ibLow,     '#00d4ff')
+    addL('OVN LOW',  I.oLow,      C.down)
+    addL('VAL J-1',  I.rVal,      C.gold)
+    addL('LOW J-1',  I.rLow,      C.down)
+    addL('SD -1',    sdVals.sm1,  C.amber)
+    addL('SD -2',    sdVals.sm2,  '#ff8833')
+    ladder.sort((a,b)=>b.val-a.val)
+    const seen = new Set<string>()
+    const uniq = ladder.filter(l=>{ const k=l.val.toFixed(2); if(seen.has(k))return false; seen.add(k); return true })
+    const insertIdx = lp>0 ? uniq.findIndex(l=>l.val<=lp) : -1
+
     return (
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:8 }}>
-          {items.map(([l,v,c,sz])=>(
-            <div key={l}>
-              <div style={jb(7, 400, { color:C.muted, marginBottom:3 })}>{l}</div>
-              <div style={jb(sz, 700, { color:c })}>{v}</div>
+
+        {/* ── LAST prominent ── */}
+        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', background:'rgba(201,168,76,0.07)', border:'1px solid rgba(201,168,76,0.28)', borderRadius:4 }}>
+          <div>
+            <div style={jb(8, 600, { color:C.muted, letterSpacing:'0.14em', marginBottom:2 })}>LAST · {tab}</div>
+            <div style={orb(30, 900, { color: lp>0?C.gold:C.muted, letterSpacing:'0.04em', fontVariantNumeric:'tabular-nums', lineHeight:1, textShadow: lp>0?'0 0 18px rgba(201,168,76,0.35)':'none' })}>
+              {lp>0 ? fmt2(lp) : '—'}
             </div>
-          ))}
+          </div>
+          {lp>0 && vw18>0 && (
+            <div style={{ marginLeft:'auto', textAlign:'right' }}>
+              <div style={jb(8,400,{color:C.muted,marginBottom:3})}>vs VWAP</div>
+              <div style={jb(13,700,{color:lp>vw18?C.up:C.down,fontVariantNumeric:'tabular-nums'})}>
+                {lp>vw18?'▲ +':'▼ '}{fmt2(Math.abs(lp-vw18))}
+              </div>
+            </div>
+          )}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:6, padding:'8px', background:'rgba(30,179,188,0.04)', border:'1px solid rgba(30,179,188,0.15)', borderRadius:3 }}>
-          {sdItems.map(([l,v])=>(
-            <div key={l} style={{ textAlign:'center' }}>
-              <div style={jb(7, 400, { color:C.muted, marginBottom:3 })}>{l}</div>
-              <div style={jb(13, 700, { color: sdHit(v) ? C.amber : C.teal, textShadow: sdHit(v) ? `0 0 8px ${C.amber}` : 'none' })}>{v||'—'}</div>
-              {sdHit(v) && <div style={{ marginTop:2 }}><Pill label="TOUCHÉ" col={C.amber} /></div>}
+        {/* ── Échelle de prix ── */}
+        {uniq.length>0 && (
+          <div style={{ border:'1px solid rgba(136,153,187,0.14)', borderRadius:4, overflow:'hidden', background:'rgba(255,255,255,0.01)' }}>
+            {uniq.map((lev,i)=>{
+              const isNear = lp>0 && Math.abs(lev.val-lp)<=sdThr*1.5
+              const dVal = lp>0 ? lev.val-lp : null
+              const isAbove = dVal !== null && dVal > 0
+              const showLast = lp>0 && i===insertIdx
+              return (
+                <div key={lev.label+lev.val}>
+                  {showLast && (
+                    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'5px 12px', background:'rgba(201,168,76,0.13)', borderTop:'1px solid rgba(201,168,76,0.40)', borderBottom:'1px solid rgba(201,168,76,0.40)' }}>
+                      <span style={jb(9,700,{color:C.gold,letterSpacing:'0.12em'})}>▶ LAST</span>
+                      <span style={orb(14,900,{color:C.gold,fontVariantNumeric:'tabular-nums'})}>{fmt2(lp)}</span>
+                    </div>
+                  )}
+                  <div style={{ display:'flex', alignItems:'center', gap:0, padding:'4px 12px', background: isNear?`${lev.col}10`:'transparent', borderBottom: i<uniq.length-1?'1px solid rgba(136,153,187,0.07)':'none' }}>
+                    <div style={{ width:4, height:4, borderRadius:'50%', background: isNear?lev.col:'rgba(136,153,187,0.20)', marginRight:8, flexShrink:0, boxShadow: isNear?`0 0 5px ${lev.col}`:'none', animation: isNear?'pulseDot 1s infinite':'none' }}/>
+                    <span style={jb(9, isNear?700:400, { color: isNear?lev.col:C.muted, letterSpacing:'0.05em', minWidth:76, flexShrink:0 })}>{lev.label}</span>
+                    <span style={orb(12, 700, { color: isNear?lev.col:'#cdd6f4', fontVariantNumeric:'tabular-nums', flex:1, textShadow: isNear?`0 0 7px ${lev.col}`:'none' })}>{lev.val.toFixed(2)}</span>
+                    {dVal!==null && (
+                      <span style={jb(9,600,{color:isAbove?'rgba(0,255,136,0.55)':'rgba(255,100,100,0.55)',fontVariantNumeric:'tabular-nums',letterSpacing:'0.03em',minWidth:56,textAlign:'right'})}>
+                        {isAbove?'▲ +':'▼ '}{Math.abs(dVal).toFixed(2)}
+                      </span>
+                    )}
+                    {isNear && <span style={{ marginLeft:8, padding:'1px 5px', borderRadius:2, background:`${lev.col}22`, border:`1px solid ${lev.col}55`, fontFamily:'Orbitron,monospace', fontSize:6.5, fontWeight:900, color:lev.col, letterSpacing:'0.10em', flexShrink:0 }}>TOUCHÉ</span>}
+                  </div>
+                </div>
+              )
+            })}
+            {lp>0 && insertIdx===uniq.length && (
+              <div style={{ display:'flex', alignItems:'center', gap:10, padding:'5px 12px', background:'rgba(201,168,76,0.13)', borderTop:'1px solid rgba(201,168,76,0.40)' }}>
+                <span style={jb(9,700,{color:C.gold,letterSpacing:'0.12em'})}>▶ LAST</span>
+                <span style={orb(14,900,{color:C.gold,fontVariantNumeric:'tabular-nums'})}>{fmt2(lp)}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Alertes OVN dans Live Tracker ── */}
+        {ovnAlerts.length > 0 && ovnAlerts.map((a, i) => (
+          <div key={i} style={{ border:`2px solid ${a.col}`, borderRadius:4, overflow:'hidden', animation:'pulseBorder 1.4s infinite' }}>
+            {/* Header alerte */}
+            <div style={{ padding:'6px 12px', background:`${a.col}18`, borderBottom:`1px solid ${a.col}30`, display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+              <span style={{ width:9, height:9, borderRadius:'50%', background:a.col, flexShrink:0, boxShadow:`0 0 8px ${a.col}`, animation:'pulseDot 1s infinite' }}/>
+              <span style={orb(10,900,{color:a.col,letterSpacing:'0.20em'})}>⚡ {a.type}</span>
+              <Pill label={a.dir} col={a.col} />
+              {a.sdConfirm && a.confirmLabels.map(l=>(
+                <span key={l} style={{ padding:'1px 6px', borderRadius:2, background:'rgba(201,168,76,0.18)', border:'1px solid rgba(201,168,76,0.50)', fontFamily:'Orbitron,monospace', fontSize:7, fontWeight:700, color:C.gold, letterSpacing:'0.14em' }}>
+                  ✓ {l} CONFIRMÉ
+                </span>
+              ))}
+              <span style={{ flex:1 }}/>
+              <span style={jb(8,400,{color:'rgba(136,153,187,0.85)',fontStyle:'italic'})}>{a.desc}</span>
             </div>
-          ))}
-        </div>
+            {/* Niveaux */}
+            <div style={{ padding:'10px 12px', background:C.sur, display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+              {([['ENTRÉE', a.entry, a.col],['STOP', a.stop, C.down],['C1', a.c1, C.up],['C2', a.c2, '#00cc66']] as [string,string,string][]).map(([l,v,c])=>(
+                <div key={l} style={{ display:'flex', flexDirection:'column', gap:3, alignItems:'center', padding:'7px 4px', background:`${c}20`, borderRadius:3, border:`1px solid ${c}55` }}>
+                  <span style={jb(7,700,{color:c,letterSpacing:'0.10em'})}>{l}</span>
+                  <span style={orb(13,900,{color:'#ffffff',fontVariantNumeric:'tabular-nums'})}>{v||'—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
 
         {/* BOX RTH block */}
         {(pf(I.boxHigh)>0||pf(I.boxLow)>0) && (() => {
@@ -1879,28 +2605,75 @@ export default function Calculateur() {
           )
         })()}
 
-        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-          {lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh)     && <Alert msg={`▲ Prix au-dessus de l'IB High (${I.ibHigh})`}    col={C.up} />}
-          {lp>0&&pf(I.ibLow)>0&&lp<pf(I.ibLow)        && <Alert msg={`▼ Prix en-dessous de l'IB Low (${I.ibLow})`}     col={C.down} />}
-          {lp>0&&pf(I.rPoc)>0&&Math.abs(lp-pf(I.rPoc))<2 && <Alert msg={`◈ Prix proche du POC J-1 (${I.rPoc})`}       col={C.gold} />}
-          {lp>0&&pf(I.orbHigh)>0&&lp>pf(I.orbHigh)    && <Alert msg={`▲ Extension au-dessus de l'ORB High (${I.orbHigh})`} col={C.up} />}
-          {lp>0&&pf(I.orbLow)>0&&lp<pf(I.orbLow)      && <Alert msg={`▼ Cassure sous l'ORB Low (${I.orbLow})`}        col={C.down} />}
-          {lp>0&&vw18>0&&lp>vw18                       && <Alert msg={`▲ Prix au-dessus du VWAP 18h (${I.vwap18h})`}   col={C.teal} />}
-          {lp>0&&vw18>0&&lp<vw18                       && <Alert msg={`▼ Prix en-dessous du VWAP 18h (${I.vwap18h})`} col={C.down} />}
-          {sdVals.sp1&&sdHit(sdVals.sp1)               && <Alert msg={`⚡ SD +1 touché (${sdVals.sp1})`}              col={C.amber} />}
-          {sdVals.sm1&&sdHit(sdVals.sm1)               && <Alert msg={`⚡ SD -1 touché (${sdVals.sm1})`}              col={C.amber} />}
-          {sdVals.sp2&&sdHit(sdVals.sp2)               && <Alert msg={`⚡ SD +2 touché (${sdVals.sp2})`}              col={C.down} />}
-          {sdVals.sm2&&sdHit(sdVals.sm2)               && <Alert msg={`⚡ SD -2 touché (${sdVals.sm2})`}              col={C.down} />}
-          {(!lp || (!pf(I.ibHigh)&&!pf(I.ibLow)&&!vw18)) && (
-            <span style={jb(8, 400, { color:'rgba(136,153,187,0.4)' })}>Saisir un dernier prix + IB / VWAP pour activer les alertes.</span>
-          )}
-          {zoneAlerts.length > 0 && (
-            <>
-              <div style={jb(7.5, 600, { color:C.amber, letterSpacing:'0.10em', marginTop:4 })}>ZONES CLÉS</div>
-              {zoneAlerts.map((a,i) => <Alert key={i} msg={a.msg} col={a.col} />)}
-            </>
-          )}
-        </div>
+        {/* BOX 3-6 / GAP / IBR Ext */}
+        {(I.box6||I.box5||I.box4||I.box3||I.gapHigh||I.gapLow||I.ibrExt1H||I.ibrExt1L) && (() => {
+          const thr2 = tab==='NQ' ? 6 : tab==='ES' ? 2.5 : 4
+          const hit = (v:string) => lp>0 && pf(v)>0 && Math.abs(lp-pf(v))<=thr2
+          const rows: [string,string,string][] = [
+            ['BOX 6',         I.box6,     C.amber],
+            ['BOX 5',         I.box5,     C.amber],
+            ['BOX 4',         I.box4,     C.amber],
+            ['BOX 3',         I.box3,     C.amber],
+            ['GAP OPEN HAUT', I.gapHigh,  C.up],
+            ['GAP OPEN BAS',  I.gapLow,   C.down],
+            ['IBR Ext 1 Haut',I.ibrExt1H, '#ff8888'],
+            ['IBR Ext 1 Bas', I.ibrExt1L, '#ff8888'],
+          ].filter(([,v])=>v) as [string,string,string][]
+          return (
+            <div style={{ padding:'8px 10px', background:'rgba(201,168,76,0.04)', border:'1px solid rgba(201,168,76,0.20)', borderRadius:3 }}>
+              <div style={jb(7.5, 600, { color:C.amber, letterSpacing:'0.10em', marginBottom:6 })}>BOX · GAP · IBR EXT</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))', gap:5 }}>
+                {rows.map(([l,v,c])=>(
+                  <div key={l} style={{ padding:'4px 6px', background: hit(v)?'rgba(201,168,76,0.12)':'transparent', borderRadius:2, border: hit(v)?`1px solid ${c}`:'1px solid transparent' }}>
+                    <div style={jb(6.5, 400, { color:C.muted, marginBottom:2 })}>{l}</div>
+                    <div style={jb(12, 700, { color: hit(v)?C.amber:c, textShadow: hit(v)?`0 0 8px ${C.amber}`:'none' })}>{v||'—'}</div>
+                    {hit(v) && <Pill label="TOUCHÉ" col={C.amber} />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ── Alertes texte ── */}
+        {(() => {
+          const alerts: { msg:string; col:string; big?:boolean }[] = []
+          if (sp2Alert) alerts.push({msg:`🔴 ALERTE VENTE — SD +2 rejeté (${sdVals.sp2})`, col:C.down, big:true})
+          if (sm2Alert) alerts.push({msg:`🟢 ALERTE ACHAT — SD -2 rejeté (${sdVals.sm2})`, col:C.up,   big:true})
+          if (sdVals.sp2&&sdHit(sdVals.sp2)) alerts.push({msg:`⚡ SD +2 TOUCHÉ (${sdVals.sp2})`,  col:'#ff4444', big:true})
+          if (sdVals.sm2&&sdHit(sdVals.sm2)) alerts.push({msg:`⚡ SD -2 TOUCHÉ (${sdVals.sm2})`,  col:'#ff8833', big:true})
+          if (sdVals.sp1&&sdHit(sdVals.sp1)) alerts.push({msg:`⚡ SD +1 touché (${sdVals.sp1})`,  col:C.amber})
+          if (sdVals.sm1&&sdHit(sdVals.sm1)) alerts.push({msg:`⚡ SD -1 touché (${sdVals.sm1})`,  col:C.amber})
+          if (lp>0&&pf(I.ibHigh)>0&&lp>pf(I.ibHigh))   alerts.push({msg:`▲ Au-dessus IB High (${I.ibHigh})`, col:C.up})
+          if (lp>0&&pf(I.ibLow)>0&&lp<pf(I.ibLow))      alerts.push({msg:`▼ Sous IB Low (${I.ibLow})`,        col:C.down})
+          if (lp>0&&pf(I.orbHigh)>0&&lp>pf(I.orbHigh))  alerts.push({msg:`▲ Extension ORB High (${I.orbHigh})`, col:C.up})
+          if (lp>0&&pf(I.orbLow)>0&&lp<pf(I.orbLow))    alerts.push({msg:`▼ Cassure ORB Low (${I.orbLow})`,     col:C.down})
+          if (lp>0&&pf(I.rPoc)>0&&Math.abs(lp-pf(I.rPoc))<2) alerts.push({msg:`◈ Proche POC J-1 (${I.rPoc})`, col:C.gold})
+          if (lp>0&&I.gapHigh&&lp>=pf(I.gapHigh)) alerts.push({msg:`▲ GAP HAUT comblé (${I.gapHigh})`,  col:C.up})
+          if (lp>0&&I.gapLow&&lp<=pf(I.gapLow))   alerts.push({msg:`▼ GAP BAS comblé (${I.gapLow})`,    col:C.down})
+          const thr2=tab==='NQ'?6:2.5
+          if (lp>0&&I.box6&&Math.abs(lp-pf(I.box6))<=thr2) alerts.push({msg:`📦 BOX 6 touché (${I.box6})`, col:C.amber})
+          if (lp>0&&I.box5&&Math.abs(lp-pf(I.box5))<=thr2) alerts.push({msg:`📦 BOX 5 touché (${I.box5})`, col:C.amber})
+          if (lp>0&&I.box4&&Math.abs(lp-pf(I.box4))<=thr2) alerts.push({msg:`📦 BOX 4 touché (${I.box4})`, col:C.amber})
+          if (lp>0&&I.box3&&Math.abs(lp-pf(I.box3))<=thr2) alerts.push({msg:`📦 BOX 3 touché (${I.box3})`, col:C.amber})
+          if (lp>0&&I.ibrExt1H&&Math.abs(lp-pf(I.ibrExt1H))<=thr2) alerts.push({msg:`⚡ IBR Ext HAUT (${I.ibrExt1H})`, col:'#ff8888'})
+          if (lp>0&&I.ibrExt1L&&Math.abs(lp-pf(I.ibrExt1L))<=thr2) alerts.push({msg:`⚡ IBR Ext BAS (${I.ibrExt1L})`,  col:'#ff8888'})
+          zoneAlerts.forEach(a => alerts.push({msg:a.msg, col:a.col}))
+          if (!alerts.length && (!lp || (!pf(I.ibHigh)&&!pf(I.ibLow)&&!vw18))) {
+            return <span style={jb(9,400,{color:'rgba(136,153,187,0.35)'})}>Saisir un prix + IB/VWAP pour activer les alertes.</span>
+          }
+          if (!alerts.length) return null
+          return (
+            <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+              {alerts.map((a,i)=>(
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:9, padding: a.big?'7px 12px':'5px 12px', borderRadius:3, background:`${a.col}${a.big?'18':'10'}`, border:`1px solid ${a.col}${a.big?'55':'30'}` }}>
+                  <span style={{ width: a.big?8:6, height: a.big?8:6, borderRadius:'50%', background:a.col, flexShrink:0, boxShadow: a.big?`0 0 7px ${a.col}`:'none', animation: a.big?'pulseDot 1.2s infinite':'none' }} />
+                  <span style={jb(a.big?11:10, a.big?700:500, { color:a.col, letterSpacing:'0.06em' })}>{a.msg}</span>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
       </div>
     )
   }
@@ -2143,13 +2916,13 @@ export default function Calculateur() {
     const sc2 = (s: Status) => s==='ok'?C.up:s==='wait'?C.amber:s==='no'?C.down:C.muted
 
     const sHdr = (txt: string) => (
-      <div style={{ fontSize:7.5, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)', marginTop:6 }}>{txt}</div>
+      <div style={{ fontSize:11, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)', marginTop:6 }}>{txt}</div>
     )
     const Row2 = ({ s, label, val }: { s: Status; label: string; val?: string }) => (
-      <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
-        <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>{si(s)}</span>
-        <span style={jb(8.5, s==='ok'?600:400, { color:sc2(s), flex:1 })}>{label}</span>
-        {val&&<span style={jb(8.5, 700, { color:sc2(s), fontVariantNumeric:'tabular-nums' })}>{val}</span>}
+      <div style={{ display:'flex', alignItems:'center', gap:7, padding:'3px 0' }}>
+        <span style={{ fontSize:13, lineHeight:1, minWidth:18, textAlign:'center' }}>{si(s)}</span>
+        <span style={jb(12, s==='ok'?600:400, { color:sc2(s), flex:1 })}>{label}</span>
+        {val&&<span style={jb(12, 700, { color:sc2(s), fontVariantNumeric:'tabular-nums' })}>{val}</span>}
       </div>
     )
 
@@ -2157,11 +2930,11 @@ export default function Calculateur() {
       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
         {/* Setup score banner */}
         <div style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 12px', background: setupReady?'rgba(0,255,136,0.07)':setupPartial?'rgba(212,175,55,0.07)':'rgba(136,153,187,0.05)', borderRadius:3, border:`1px solid ${setupReady?'rgba(0,255,136,0.25)':setupPartial?'rgba(212,175,55,0.22)':'rgba(136,153,187,0.14)'}` }}>
-          <span style={orb(11, 900, { color: setupReady?C.up:setupPartial?C.amber:C.muted, letterSpacing:'0.14em' })}>{setupReady?'◈ SETUP PRÊT':setupPartial?'◈ SETUP PARTIEL':'◈ PAS DE SETUP'}</span>
-          <span style={jb(9, 600, { color:C.muted })}>{okCnt}/{active}</span>
+          <span style={orb(15, 900, { color: setupReady?C.up:setupPartial?C.amber:C.muted, letterSpacing:'0.14em' })}>{setupReady?'◈ SETUP PRÊT':setupPartial?'◈ SETUP PARTIEL':'◈ PAS DE SETUP'}</span>
+          <span style={jb(12, 600, { color:C.muted })}>{okCnt}/{active}</span>
           <span style={{ flex:1 }} />
-          <span style={orb(10, 900, { color:dirCol })}>{dir}</span>
-          {nyTime && <span style={jb(8, 400, { color:'rgba(136,153,187,0.55)' })}>{nyTime.slice(0,5)} ET</span>}
+          <span style={orb(13, 900, { color:dirCol })}>{dir}</span>
+          {nyTime && <span style={jb(11, 400, { color:'rgba(136,153,187,0.55)' })}>{nyTime.slice(0,5)} ET</span>}
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
@@ -2171,9 +2944,9 @@ export default function Calculateur() {
             <Row2 s={valAccepted}  label="VAL J-1 acceptée (prix > VAH)"    val={rVah>0?`>${fmt2(rVah)}`:''} />
             <Row2 s={pocMigStatus} label="POC migration"                     val={td.pocMig||'—'} />
             <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
-              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>{alnPat?'ℹ️':'⬜'}</span>
-              <span style={jb(8.5, 400, { color:C.muted, flex:1 })}>ALN Pattern</span>
-              <span style={jb(8.5, 700, { color:alnPat==='P3'?C.up:alnPat==='P4'?C.down:C.muted })}>{alnPat||'—'}{alnBiais!=='—'?` · ${alnBiais}`:''}</span>
+              <span style={{ fontSize:13, lineHeight:1, minWidth:18, textAlign:'center' }}>{alnPat?'ℹ️':'⬜'}</span>
+              <span style={jb(12, 400, { color:C.muted, flex:1 })}>ALN Pattern</span>
+              <span style={jb(12, 700, { color:alnPat==='P3'?C.up:alnPat==='P4'?C.down:C.muted })}>{alnPat||'—'}{alnBiais!=='—'?` · ${alnBiais}`:''}</span>
             </div>
 
             {sHdr('2 · §9 — ALIGNEMENT NQ/ES')}
@@ -2184,10 +2957,10 @@ export default function Calculateur() {
             {boxH>0&&boxL>0&&(<>
               {sHdr('BOX RTH · ZONE BALANCÉE')}
               <Row2 s={boxPosStatus} label="Prix > BOX High (breakout haussier)" val={boxH>0?fmt2(boxH):''} />
-              {boxDH>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Δ BOX High</span><span style={jb(8.5,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDH)}</span></div>}
-              {boxDL>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Δ BOX Low</span><span style={jb(8.5,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDL)}</span></div>}
-              {bMid>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:'#00d4ff'})}>Milieu BOX = pivot</span><span style={jb(8.5,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>{fmt2(bMid)}</span></div>}
-              {cSig.boxPos&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(8,400,{color:C.muted})}>Mode</span><Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'}/></div>}
+              {boxDH>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(11,400,{color:C.muted})}>Δ BOX High</span><span style={jb(12,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDH)}</span></div>}
+              {boxDL>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(11,400,{color:C.muted})}>Δ BOX Low</span><span style={jb(12,700,{color:C.muted,fontVariantNumeric:'tabular-nums'})}>{fmt2(boxDL)}</span></div>}
+              {bMid>0&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(11,400,{color:'#00d4ff'})}>Milieu BOX = pivot</span><span style={jb(12,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>{fmt2(bMid)}</span></div>}
+              {cSig.boxPos&&<div style={{ display:'flex', gap:7, padding:'2px 0', paddingLeft:23 }}><span style={jb(11,400,{color:C.muted})}>Mode</span><Pill label={cSig.boxPos} col={cSig.boxPos==='BREAKOUT HAUSSIER'?C.up:cSig.boxPos==='BREAKOUT BAISSIER'?C.down:'#00d4ff'}/></div>}
             </>)}
 
             {sHdr('3 · STRUCTURE TPO')}
@@ -2198,14 +2971,14 @@ export default function Calculateur() {
             {sHdr('4 · TRIGGER')}
             <Row2 s={vwapStatus} label="Prix > VWAP18h" val={vw18>0?fmt2(vw18):''} />
             <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
-              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>⏳</span>
-              <span style={jb(8.5, 400, { color:C.amber, flex:1 })}>Bougie {dir==='LONG'?'rouge':'verte'} sur pullback</span>
-              <span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
+              <span style={{ fontSize:13, lineHeight:1, minWidth:18, textAlign:'center' }}>⏳</span>
+              <span style={jb(12, 400, { color:C.amber, flex:1 })}>Bougie {dir==='LONG'?'rouge':'verte'} sur pullback</span>
+              <span style={jb(11, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'2px 0' }}>
-              <span style={{ fontSize:11, lineHeight:1, minWidth:16, textAlign:'center' }}>⏳</span>
-              <span style={jb(8.5, 400, { color:C.amber, flex:1 })}>Close &gt; niveau clé → ENTRÉE</span>
-              <span style={jb(8, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'3px 0' }}>
+              <span style={{ fontSize:13, lineHeight:1, minWidth:18, textAlign:'center' }}>⏳</span>
+              <span style={jb(12, 400, { color:C.amber, flex:1 })}>Close &gt; niveau clé → ENTRÉE</span>
+              <span style={jb(11, 400, { color:'rgba(136,153,187,0.45)' })}>manuel</span>
             </div>
 
             {isNoon && (<>
@@ -2217,61 +2990,61 @@ export default function Calculateur() {
 
           {/* ── RIGHT: Signal Output ─────────────── */}
           <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <div style={{ fontSize:7.5, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)' }}>SIGNAL OUTPUT</div>
+            <div style={{ fontSize:11, fontFamily:'Orbitron,monospace', fontWeight:700, color:C.muted, letterSpacing:'0.18em', paddingBottom:3, borderBottom:'1px solid rgba(201,168,76,0.10)' }}>SIGNAL OUTPUT</div>
 
             <div style={{ border:`1px solid ${dirCol}30`, borderRadius:4, overflow:'hidden', flexGrow:1 }}>
               <div style={{ padding:'7px 10px', background:`${dirCol}0a`, borderBottom:`1px solid ${dirCol}20`, display:'flex', alignItems:'center', gap:6 }}>
                 <span style={{ width:6, height:6, borderRadius:'50%', background:dirCol, flexShrink:0, animation: setupReady?`pulseDot${dir==='LONG'?'':' '} 1.8s infinite`:'none' }} />
-                <span style={orb(10, 900, { color:dirCol, letterSpacing:'0.16em' })}>SETUP {tab} — {dir}</span>
+                <span style={orb(13, 900, { color:dirCol, letterSpacing:'0.16em' })}>SETUP {tab} — {dir}</span>
               </div>
               <div style={{ padding:'8px 10px', display:'flex', flexDirection:'column', gap:5 }}>
                 {/* Condition summary rows */}
                 {valAccepted!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>{si(valAccepted)}</span>
-                  <span style={jb(8.5, valAccepted==='ok'?600:400, { color:sc2(valAccepted) })}>VAL J-1 acceptée</span>
+                  <span style={{ fontSize:13 }}>{si(valAccepted)}</span>
+                  <span style={jb(12, valAccepted==='ok'?600:400, { color:sc2(valAccepted) })}>VAL J-1 acceptée</span>
                 </div>}
                 {p9All!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>{si(p9All)}</span>
-                  <span style={jb(8.5, p9All==='ok'?600:400, { color:sc2(p9All) })}>§9 {p9All==='ok'?'confirmé':p9All==='wait'?'partiel':'divergent'}</span>
+                  <span style={{ fontSize:13 }}>{si(p9All)}</span>
+                  <span style={jb(12, p9All==='ok'?600:400, { color:sc2(p9All) })}>§9 {p9All==='ok'?'confirmé':p9All==='wait'?'partiel':'divergent'}</span>
                 </div>}
                 {otfStatus!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>{si(otfStatus)}</span>
-                  <span style={jb(8.5, otfStatus==='ok'?600:400, { color:sc2(otfStatus) })}>OTF Higher</span>
+                  <span style={{ fontSize:13 }}>{si(otfStatus)}</span>
+                  <span style={jb(12, otfStatus==='ok'?600:400, { color:sc2(otfStatus) })}>OTF Higher</span>
                 </div>}
                 {vwapStatus!=='na'&&<div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>{si(vwapStatus)}</span>
-                  <span style={jb(8.5, vwapStatus==='ok'?600:400, { color:sc2(vwapStatus) })}>VWAP18h {vwapStatus==='ok'?'au-dessus':'en-dessous'}</span>
+                  <span style={{ fontSize:13 }}>{si(vwapStatus)}</span>
+                  <span style={jb(12, vwapStatus==='ok'?600:400, { color:sc2(vwapStatus) })}>VWAP18h {vwapStatus==='ok'?'au-dessus':'en-dessous'}</span>
                 </div>}
                 <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                  <span style={{ fontSize:11 }}>⏳</span>
-                  <span style={jb(8.5, 400, { color:C.amber })}>Attendre bougie {dir==='LONG'?'rouge':'verte'}</span>
+                  <span style={{ fontSize:13 }}>⏳</span>
+                  <span style={jb(12, 400, { color:C.amber })}>Attendre bougie {dir==='LONG'?'rouge':'verte'}</span>
                 </div>
 
                 <div style={{ height:1, background:'rgba(201,168,76,0.10)', margin:'3px 0' }} />
 
                 {/* Entry rule */}
                 <div style={{ padding:'5px 8px', background:`${dirCol}08`, borderRadius:2, borderLeft:`2px solid ${dirCol}60` }}>
-                  <div style={jb(8, 400, { color:C.muted, marginBottom:2 })}>Règle entrée</div>
-                  <div style={jb(8.5, 600, { color:dirCol })}>Close {dir==='LONG'?'rouge':'verte'} {dir==='LONG'?'>':'<'} VWAP18h{vw18>0?` (${fmt2(vw18)})`:''}</div>
+                  <div style={jb(11, 400, { color:C.muted, marginBottom:2 })}>Règle entrée</div>
+                  <div style={jb(12, 600, { color:dirCol })}>Close {dir==='LONG'?'rouge':'verte'} {dir==='LONG'?'>':'<'} VWAP18h{vw18>0?` (${fmt2(vw18)})`:''}</div>
                 </div>
 
                 <div style={{ height:1, background:'rgba(201,168,76,0.10)', margin:'1px 0' }} />
 
                 {/* Levels */}
                 {dir==='LONG'?(<>
-                  {stopL>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`sous VAL J-1  ${fmt2(stopL)}`}</span></div>}
-                  {c1L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`SD+1  ${fmt2(c1L)}`}</span></div>}
-                  {c2L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAH J-1  {fmt2(c2L)}</span></div>}
-                  {c3L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+2  {fmt2(c3L)}</span></div>}
-                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:'#00d4ff',minWidth:36})}>Pivot</span><span style={jb(9,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
-                  {rrL!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrL}</span></div>}
+                  {stopL>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>Stop</span><span style={jb(13,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`sous VAL J-1  ${fmt2(stopL)}`}</span></div>}
+                  {c1L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C1</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`SD+1  ${fmt2(c1L)}`}</span></div>}
+                  {c2L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C2</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAH J-1  {fmt2(c2L)}</span></div>}
+                  {c3L>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C3</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD+2  {fmt2(c3L)}</span></div>}
+                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:'#00d4ff',minWidth:42})}>Pivot</span><span style={jb(13,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
+                  {rrL!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>R:R</span><span style={jb(13,700,{color:C.teal})}>1 : {rrL}</span></div>}
                 </>):(<>
-                  {stopS>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>Stop</span><span style={jb(9,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`sur VAH J-1  ${fmt2(stopS)}`}</span></div>}
-                  {c1S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C1</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`SD-1  ${fmt2(c1S)}`}</span></div>}
-                  {c2S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C2</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAL J-1  {fmt2(c2S)}</span></div>}
-                  {c3S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>C3</span><span style={jb(9,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-2  {fmt2(c3S)}</span></div>}
-                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(8,400,{color:'#00d4ff',minWidth:36})}>Pivot</span><span style={jb(9,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
-                  {rrS!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(8,400,{color:C.muted,minWidth:36})}>R:R</span><span style={jb(9,700,{color:C.teal})}>1 : {rrS}</span></div>}
+                  {stopS>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>Stop</span><span style={jb(13,700,{color:C.down,fontVariantNumeric:'tabular-nums'})}>{boxH>0?`BOX High  ${fmt2(boxH)}`:`sur VAH J-1  ${fmt2(stopS)}`}</span></div>}
+                  {c1S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C1</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>{boxL>0?`BOX Low  ${fmt2(boxL)}`:`SD-1  ${fmt2(c1S)}`}</span></div>}
+                  {c2S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C2</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>VAL J-1  {fmt2(c2S)}</span></div>}
+                  {c3S>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>C3</span><span style={jb(13,700,{color:C.up,fontVariantNumeric:'tabular-nums'})}>SD-2  {fmt2(c3S)}</span></div>}
+                  {bMid>0&&<div style={{ display:'flex', gap:8 }}><span style={jb(11,400,{color:'#00d4ff',minWidth:42})}>Pivot</span><span style={jb(13,700,{color:'#00d4ff',fontVariantNumeric:'tabular-nums'})}>BOX Mid  {fmt2(bMid)}</span></div>}
+                  {rrS!=='—'&&<div style={{ display:'flex', gap:8, paddingTop:3, borderTop:'1px solid rgba(201,168,76,0.08)' }}><span style={jb(11,400,{color:C.muted,minWidth:42})}>R:R</span><span style={jb(13,700,{color:C.teal})}>1 : {rrS}</span></div>}
                 </>)}
               </div>
             </div>
@@ -2506,30 +3279,34 @@ export default function Calculateur() {
             <span style={orb(10, 900, { color:C.gold, letterSpacing:'0.14em', fontVariantNumeric:'tabular-nums' })}>{nyTime}</span>
           </div>
         )}
-        {/* SC Bridge status + launch button */}
+        {!isSimple && <button
+          onClick={()=>applySessionData(true)}
+          title="Charger les données J-1 + OVN + VWAP/SD du jour"
+          style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.50)', color:'#c9a84c', transition:'all 0.14s' }}
+        >⬇ CHARGER SESSION</button>}
         <button
-          onClick={() => { if (wsSc !== 'live') window.open('scbridge://launch') }}
-          title={wsSc === 'live' ? 'Bridge actif' : 'Cliquer pour lancer le bridge Sierra Chart'}
-          style={{ display:'flex', alignItems:'center', gap:5, padding:'3px 10px', borderRadius:2, border:'none', cursor: wsSc==='live' ? 'default' : 'pointer', background: wsSc==='live' ? 'rgba(0,255,136,0.08)' : 'rgba(255,68,68,0.13)', outline:`1px solid ${wsSc==='live' ? 'rgba(0,255,136,0.30)' : 'rgba(255,68,68,0.45)'}`, transition:'all 0.15s' }}
-        >
-          <span style={{ width:6, height:6, borderRadius:'50%', background: wsSc==='live' ? C.up : C.down, flexShrink:0, animation: wsSc==='live' ? 'pulseDot 1.8s infinite' : 'none' }} />
-          <span style={orb(7, 700, { color: wsSc==='live' ? C.up : C.down, letterSpacing:'0.14em' })}>
-            {wsSc==='live' ? 'SC LIVE' : '⚡ LANCER BRIDGE'}
-          </span>
-        </button>
-        <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />
-        <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />
-        <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />
-        <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />
-        <Btn label="◈ BACKTEST SD-2"    active={btOpen} col={C.teal}  onClick={()=>setBtOpen(o=>!o)} />
-        <Btn label="⬡ POSITION ACTIVE"  active={posOpen} col='#c77dff' onClick={()=>setPosOpen(o=>!o)} />
+          onClick={()=>setJsonModal(true)}
+          title="Coller le JSON généré par Claude"
+          style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(0,212,255,0.12)', outline:'1px solid rgba(0,212,255,0.50)', color:'#00d4ff', transition:'all 0.14s' }}
+        >📋 JSON CLAUDE</button>
+        <button
+          onClick={()=>{ setCsvScTab(tab); setCsvScModal(true) }}
+          title="Importer CSV Sierra Chart → auto-remplit SD, VWAP, J-1"
+          style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(0,255,136,0.10)', outline:'1px solid rgba(0,255,136,0.40)', color:'#00ff88', transition:'all 0.14s' }}
+        >📊 SC CSV</button>
+        {!isSimple && <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />}
+        {!isSimple && <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />}
+        {!isSimple && <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />}
+        {!isSimple && <Btn label="⚙ RÉGLAGES IB/OR"  active={stOpen} col={C.muted}  onClick={()=>setStOpen(o=>!o)} />}
+        {!isSimple && <Btn label="◈ BACKTEST SD-2"    active={btOpen} col={C.teal}  onClick={()=>setBtOpen(o=>!o)} />}
+        {!isSimple && <Btn label="⬡ POSITION ACTIVE"  active={posOpen} col='#c77dff' onClick={()=>setPosOpen(o=>!o)} />}
         <button onClick={handleReset} style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(255,68,68,0.08)', outline:'1px solid rgba(255,68,68,0.25)', color:'rgba(255,100,100,0.75)', transition:'all 0.14s' }}>
           ↺ RESET
         </button>
       </div>
 
-      {/* Score bar */}
-      <div style={{ padding:'8px 14px', border:`1px solid ${C.brd}`, borderRadius:3, background:C.sur, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+      {/* Score bar — NQ/ES only */}
+      {!isSimple && <div style={{ padding:'8px 14px', border:`1px solid ${C.brd}`, borderRadius:3, background:C.sur, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
         <span style={orb(8, 700, { color:C.muted, letterSpacing:'0.16em' })}>SCORE TOP-DOWN</span>
         <span style={orb(24, 900, { color:scCol, lineHeight:1, textShadow:`0 0 12px ${scCol}` })}>{sc>0?'+':''}{sc}<span style={orb(9, 700, { color:`${scCol}80` })}>/9</span></span>
         <div style={{ flex:1, minWidth:80, height:5, background:'rgba(255,255,255,0.06)', borderRadius:3, overflow:'hidden', position:'relative' }}>
@@ -2543,13 +3320,13 @@ export default function Calculateur() {
           {td.pocMig && <Pill label={`POC: ${td.pocMig}`}       col={td.pocMig==='Ascendant'?C.up:td.pocMig==='Descendant'?C.down:C.muted} />}
           {td.mOtf   && <Pill label={`MONTHLY: ${td.mOtf}`}    col={td.mOtf==='Higher'?C.up:td.mOtf==='Lower'?C.down:C.muted} />}
         </div>
-      </div>
+      </div>}
 
       {/* Setup Launcher */}
-      {slOpen && (
+      {!isSimple && slOpen && (
         <div style={{ border:'1px solid rgba(0,212,255,0.22)', borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:'3px solid #00d4ff', background:'rgba(0,212,255,0.04)', borderBottom:'1px solid rgba(0,212,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
-            <span style={orb(8.5, 900, { color:'#00d4ff', letterSpacing:'0.22em' })}>◉ SETUP LAUNCHER · {tab}</span>
+            <span style={orb(12, 900, { color:'#00d4ff', letterSpacing:'0.22em' })}>◉ SETUP LAUNCHER · {tab}</span>
             <span style={{ width:6, height:6, borderRadius:'50%', background:'#00d4ff', animation:'pulseDot 2.4s infinite', flexShrink:0 }} />
           </div>
           <div style={{ padding:'12px 12px', background:C.sur }}>
@@ -2559,7 +3336,7 @@ export default function Calculateur() {
       )}
 
       {/* Top-Down Dalton */}
-      {tdOpen && (
+      {!isSimple && tdOpen && (
         <div style={{ border:`1px solid ${C.brd}`, borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.gold}`, background:'rgba(201,168,76,0.05)', borderBottom:`1px solid ${C.brd}` }}>
             <span style={orb(8.5, 900, { color:C.gold, letterSpacing:'0.22em' })}>◈ TOP-DOWN DALTON · CONTEXTE MARCHÉ</span>
@@ -2585,7 +3362,7 @@ export default function Calculateur() {
       </div>
 
       {/* Live Tracker */}
-      {trOpen && (
+      {!isSimple && trOpen && (
         <div style={{ border:`1px solid rgba(0,255,136,0.18)`, borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.up}`, background:'rgba(0,255,136,0.04)', borderBottom:'1px solid rgba(0,255,136,0.14)', display:'flex', alignItems:'center', gap:8 }}>
             <span style={orb(8.5, 900, { color:C.up, letterSpacing:'0.22em' })}>⊕ LIVE TRACKER · {tab}</span>
@@ -2598,7 +3375,7 @@ export default function Calculateur() {
       )}
 
       {/* Settings */}
-      {stOpen && (
+      {!isSimple && stOpen && (
         <div style={{ border:'1px solid rgba(136,153,187,0.18)', borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.muted}`, background:'rgba(136,153,187,0.04)', borderBottom:'1px solid rgba(136,153,187,0.14)' }}>
             <span style={orb(8.5, 900, { color:C.muted, letterSpacing:'0.22em' })}>⚙ RÉGLAGES IB / OR / SESSIONS</span>
@@ -2610,7 +3387,7 @@ export default function Calculateur() {
       )}
 
       {/* Backtest SD-2 Bounce OVN */}
-      {btOpen && (
+      {!isSimple && btOpen && (
         <div style={{ border:`1px solid rgba(30,179,188,0.22)`, borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.teal}`, background:'rgba(30,179,188,0.04)', borderBottom:'1px solid rgba(30,179,188,0.14)', display:'flex', alignItems:'center', gap:8 }}>
             <span style={orb(8.5, 900, { color:C.teal, letterSpacing:'0.22em' })}>◈ BACKTEST — SD-2 BOUNCE OVN · NQ</span>
@@ -2622,7 +3399,7 @@ export default function Calculateur() {
       )}
 
       {/* Position Active */}
-      {posOpen && (
+      {!isSimple && posOpen && (
         <div style={{ border:'1px solid rgba(199,125,255,0.22)', borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:'3px solid #c77dff', background:'rgba(199,125,255,0.04)', borderBottom:'1px solid rgba(199,125,255,0.14)', display:'flex', alignItems:'center', gap:8 }}>
             <span style={orb(8.5, 900, { color:'#c77dff', letterSpacing:'0.22em' })}>⬡ GESTION POSITION ACTIVE · {tab}</span>
@@ -2644,6 +3421,81 @@ export default function Calculateur() {
       {csvMsg && (
         <div style={{ position:'fixed', bottom:16, right:16, zIndex:9999, maxWidth:380, padding:'8px 14px', borderRadius:4, background: csvMsg.ok ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,68,0.12)', border:`1px solid ${csvMsg.ok ? 'rgba(0,255,136,0.4)' : 'rgba(255,68,68,0.4)'}`, backdropFilter:'blur(4px)' }}>
           <span style={jb(11.5, 600, { color: csvMsg.ok ? C.up : C.down, whiteSpace:'pre-wrap' })}>{csvMsg.text}</span>
+        </div>
+      )}
+
+      {/* Analyse Claude banner */}
+      {jsonAnalyse && (
+        <div style={{ position:'fixed', bottom: csvMsg ? 70 : 16, left:16, zIndex:9998, maxWidth:420, padding:'10px 14px', borderRadius:4, background:'rgba(0,10,30,0.95)', border:'1px solid rgba(0,212,255,0.40)', backdropFilter:'blur(6px)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+            <span style={orb(8, 900, { color:'#00d4ff', letterSpacing:'0.16em' })}>📋 ANALYSE CLAUDE</span>
+            <span style={{ padding:'1px 7px', borderRadius:2, background: jsonAnalyse.direction==='LONG'?'rgba(0,255,136,0.18)':jsonAnalyse.direction==='SHORT'?'rgba(255,68,68,0.18)':'rgba(201,168,76,0.18)', border:`1px solid ${jsonAnalyse.direction==='LONG'?C.up:jsonAnalyse.direction==='SHORT'?C.down:C.amber}`, fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:900, color: jsonAnalyse.direction==='LONG'?C.up:jsonAnalyse.direction==='SHORT'?C.down:C.amber }}>{jsonAnalyse.direction}</span>
+            <button onClick={()=>setJsonAnalyse(null)} style={{ marginLeft:'auto', background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:14, lineHeight:1 }}>×</button>
+          </div>
+          <div style={jb(11, 500, { color:'#cdd6f4', marginBottom:6, lineHeight:1.4 })}>{jsonAnalyse.setup}</div>
+          {jsonAnalyse.alertes?.map((a,i)=>(
+            <div key={i} style={jb(10, 400, { color:C.amber, marginTop:2 })}>⚠ {a}</div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal JSON Claude */}
+      {jsonModal && (
+        <div style={{ position:'fixed', inset:0, zIndex:10000, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={e=>{ if(e.target===e.currentTarget) setJsonModal(false) }}>
+          <div style={{ background:'#0d1526', border:'1px solid rgba(0,212,255,0.40)', borderRadius:6, padding:20, width:'100%', maxWidth:560 }}>
+            <div style={{ display:'flex', alignItems:'center', marginBottom:12 }}>
+              <span style={orb(10, 900, { color:'#00d4ff', letterSpacing:'0.18em', flex:1 })}>📋 CHARGER JSON CLAUDE</span>
+              <button onClick={()=>setJsonModal(false)} style={{ background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:18, lineHeight:1 }}>×</button>
+            </div>
+            <textarea
+              value={jsonText}
+              onChange={e=>setJsonText(e.target.value)}
+              placeholder='Colle ici le JSON généré par Claude...'
+              rows={12}
+              style={{ width:'100%', background:'#111827', border:'1px solid rgba(0,212,255,0.25)', borderRadius:3, padding:'8px 10px', fontSize:11, color:'#cdd6f4', fontFamily:'"JetBrains Mono",monospace', outline:'none', resize:'vertical', boxSizing:'border-box' }}
+            />
+            {jsonError && (
+              <div style={{ marginTop:8, padding:'6px 10px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.50)', borderRadius:3, color:'#f87171', fontSize:11, fontFamily:'"JetBrains Mono",monospace', whiteSpace:'pre-wrap', wordBreak:'break-all' }}>
+                ⚠ {jsonError}
+              </div>
+            )}
+            <div style={{ display:'flex', gap:8, marginTop:10, justifyContent:'flex-end' }}>
+              <button onClick={()=>{ setJsonModal(false); setJsonError('') }} style={{ padding:'6px 16px', background:'transparent', border:'1px solid rgba(136,153,187,0.30)', borderRadius:3, color:C.muted, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700 }}>ANNULER</button>
+              <button onClick={loadJsonClaude} style={{ padding:'6px 20px', background:'rgba(0,212,255,0.15)', border:'1px solid rgba(0,212,255,0.60)', borderRadius:3, color:'#00d4ff', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:900, letterSpacing:'0.14em' }}>⚡ CHARGER</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal CSV Sierra Chart */}
+      {csvScModal && (
+        <div style={{ position:'fixed', inset:0, zIndex:10000, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={e=>{ if(e.target===e.currentTarget){ setCsvScModal(false); setCsvScErr('') } }}>
+          <div style={{ background:'#0d1526', border:'1px solid rgba(0,255,136,0.40)', borderRadius:6, padding:20, width:'100%', maxWidth:640 }}>
+            <div style={{ display:'flex', alignItems:'center', marginBottom:12 }}>
+              <span style={orb(10, 900, { color:'#00ff88', letterSpacing:'0.18em', flex:1 })}>📊 IMPORTER CSV SIERRA CHART — <span style={{ color: TC[csvScTab] }}>{csvScTab}</span></span>
+              <button onClick={()=>{ setCsvScModal(false); setCsvScErr('') }} style={{ background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:18, lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ marginBottom:8, fontSize:10, color:C.muted, fontFamily:'"JetBrains Mono",monospace' }}>
+              Colle les lignes CSV depuis Sierra Chart (avec ou sans entête).<br/>
+              Colonnes lues : close(5), J1-High(15), J1-Low(16), J1-Settle(17), VWAP(19), SD-1L(20), SD+2H(21), SD-2L(22)
+            </div>
+            <textarea
+              value={csvScText}
+              onChange={e=>setCsvScText(e.target.value)}
+              placeholder={'Colle ici les données CSV Sierra Chart...\nEx: 2026-8-27, 18:00:00.000000, 7733.75, ...'}
+              rows={10}
+              style={{ width:'100%', background:'#111827', border:'1px solid rgba(0,255,136,0.25)', borderRadius:3, padding:'8px 10px', fontSize:10, color:'#cdd6f4', fontFamily:'"JetBrains Mono",monospace', outline:'none', resize:'vertical', boxSizing:'border-box' }}
+            />
+            {csvScErr && (
+              <div style={{ marginTop:8, padding:'6px 10px', background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.50)', borderRadius:3, color:'#f87171', fontSize:11, fontFamily:'"JetBrains Mono",monospace', whiteSpace:'pre-wrap', wordBreak:'break-all' }}>
+                ⚠ {csvScErr}
+              </div>
+            )}
+            <div style={{ display:'flex', gap:8, marginTop:10, justifyContent:'flex-end' }}>
+              <button onClick={()=>{ setCsvScModal(false); setCsvScErr('') }} style={{ padding:'6px 16px', background:'transparent', border:'1px solid rgba(136,153,187,0.30)', borderRadius:3, color:C.muted, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700 }}>ANNULER</button>
+              <button onClick={parseCsvSc} style={{ padding:'6px 20px', background:'rgba(0,255,136,0.15)', border:'1px solid rgba(0,255,136,0.60)', borderRadius:3, color:'#00ff88', cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:9, fontWeight:900, letterSpacing:'0.14em' }}>⚡ IMPORTER</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

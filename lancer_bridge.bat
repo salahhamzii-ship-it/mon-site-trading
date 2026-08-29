@@ -9,7 +9,7 @@ echo.
 set "DIR=%~dp0"
 
 echo [1/2] Telechargement de la derniere version du bridge...
-curl -s -o "%DIR%sc_bridge.py" "https://raw.githubusercontent.com/salahhamzii-ship-it/mon-site-trading/claude/bjr-3hneil/sc_bridge.py"
+curl -s -o "%DIR%sc_bridge.py" "https://raw.githubusercontent.com/salahhamzii-ship-it/mon-site-trading/main/sc_bridge.py"
 if errorlevel 1 (
     echo    ERREUR telechargement - utilisation de la version locale
 ) else (

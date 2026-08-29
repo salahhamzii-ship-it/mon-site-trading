@@ -1,6 +1,9 @@
+// Vercel serverless function — fetch depuis bridge_receiver.py sur VPS
+// sc_bridge.py (Windows) → HTTP POST → VPS:8767 → GET ici → frontend
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const VPS_URL = 'http://2.29.3.199:8767/data'
+const VPS_URL = 'http://2.29.3.199:8766/data'
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
