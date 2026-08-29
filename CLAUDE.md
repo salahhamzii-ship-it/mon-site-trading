@@ -979,3 +979,76 @@ Close = 29 498 (autour du POC 29 508)
 ---
 
 > **En une phrase :** P3 = signal le plus fiable du labo (100% IB) — trader le matin, Excess pour le retournement PM. P4 = ambigu (56%) — toujours attendre l'IB, ne jamais shorter automatiquement, car la counter auction peut produire un Trend Day haussier rare mais réel.
+
+---
+
+## PARTIE 19 — DONNÉES SIERRA CHART NQ+ES (VÉRIFICATION 28/08/2026)
+
+### NQ Monthly — Données corrigées Sierra Chart
+
+**Juillet 2026 (référence mensuelle) :**
+| | |
+| :--- | :--- |
+| High | **30 553.75** |
+| Low | **27 201.50** |
+| Close | **28 404.25** |
+| POC | **28 877.75** |
+| VAH | **30 051.00** |
+| VAL | **27 704.50** |
+
+**Août 2026 (partiel, composite OVN+RTH 8/3→8/28) :**
+| | |
+| :--- | :--- |
+| High | **30 343** (8/17) |
+| Low | **28 313.50** (8/3) |
+| Close | **29 509.50** |
+| POC | **29 328.25** |
+| VAH | **30 038.75** |
+| VAL | **28 617.75** |
+
+→ **Août inside Juillet ✅** (H 30343 < 30553 / L 28313 > 27201)
+
+### NQ Weekly — Composite 4 semaines (8/3→8/28)
+
+| | Ancien (RTH) | Sierra Chart (correct) |
+| :--- | :--- | :--- |
+| POC | 29 222 | **29 533.50** |
+| VAH | 29 545 | **30 141.25** |
+| VAL | 28 947 | **29 135.50** |
+
+→ POC 29 533.50 stable depuis 8/3 = **R17 actif** (accumulation/distribution)
+→ Close vendredi 29 509 = juste sous POC composite weekly (29 533.50) ★★★
+
+### NQ Daily — Chronologie OTF Lower depuis 8/17
+
+| Date | High | Low | Close | Note |
+| :--- | :--- | :--- | :--- | :--- |
+| 8/17 | 30 343 | 30 054 | 30 096 | HIGH absolu août |
+| 8/18 | 30 121 | 29 514 | **29 586** | RUPTURE — cassure |
+| 8/19 | 29 757 | 29 375 | 29 512 | OTF Lower |
+| 8/20 | 29 689 | 29 202 | 29 300 | OTF Lower |
+| 8/21 | 29 539 | 29 220 | 29 387 | OTF Lower |
+| 8/24 | 29 480 | **28 946** | 29 105 | LOW semaine |
+| 8/25 | 29 425 | 29 017 | 29 276 | |
+| 8/26 | 29 437 | 29 096 | 29 289 | |
+| 8/27 | **29 708** | 29 401 | **29 695** | Rebond jeudi |
+| 8/28 | 29 811 | 29 436 | 29 509 | Vendredi — close POC |
+
+### ES Monthly — Données Sierra Chart
+
+**Juillet 2026 :** H=7 632 | L=7 324 | C=7 519.25 | POC=7 478 | VAH=7 586 | VAL=7 370
+**Août 2026 (partiel) :** H=**7 838.50** | L=7 542.75 | C=7 722 | POC=7 690.75 | VAH=7 794.25 | VAL=7 587.25
+→ **ES août NOT inside juillet** (H 7838.50 > juillet H 7632) — ES plus fort que NQ
+
+### ES Weekly — Composite (8/3→8/28)
+POC=7 738 | VAH=7 820.25 | VAL=7 678.25
+→ POC 7738 stable 4 semaines = R17 actif
+→ Close ES vendredi 7722 = AU-DESSUS VAL weekly (7678.25) → ES structurellement plus fort
+
+### Divergence §9 — Mensuelle NQ vs ES
+| | NQ | ES |
+| :--- | :--- | :--- |
+| Inside mois précédent | **OUI** (inside juillet) | **NON** (dépasse juillet) |
+| POC weekly stable | 29 533.50 | 7 738 |
+| Close vs VAL weekly | Sous (29509 < 29535) | Au-dessus (7722 > 7678) |
+→ ES plus fort → divergence baissière NQ relative → surveiller §9 au RTH open lundi
