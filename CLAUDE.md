@@ -1052,3 +1052,73 @@ POC=7 738 | VAH=7 820.25 | VAL=7 678.25
 | POC weekly stable | 29 533.50 | 7 738 |
 | Close vs VAL weekly | Sous (29509 < 29535) | Au-dessus (7722 > 7678) |
 → ES plus fort → divergence baissière NQ relative → surveiller §9 au RTH open lundi
+
+---
+
+## PARTIE 20 — ES J-1 VENDREDI 28/08/2026 (DONNÉES SIERRA CHART COMPLÈTES)
+
+### Session OVN+RTH — Colonnes Sierra Chart
+`Date, Time, Open, High, Low, Last, Volume, #Trades, OHLC, HLC, HL, BidVol, AskVol, TPO POC, TPO VAH, TPO VAL, AVWAP 18H, SD+1, SD-1, SD+2, SD-2, SD+3, SD-3`
+
+### OVN (18:00 jeu 27/08 → 09:30 ven 28/08)
+| | Valeur |
+| :--- | :--- |
+| Open OVN 18:00 | **7 732.75** |
+| High OVN | **7 755.00** (09:00) |
+| Low OVN | **7 727.25** (19:50) |
+| AVWAP 18H à 09:30 | **7 743.60** |
+| SD+2 à 09:30 | 7 749.81 |
+| SD-2 à 09:30 | 7 737.38 |
+
+### RTH (09:30–16:00) — Vendredi 28/08/2026
+| | Valeur |
+| :--- | :--- |
+| Open RTH | **7 746.25** |
+| High RTH | **7 782.50** (11:00) |
+| Low RTH | **7 711.75** (13:10) |
+| Settle RTH | **7 722.50** |
+
+### Chronologie RTH ES 28/08
+- **09:30–10:30 IB** : H=7 760.50 / L=7 726.50 → IB Range 34 pts
+- **10:40–11:00** : Elongation au-dessus IB → High 7 782.50 (dépasse SD+2 RTH)
+- **11:30–13:10** : Sell-off violent -70 pts → Low 7 711.75 (inside J-1 VAL)
+- **13:10–15:50** : Balance PM (~15 pts) → 7 711 / 7 726
+- **Clôture** : 7 722.50 = **SD-2 exact** (7 722.47) ★★★
+
+### AVWAP 18H à la clôture RTH 28/08
+| Bande | Valeur | Note |
+| :--- | :--- | :--- |
+| SD+3 | 7 766.00 | — |
+| **SD+2** | **7 757.25** | Résistance ★★★ |
+| **SD+1** | **7 748.50** | Résistance |
+| **AVWAP 18H** | **7 739.88** | Référence principale 👑 |
+| **SD-1** | **7 731.00** | Support |
+| **SD-2** | **7 722.50** | = SETTLE ★★★ |
+| SD-3 | 7 713.75 | — |
+
+→ **Settle = SD-2 exact** → même pattern que NQ (NQ settle = SD-1)
+→ Position relative : ES plus faible intraday (SD-2) mais plus fort structurellement (weekly)
+
+### TPO J-1 Référence (jeudi 27/08 RTH)
+| | Valeur |
+| :--- | :--- |
+| TPO POC J-1 | **7 764.25** |
+| TPO VAH J-1 | **7 794.00** |
+| TPO VAL J-1 | **7 676.50** |
+
+→ ES ne touche pas VAH J-1 (7 794) → Refus Questionable High → structure intacte
+→ ES Low 7 711.75 reste INSIDE J-1 VA (7 676.50–7 794) → rotationnel
+
+### Niveaux ES pour Lundi 01/09/2026 (plan à migration Globex 18H)
+| Niveau | Prix | Type |
+| :--- | :--- | :--- |
+| J-1 VAH | 7 794.00 | Résistance majeure |
+| SD+2 migré | ~7 757 | Résistance ★★★ |
+| SD+1 migré | ~7 748 | Résistance |
+| **AVWAP 18H** | **~7 740** | **Référence principale** |
+| SD-1 migré | ~7 731 | Support |
+| **SD-2 = SETTLE** | **7 722.50** | **Support ★★★** |
+| J-1 VAL | 7 676.50 | Support profond |
+
+→ Migration dimanche 18:00 : recalibrer AVWAP et SD avec OVN dimanche/lundi
+
