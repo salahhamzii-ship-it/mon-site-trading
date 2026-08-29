@@ -599,6 +599,7 @@ function nav(el){
   const s=el.dataset.s;
   document.querySelectorAll('.sec').forEach(x=>x.classList.remove('active'));
   document.getElementById('sec-'+s).classList.add('active');
+  document.getElementById('main').scrollTop=0;
 }
 function toggleSB(){document.getElementById('sidebar').classList.toggle('collapsed');}
 
