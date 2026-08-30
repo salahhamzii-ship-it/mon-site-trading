@@ -431,6 +431,36 @@ input:focus,textarea:focus,select:focus{border-color:#C8A020;
           <div id="aln-note" style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;padding-top:6px;border-top:1px solid var(--border)"></div>
         </div>
       </div>
+      <!-- RTH OPEN SCANNER -->
+      <div class="card"><div class="ct">RTH OPEN SCANNER</div>
+        <p style="font-size:10px;color:var(--muted);margin:4px 0 8px;line-height:1.5">Gap mesuré vs J-1 RTH High/Low (pas le Settle). n=2 488 sessions NQ 2016–2025.</p>
+        <div class="f" style="margin-bottom:6px"><label title="Plus haut imprimé pendant la RTH de J-1 (09h30–16h00)">J-1 RTH High ⓘ</label><input type="number" id="rth-j1h" placeholder="29811.50" step=".25"></div>
+        <div class="f" style="margin-bottom:6px"><label title="Plus bas imprimé pendant la RTH de J-1 (09h30–16h00)">J-1 RTH Low ⓘ</label><input type="number" id="rth-j1l" placeholder="29436.25" step=".25"></div>
+        <div class="f" style="margin-bottom:8px"><label title="Premier prix imprimé à 09h30 ET">RTH Open 09h30 ⓘ</label><input type="number" id="rth-open" placeholder="29628.50" step=".25"></div>
+        <button class="btn bg" style="width:100%" onclick="calcRTHScanner()">SCANNER ▶</button>
+        <div id="rths-results" style="margin-top:8px;font-family:var(--mono);font-size:11px">
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Situation</span><span id="rths-type" style="font-weight:600">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Gap amplitude</span><span id="rths-gap">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Clôture direction</span><span id="rths-close">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--muted)">Tient côté opposé</span><span id="rths-hold">—</span></div>
+          <div id="rths-verdict" class="vb" style="display:none;margin-top:6px"></div>
+          <div id="rths-note" style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;padding-top:6px;border-top:1px solid var(--border)"></div>
+        </div>
+      </div>
+      <!-- OVN INVENTORY -->
+      <div class="card"><div class="ct">OVN INVENTORY</div>
+        <p style="font-size:10px;color:var(--muted);margin:4px 0 8px;line-height:1.5">Inventaire overnight mesuré vs Settle J-1 (pas le High/Low). Un vendeur de nuit est un acheteur potentiel du jour (R2).</p>
+        <div class="f" style="margin-bottom:6px"><label title="Settle RTH J-1 — prix de clôture officiel à 16h00">J-1 Settle ⓘ</label><input type="number" id="ovni-settle" placeholder="29509.25" step=".25"></div>
+        <div class="f" style="margin-bottom:8px"><label title="Dernier prix OVN avant 09h30 ET (AVWAP 18H ou OVN Close)">OVN Close (≈09h25) ⓘ</label><input type="number" id="ovni-close" placeholder="29628.50" step=".25"></div>
+        <button class="btn bg" style="width:100%" onclick="calcOVNInventory()">ANALYSER ▶</button>
+        <div id="ovni-results" style="margin-top:8px;font-family:var(--mono);font-size:11px">
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Inventaire OVN</span><span id="ovni-inv" style="font-weight:600">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Δ vs Settle</span><span id="ovni-delta">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--muted)">Biais ouverture</span><span id="ovni-bias">—</span></div>
+          <div id="ovni-verdict" class="vb" style="display:none;margin-top:6px"></div>
+          <div id="ovni-note" style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;padding-top:6px;border-top:1px solid var(--border)"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1500,6 +1530,78 @@ function calcNoon(){
   const vEl=document.getElementById('nc-verdict');
   vEl.className='vb '+vCls;vEl.textContent=vTxt;vEl.style.display='block';
   document.getElementById('nc-note').textContent=note;
+}
+
+// ── RTH OPEN SCANNER ─────────────────────────────────
+function calcRTHScanner(){
+  const j1h=gv('rth-j1h'),j1l=gv('rth-j1l'),open=gv('rth-open');
+  if(!j1h||!j1l||!open){toast('Entrez J-1 High, J-1 Low et RTH Open');return;}
+  let type='',typeColor='',gap=0,gapStr='',closeStr='',closePct='',holdStr='',holdPct='',vCls='',vTxt='',note='';
+  if(open>j1h){
+    type='GAP UP ▲';typeColor='var(--green)';
+    gap=open-j1h;gapStr='+'+gap.toFixed(2)+' pts au-dessus J-1 High';
+    closePct='69.9%';closeStr='Clôture > J-1 High : 69.9% | Clôture < J-1 High : 30.1%';
+    holdPct='88.1%';holdStr='J-1 Low non touché : 88.1%';
+    vCls='go';vTxt='GAP UP · 69.9% clôturent au-dessus J-1 H · 88.1% ne pénètrent pas J-1 L';
+    note='n=654 sessions. Le gap UP est une opportunité directionnelle si l\'inventaire OVN est aligné long et si le gap n\'est pas comblé rapidement après l\'ouverture (R27). Si le gap est comblé → surveiller l\'acceptation de valeur. Si valeur reste au-dessus J-1 VA → retour haussier probable.';
+  }else if(open<j1l){
+    type='GAP DOWN ▼';typeColor='var(--red)';
+    gap=j1l-open;gapStr='-'+gap.toFixed(2)+' pts en dessous J-1 Low';
+    closePct='59.5%';closeStr='Clôture < J-1 Low : 59.5% | Clôture > J-1 Low : 40.5%';
+    holdPct='90.4%';holdStr='J-1 High non touché : 90.4%';
+    vCls='nogo';vTxt='GAP DOWN · 59.5% clôturent sous J-1 L · 90.4% ne pénètrent pas J-1 H';
+    note='n=363 sessions. Le gap DOWN moins fiable que le gap UP (59.5% vs 69.9%). L\'inventaire OVN doit être court et aligné. Un gap DOWN avec inventaire long OVN = signal faible → risque de Short Squeeze. R27 : si gap non comblé rapidement → GO WITH.';
+  }else{
+    type='INSIDE RANGE ↔';typeColor='var(--amber)';
+    const distH=(j1h-open).toFixed(2),distL=(open-j1l).toFixed(2);
+    gap=0;gapStr='Open inside · Dist J-1H: '+distH+' | Dist J-1L: '+distL;
+    closePct='74.0%';closeStr='Breach un côté : 74.0% | Stay inside : 17.7% | Breach les deux : 8.3%';
+    holdPct='74.0%';holdStr='Un côté cassé dans 74% des cas';
+    vCls='caution';vTxt='INSIDE · 74% cassent un côté · 17.7% restent inside · 8.3% cassent les deux';
+    note='n=1 471 sessions. Ouverture dans le range J-1 → forte probabilité de chop (R26). Ne pas entrer tant qu\'une référence claire n\'est pas testée avec confirmation. La première rotation est souvent un piège. Attendre la cassure avec acceptation de valeur.';
+  }
+  const res=document.getElementById('rths-results');
+  const typeEl=document.getElementById('rths-type');
+  typeEl.textContent=type;typeEl.style.color=typeColor;
+  document.getElementById('rths-gap').textContent=gapStr;
+  document.getElementById('rths-close').textContent=closeStr;
+  document.getElementById('rths-hold').textContent=holdStr;
+  const vEl=document.getElementById('rths-verdict');
+  vEl.className='vb '+vCls;vEl.textContent=vTxt;vEl.style.display='block';
+  document.getElementById('rths-note').textContent=note;
+}
+
+// ── OVN INVENTORY ─────────────────────────────────────
+function calcOVNInventory(){
+  const settle=gv('ovni-settle'),close=gv('ovni-close');
+  if(!settle||!close){toast('Entrez Settle J-1 et OVN Close');return;}
+  const delta=close-settle;
+  let inv='',invColor='',bias='',biasColor='',vCls='',vTxt='',note='';
+  if(Math.abs(delta)<0.25){
+    inv='NEUTRE';invColor='var(--amber)';
+    bias='Indécis — attendre l\'IB';biasColor='var(--amber)';
+    vCls='caution';vTxt='NEUTRE · OVN Close ≈ Settle · Pas de biais directionnel';
+    note='OVN close quasi identique au Settle J-1. Les acheteurs et vendeurs overnight ont été équilibrés. L\'IB (09h30–10h30) sera le premier signal directionnel. Attendre Bull A ou Bear A avant d\'agir (R41).';
+  }else if(delta>0){
+    inv='LONG ▲';invColor='var(--green)';
+    bias='Biais HAUSSIER — acheteurs overnight';biasColor='var(--green)';
+    vCls='go';vTxt='INVENTAIRE LONG · OVN Close > Settle · Acheteurs potentiels du jour';
+    note='R2 : l\'inventaire long OVN signifie que les acheteurs overnight ont poussé le prix au-dessus du Settle. Ces acheteurs seront des vendeurs potentiels en RTH si le prix monte vers leurs points d\'achat — mais leur présence valide un biais haussier d\'ouverture. Un gap UP + inventaire long = confluence forte. Surveiller si l\'IB confirme (Bull A).';
+  }else{
+    inv='SHORT ▼';invColor='var(--red)';
+    bias='Biais BAISSIER — vendeurs overnight';biasColor='var(--red)';
+    vCls='nogo';vTxt='INVENTAIRE SHORT · OVN Close < Settle · Vendeurs potentiels du jour';
+    note='R2 : les vendeurs overnight ont poussé le prix sous le Settle. Ces vendeurs seront des acheteurs potentiels (couverture de shorts) en RTH si le prix descend — mais leur présence valide un biais baissier d\'ouverture. Un gap DOWN + inventaire short = confluence directionnelle. R22 : inventaire très short à de mauvais prix → risque de Short Squeeze → surveiller LBF.';
+  }
+  const res=document.getElementById('ovni-results');
+  const invEl=document.getElementById('ovni-inv');invEl.textContent=inv;invEl.style.color=invColor;
+  const deltaEl=document.getElementById('ovni-delta');
+  deltaEl.textContent=(delta>=0?'+':'')+delta.toFixed(2)+' pts';
+  deltaEl.style.color=delta>0.25?'var(--green)':delta<-0.25?'var(--red)':'var(--amber)';
+  const biasEl=document.getElementById('ovni-bias');biasEl.textContent=bias;biasEl.style.color=biasColor;
+  const vEl=document.getElementById('ovni-verdict');
+  vEl.className='vb '+vCls;vEl.textContent=vTxt;vEl.style.display='block';
+  document.getElementById('ovni-note').textContent=note;
 }
 
 // ── AUTO-INIT SESSION 28/08 ───────────────────────────
