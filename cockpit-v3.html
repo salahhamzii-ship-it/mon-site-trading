@@ -210,7 +210,7 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   <div class="ni" data-s="reglages" onclick="nav(this)"><span class="ni-ico">⚙</span>RÉGLAGES IB/OR</div>
   <div class="ni" data-s="backtest" onclick="nav(this)"><span class="ni-ico">◈</span>BACKTEST SD-2</div>
   <div class="ni" data-s="position" onclick="nav(this)"><span class="ni-ico">⬡</span>POSITION ACTIVE</div>
-  <div class="ni" data-s="aln-ib-noon" onclick="nav(this)"><span class="ni-ico">◐</span>ALN · IB · NOON</div>
+  <div class="ni" data-s="aln-ib-noon" onclick="nav(this)"><span class="ni-ico">◐</span>NOON CURVE</div>
 </nav>
 <main id="main">
 
@@ -259,6 +259,28 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
       <div class="card" id="sd-card"><div class="ct">BANDES SD — LIVE</div><div id="sd-dis"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">Entrez AVWAP + Sigma.</span></div></div>
       <div class="card" id="ib-card"><div class="ct">IB NIVEAUX</div><div id="ib-dis"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">Entrez IB High + Low.</span></div></div>
       <div class="card"><div class="ct">J-1 SNAPSHOT</div><div id="j1-dis" style="font-family:var(--mono);font-size:12px;line-height:2.1"><span style="color:var(--muted)">Entrez les niveaux J-1.</span></div></div>
+      <!-- ALN Pattern -->
+      <div class="card"><div class="ct">ALN PATTERN</div>
+        <p style="font-size:10px;color:var(--muted);margin:4px 0 8px;line-height:1.5">Pattern classifié à 08h00 ET selon la relation London / Asia. Prédit le biais New York.</p>
+        <div class="r2">
+          <div class="f"><label title="Asia session 20h00–02h00 ET — High du range asiatique">Asia High ⓘ</label><input type="number" id="aln-ah" placeholder="29750" step=".25"></div>
+          <div class="f"><label title="Asia session 20h00–02h00 ET — Low du range asiatique">Asia Low ⓘ</label><input type="number" id="aln-al" placeholder="29620" step=".25"></div>
+        </div>
+        <div class="r2" style="margin-top:6px">
+          <div class="f"><label title="London session 02h00–08h00 ET — High européen">London High ⓘ</label><input type="number" id="aln-lh" placeholder="29800" step=".25"></div>
+          <div class="f"><label title="London session 02h00–08h00 ET — Low européen">London Low ⓘ</label><input type="number" id="aln-ll" placeholder="29680" step=".25"></div>
+        </div>
+        <button class="btn bg" style="width:100%;margin-top:8px" onclick="calcALN()">CLASSIFIER ▶</button>
+        <div id="aln-results" style="margin-top:8px;font-family:var(--mono);font-size:11px">
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Pattern</span><span class="gold" id="aln-pat">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Fréquence</span><span id="aln-freq">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">% Casse London H</span><span class="green" id="aln-ph">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">% Casse London L</span><span class="red" id="aln-pl">—</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--muted)">Biais NY</span><span class="amber" id="aln-bias">—</span></div>
+          <div id="aln-verdict" class="vb" style="display:none;margin-top:6px"></div>
+          <div id="aln-note" style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;padding-top:6px;border-top:1px solid var(--border)"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -544,6 +566,26 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
         <div id="sc-verdict" class="vb" style="display:none"></div>
       </div></div></div>
 
+    <!-- IB Position -->
+    <div class="cc"><div class="ch"><div class="ctit">IB POSITION</div><div class="csub">Close vs Mid · Breach Stats</div></div>
+    <div class="cb">
+      <p style="font-size:10px;color:var(--muted);margin-bottom:9px;line-height:1.5">IB = 09h30–10h30 ET. Position du close IB + séquence → probabilité de breach IB High ou Low (n = 2 571 sessions NQ).</p>
+      <div class="fr"><label title="IB High = plus haut imprimé entre 09h30 et 10h30">IB High ⓘ</label><input type="number" id="ibp-h" placeholder="29704" step=".25"></div>
+      <div class="fr"><label title="IB Low = plus bas imprimé entre 09h30 et 10h30">IB Low ⓘ</label><input type="number" id="ibp-l" placeholder="29629" step=".25"></div>
+      <div class="fr"><label title="Prix de clôture à 10h30 — détermine la position dans le range IB. Close > midpoint → signal haussier.">IB Close (10h30) ⓘ</label><input type="number" id="ibp-c" placeholder="29689" step=".25"></div>
+      <div class="fr"><label title="Low First = le Low IB imprimé AVANT le High (setup haussier). High First = le High imprimé en premier (setup baissier).">Séquence ⓘ</label><select id="ibp-seq"><option value="lowfirst">Low First (High Last)</option><option value="highfirst">High First (Low Last)</option></select></div>
+      <button class="calc-btn" onclick="calcIBPos()">ANALYSER ▶</button>
+      <div class="cr" id="ibp-results">
+        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl" title="Position du close dans le range IB — 0% = IB Low, 100% = IB High">% dans range ⓘ</div><div class="rv gold" id="ibp-pct">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Q1=0–25% · Q2=25–50% · Q3=50–75% · Q4=75–100% du range IB">Quartile ⓘ</div><div class="rv" id="ibp-q">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Close au-dessus du midpoint → signal haussier. En dessous → signal baissier.">Close vs Mid ⓘ</div><div class="rv" id="ibp-mid">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="Probabilité que IB High soit cassé avant 12h00 (noon)">IB H breach · Noon ⓘ</div><div class="rv green" id="ibp-bhn">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="Probabilité que IB High soit cassé avant 16h00 (close)">IB H breach · Close ⓘ</div><div class="rv green" id="ibp-bhc">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl" title="Probabilité que IB Low soit cassé avant 12h00 (noon)">IB L breach · Noon ⓘ</div><div class="rv red" id="ibp-bln">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl" title="Probabilité que IB Low soit cassé avant 16h00 (close)">IB L breach · Close ⓘ</div><div class="rv red" id="ibp-blc">—</div></div>
+        <div id="ibp-verdict" class="vb" style="display:none"></div>
+      </div></div></div>
+
   </div>
 </div>
 
@@ -599,49 +641,10 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
     </div></div>
 </div>
 
-<!-- ── ALN · IB · NOON ── -->
+<!-- ── NOON CURVE ── -->
 <div class="sec" id="sec-aln-ib-noon">
-  <div class="sh"><h2>◐ ALN · IB · NOON CURVE</h2></div>
+  <div class="sh"><h2>◐ NOON CURVE</h2></div>
   <div class="cg">
-
-    <!-- ALN Pattern -->
-    <div class="cc"><div class="ch"><div class="ctit">ALN PATTERN</div><div class="csub">Asia · London · New York</div></div>
-    <div class="cb">
-      <p style="font-size:10px;color:var(--muted);margin-bottom:9px;line-height:1.5">Pattern classifié à la clôture 08h00 ET (dernière barre London). Mesure comment London interagit avec Asia pour prédire New York.</p>
-      <div class="fr"><label title="Asia session 20h00–02h00 ET — High du range overnight asiatique">Asia High ⓘ</label><input type="number" id="aln-ah" placeholder="29750" step=".25"></div>
-      <div class="fr"><label title="Asia session 20h00–02h00 ET — Low du range overnight asiatique">Asia Low ⓘ</label><input type="number" id="aln-al" placeholder="29620" step=".25"></div>
-      <div class="fr"><label title="London session 02h00–08h00 ET — High de la session européenne">London High ⓘ</label><input type="number" id="aln-lh" placeholder="29800" step=".25"></div>
-      <div class="fr"><label title="London session 02h00–08h00 ET — Low de la session européenne">London Low ⓘ</label><input type="number" id="aln-ll" placeholder="29680" step=".25"></div>
-      <button class="calc-btn" onclick="calcALN()">CLASSIFIER ▶</button>
-      <div class="cr" id="aln-results">
-        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl" title="Pattern identifié selon la relation London / Asia">Pattern</div><div class="rv gold" id="aln-pat">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Fréquence historique sur 2479 sessions NQ (10 ans)">Fréquence</div><div class="rv" id="aln-freq">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="% de sessions NY où le London High est cassé">% Casse London H</div><div class="rv green" id="aln-ph">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl" title="% de sessions NY où le London Low est cassé">% Casse London L</div><div class="rv red" id="aln-pl">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--amber)"></div><div class="rl" title="Biais directionnel NY déduit du pattern">Biais NY</div><div class="rv" id="aln-bias">—</div></div>
-        <div id="aln-verdict" class="vb" style="display:none"></div>
-        <div id="aln-note" style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.55;padding:7px 0;border-top:1px solid var(--border)"></div>
-      </div></div></div>
-
-    <!-- IB Position -->
-    <div class="cc"><div class="ch"><div class="ctit">IB POSITION</div><div class="csub">Close vs Mid · Breach Stats</div></div>
-    <div class="cb">
-      <p style="font-size:10px;color:var(--muted);margin-bottom:9px;line-height:1.5">IB = 09h30–10h30 ET. Position du close IB + séquence H/L → probabilité de breach IB High ou Low (n = 2 571 sessions NQ).</p>
-      <div class="fr"><label title="IB High = plus haut imprimé entre 09h30 et 10h30">IB High ⓘ</label><input type="number" id="ibp-h" placeholder="29704" step=".25"></div>
-      <div class="fr"><label title="IB Low = plus bas imprimé entre 09h30 et 10h30">IB Low ⓘ</label><input type="number" id="ibp-l" placeholder="29629" step=".25"></div>
-      <div class="fr"><label title="Prix de clôture à 10h30 — détermine la position dans le range IB. Si le close > midpoint → signal haussier.">IB Close (10h30) ⓘ</label><input type="number" id="ibp-c" placeholder="29689" step=".25"></div>
-      <div class="fr"><label title="Low First = le Low IB a été imprimé AVANT le High (setup haussier). High First = le High imprimé en premier (setup baissier).">Séquence ⓘ</label><select id="ibp-seq"><option value="lowfirst">Low First (High Last)</option><option value="highfirst">High First (Low Last)</option></select></div>
-      <button class="calc-btn" onclick="calcIBPos()">ANALYSER ▶</button>
-      <div class="cr" id="ibp-results">
-        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl" title="Position du close dans le range IB — 0% = IB Low, 100% = IB High">% dans range ⓘ</div><div class="rv gold" id="ibp-pct">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Q1=0–25% · Q2=25–50% · Q3=50–75% · Q4=75–100% du range IB">Quartile ⓘ</div><div class="rv" id="ibp-q">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Close au-dessus du midpoint → signal haussier. En dessous → signal baissier.">Close vs Mid ⓘ</div><div class="rv" id="ibp-mid">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="Probabilité que IB High soit cassé avant 12h00 (noon)">IB H breach · Noon ⓘ</div><div class="rv green" id="ibp-bhn">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="Probabilité que IB High soit cassé avant 16h00 (close)">IB H breach · Close ⓘ</div><div class="rv green" id="ibp-bhc">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl" title="Probabilité que IB Low soit cassé avant 12h00 (noon)">IB L breach · Noon ⓘ</div><div class="rv red" id="ibp-bln">—</div></div>
-        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl" title="Probabilité que IB Low soit cassé avant 16h00 (close)">IB L breach · Close ⓘ</div><div class="rv red" id="ibp-blc">—</div></div>
-        <div id="ibp-verdict" class="vb" style="display:none"></div>
-      </div></div></div>
 
     <!-- Noon Curve -->
     <div class="cc"><div class="ch"><div class="ctit">NOON CURVE</div><div class="csub">TBR 08h–16h · Q2 vs Q1</div></div>
