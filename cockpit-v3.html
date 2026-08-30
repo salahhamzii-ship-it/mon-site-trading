@@ -4,20 +4,20 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#C4D4E6;        /* panneau cockpit — bleu-gris acier */
-  --surface:#EEF5FF;   /* face instrument — blanc bleuté */
-  --surface2:#D6E6F8;  /* surface en retrait */
-  --border:#6888A8;    /* cadre instrument visible */
-  --border2:#4A6888;
-  --text:#08172A;      /* navy profond — très lisible */
-  --muted:#426080;     /* labels */
-  --gold:#B07808;      /* amber-gold */
-  --gold-dim:#8A6010;
-  --green:#0A7035;     /* aviation green */
-  --red:#B02020;       /* warning */
-  --amber:#A85010;     /* caution */
+  --bg:#e8ecf2;        /* fond page — gris-bleuté clair */
+  --surface:#f4f6fa;   /* face instrument — blanc cassé */
+  --surface2:#edf0f5;  /* surface en retrait */
+  --border:#1a2436;    /* cadre instrument foncé — effet "encastré" */
+  --border2:#2c3d55;
+  --text:#1a2436;      /* navy profond */
+  --muted:#4a617a;     /* labels */
+  --gold:#c8930a;      /* amber-gold vif sur fond clair */
+  --gold-dim:#a87808;
+  --green:#1b8a5a;     /* aviation green */
+  --red:#d32f2f;       /* warning saturé */
+  --amber:#b8860b;     /* caution saturé */
   --blue:#1848A0;      /* info */
-  --cyan:#0098B8;      /* système / highlight */
+  --cyan:#0891b2;      /* système */
   --mono:'IBM Plex Mono',monospace;--sans:'Inter',system-ui,sans-serif;
   --sw:220px;--hh:52px;
 }
@@ -197,137 +197,138 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
 }
 
 /* ════════════════════════════════════════════════════════════════
-   COCKPIT THEME — Panneau bleu-gris + écrans instrument sombres
+   COCKPIT THEME — Aviation instrument panel · fond clair pro
    ════════════════════════════════════════════════════════════════ */
 
-/* ── Bezel / Frame : header + sidebar (dark navy) ── */
-#hdr{background:#0E1A28;border-bottom:2px solid #1E3048}
-#hdr-title{color:#C8A020;letter-spacing:.09em}
-#hdr-ver{border-color:#1E3048;color:#486880;background:transparent}
-#clock{color:#7CC8E0;font-weight:600;letter-spacing:.06em}
-#menu-btn{color:#486880}
-#menu-btn:hover{background:#162032;color:#C8DCF0}
-#reset-btn{border-color:#1E3048;color:#486880;font-size:10px}
-#reset-btn:hover{border-color:#B02020;color:#E05050}
-#pb-bg{background:rgba(255,255,255,.1)}
-#pb-fill{background:#C8A020}
-#pb-lbl{color:#486880}
+/* ── Header — bandeau sombre "bezel" ── */
+#hdr{background:#0d1628;border-bottom:2px solid #1a2436}
+#hdr-title{color:#f0d070;letter-spacing:.09em}
+#hdr-ver{border-color:#2c3d55;color:#5a7898;background:transparent}
+#clock{color:#e0c060;font-weight:600;letter-spacing:.06em}
+#menu-btn{color:#5a7898}
+#menu-btn:hover{background:#1a2436;color:#c8ddef}
+#reset-btn{border-color:#2c3d55;color:#5a7898;font-size:10px}
+#reset-btn:hover{border-color:#d32f2f;color:#d32f2f}
+#pb-bg{background:rgba(255,255,255,.08)}
+#pb-fill{background:#f0d070}
+#pb-lbl{color:#5a7898}
 
-#sidebar{background:#0E1A28;border-right:2px solid #1E3048}
-.ni{color:#4A6880;border-bottom-color:#152234;font-size:11px}
-.ni:hover{background:#162032;color:#B8D0E8}
-.ni.active{background:#162032;color:#C8A020;border-right:3px solid #C8A020}
+/* ── Sidebar — panneau latéral sombre ── */
+#sidebar{background:#0d1628;border-right:2px solid #1a2436}
+.ni{color:#5a7898;border-bottom-color:#1a2436;font-size:11px}
+.ni:hover{background:#1a2436;color:#c8ddef}
+.ni.active{background:#1a2436;color:#f0d070;border-right:3px solid #f0d070}
 .ni-ico{opacity:.7}
 .ni.active .ni-ico{opacity:1}
 
-/* ── Inputs + selects — fond blanc sur fond gris-bleu ── */
+/* ── Inputs — fond blanc, bordure ambre au focus ── */
 input,textarea,select{
-  background:#F8FBFF;border:1px solid #8AA8C8;color:#08172A;
-  border-radius:2px}
-input:focus,textarea:focus,select:focus{border-color:#C8A020;
-  background:#FFFFFF;outline:none}
-.fr input,.fr select{background:#F8FBFF;border-color:#8AA8C8;color:#08172A}
-.fr input::placeholder{color:#7A96B2;opacity:1}
-.fr label{color:#4A6080}
+  background:#ffffff;border:1px solid #c9a84c;color:#1a2436;border-radius:2px}
+input:focus,textarea:focus,select:focus{border-color:#b8860b;background:#fffdf5;outline:none}
+.fr input,.fr select{background:#ffffff;border-color:#c9a84c;color:#1a2436}
+.fr input::placeholder{color:#8aa0b8;opacity:1}
+.fr label{color:#4a617a}
 
-/* ── Cards / instruments ── */
-.card{background:#EEF5FF;border:1px solid #8090A8;border-radius:5px;
-  box-shadow:0 1px 4px rgba(10,30,60,.10)}
-.ct{color:#B07808;border-bottom-color:#B0C4D8}
-.cc{background:#EEF5FF;border:1px solid #7090B0;border-radius:5px;
-  box-shadow:0 1px 3px rgba(10,30,60,.10)}
-.ch{border-bottom-color:#B0C4D8}
-.ctit{color:#B07808}
-.csub{color:#5A7898}
+/* ── Cards — blanc cassé, bordure foncée "instrument encastré" ── */
+.card{background:#f4f6fa;border:1px solid #1a2436;border-radius:4px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.ct{background:#1a2436;color:#f0d070;border-bottom:none;border-radius:3px 3px 0 0;
+  margin:-14px -14px 12px -14px;padding:8px 14px;letter-spacing:.1em}
+.cc{background:#f4f6fa;border:1px solid #1a2436;border-radius:4px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.ch{background:#1a2436;border-bottom:none;border-radius:4px 4px 0 0;padding:8px 14px}
+.ctit{color:#f0d070}
+.csub{color:#8aa0b8}
 
-/* ── Calc buttons ── */
-.calc-btn{background:#0E1A28;color:#C8E0F0;letter-spacing:.07em}
-.calc-btn:hover{background:#162032;opacity:1}
+/* ── Calc / action buttons ── */
+.calc-btn{background:#1a2436;color:#f0d070;letter-spacing:.07em}
+.calc-btn:hover{background:#0d1628;opacity:1}
+.bg{background:#c8930a;color:#ffffff}.bg:hover{opacity:.88}
+.bgh{background:transparent;border:1px solid #1a2436;color:#4a617a}
+.bgh:hover{border-color:#c8930a;color:#c8930a}
 
-/* ── SD display — écran instrument sombre ── */
+/* ── SD display — écran instrument sombre (conservation) ── */
 .sdg{gap:4px 10px}
-.sl{color:#5A7898}
-.sv{background:#0C1828;border:1px solid #1E3048;color:#E0EEFF;
+.sl{color:#5a7898}
+.sv{background:#0c1828;border:1px solid #1a2436;color:#e0eeff;
   border-radius:2px;font-size:14px}
-/* couleurs SD bandes */
-.svw{color:#F0C020;font-size:15px}       /* AVWAP gold */
-.s3u{color:#FF5555;text-shadow:0 0 6px rgba(255,85,85,.4)}  /* SD+3 rouge vif */
-.s2u{color:#F0A020}                      /* SD+2 amber */
-.s1u{color:#7CC8E0}                      /* SD+1 cyan */
-.s1d{color:#7CC8E0}                      /* SD-1 cyan */
-.s2d{color:#30D46A}                      /* SD-2 vert */
-.s3d{color:#30D46A;text-shadow:0 0 6px rgba(48,212,106,.3)} /* SD-3 vert vif */
+.svw{color:#f0c020;font-size:15px}
+.s3u{color:#d32f2f;font-weight:700}
+.s2u{color:#b8860b;font-weight:600}
+.s1u{color:#0891b2}
+.s1d{color:#0891b2}
+.s2d{color:#1b8a5a;font-weight:600}
+.s3d{color:#1b8a5a;font-weight:700}
 
-/* ── Verdict boxes — écrans d'alerte sombres ── */
-.vb{border-radius:3px;letter-spacing:.06em}
-.vb.go{background:#071A0C;color:#22D46A;border:1px solid #0A4020;
-  text-shadow:0 0 8px rgba(34,212,106,.3)}
-.vb.nogo{background:#1A0708;color:#FF5555;border:1px solid #401010;
-  text-shadow:0 0 8px rgba(255,85,85,.3)}
-.vb.caution{background:#1A0E04;color:#F0A820;border:1px solid #402808;
-  text-shadow:0 0 8px rgba(240,168,32,.25)}
+/* ── Verdict boxes — fond pâle coloré, pas de néon ── */
+.vb{border-radius:3px;letter-spacing:.05em}
+.vb.go{background:#edf7f1;color:#1b8a5a;border:1px solid #1b8a5a}
+.vb.nogo{background:#fdf0f0;color:#d32f2f;border:1px solid #d32f2f}
+.vb.caution{background:#fdf3d8;color:#b8860b;border:1px solid #b8860b}
 
 /* ── Results rows ── */
-.rr{border-bottom-color:#B8CCE0}
-.rl{color:#4A6080}
-.rv{color:#08172A}
-.rv.gold{color:#B07808}.rv.green{color:#0A7035}.rv.red{color:#B02020}
-.rv.amber{color:#A85010}.rv.blue{color:#1848A0}
-/* cyan class pour nouveaux éléments */
-.rv.cyan,.cyan{color:#0098B8}
+.rr{border-bottom-color:#d8dde6}
+.rl{color:#4a617a}
+.rv{color:#1a2436}
+.rv.gold{color:#c8930a}.rv.green{color:#1b8a5a}.rv.red{color:#d32f2f}
+.rv.amber{color:#b8860b}.rv.blue{color:#1848A0}
+.rv.cyan,.cyan{color:#0891b2}
 
-/* ── Checklist items ── */
-.ci input[type=checkbox]{background:#F8FBFF;border-color:#8AA8C8}
-.ci input[type=checkbox]:checked{background:#0A7035;border-color:#0A7035}
-.ci input[type=checkbox]:checked::after{border-color:#FFFFFF}
-.ci label{color:#0D2040}
-.ci input:checked+label{color:#6A8AA8;text-decoration-color:#B0C4D8}
-.ci:hover{background:rgba(10,112,53,.05)}
-.pc{background:#EEF5FF;border-color:#7090B0}
-.ph{border-bottom-color:#B0C4D8}
-.ph:hover{background:#E4F0FF}
-.ph.done{border-left-color:#0A7035}
-.pn{color:#B07808}
-.pt{color:#5A7898}
-.pcnt{color:#7A96B2}
-.pb{background:#EEF5FF}
+/* ── Checklist ── */
+.ci input[type=checkbox]{background:#ffffff;border-color:#1a2436}
+.ci input[type=checkbox]:checked{background:#1b8a5a;border-color:#1b8a5a}
+.ci input[type=checkbox]:checked::after{border-color:#ffffff}
+.ci label{color:#1a2436}
+.ci input:checked+label{color:#8aa0b8;text-decoration-color:#c8d4e0}
+.ci:hover{background:rgba(27,138,90,.04)}
+.pc{background:#f4f6fa;border-color:#1a2436}
+.ph{border-bottom-color:#d0d8e4}
+.ph:hover{background:#edf0f5}
+.ph.done{border-left-color:#1b8a5a}
+.pn{color:#c8930a}
+.pt{color:#5a7898}
+.pcnt{color:#8aa0b8}
+.pb{background:#f4f6fa}
 
 /* ── Tags ── */
-.tag{background:#D0DEEE;color:#3A5878;border-radius:2px}
-.tag.r{background:rgba(176,32,32,.10);color:#B02020}
-.tag.g{background:rgba(10,112,53,.10);color:#0A7035}
-.tag.a{background:rgba(168,80,16,.10);color:#A85010}
+.tag{background:#dde3ec;color:#3a5878;border-radius:2px}
+.tag.r{background:rgba(211,47,47,.08);color:#d32f2f}
+.tag.g{background:rgba(27,138,90,.08);color:#1b8a5a}
+.tag.a{background:rgba(184,134,11,.08);color:#b8860b}
 
 /* ── Section headers ── */
-.sh h2{color:#0D2040}
-.sh span{color:#5A7898}
+.sh h2{color:#1a2436}
+.sh span{color:#5a7898}
+
+/* ── Zones ★★★ (decision critique) ── */
+.star3{background:#fdf3d8;border:1px solid #b8860b;border-radius:3px;padding:2px 6px}
 
 /* ── Backtest ── */
-.bts-box{background:#EEF5FF;border-color:#8090A8}
-.bts-lbl{color:#5A7898}
-.bts-val{color:#B07808}
-.btt th{color:#5A7898;border-bottom-color:#B0C4D8}
-.btt td{color:#0D2040;border-bottom-color:#D0DCEA}
-.btt tr:hover td{background:#E0EEF8}
+.bts-box{background:#f4f6fa;border-color:#1a2436}
+.bts-lbl{color:#5a7898}
+.bts-val{color:#c8930a}
+.btt th{color:#5a7898;border-bottom-color:#d0d8e4}
+.btt td{color:#1a2436;border-bottom-color:#e0e6ef}
+.btt tr:hover td{background:#edf0f5}
 
 /* ── Position tracker ── */
-.pm{background:#EEF5FF;border-color:#8090A8}
-.pm-l{color:#5A7898}
-#tp{background:#F8FBFF;border-color:#8AA8C8;color:#08172A}
-#tp:focus{border-color:#C8A020}
-.tb{background:#E4F0FF;border-color:#8090A8}
-.tb.ab{background:rgba(176,120,8,.10);border-color:#B07808}
-.tbl{color:#5A7898}
+.pm{background:#f4f6fa;border-color:#1a2436}
+.pm-l{color:#5a7898}
+#tp{background:#ffffff;border-color:#c9a84c;color:#1a2436}
+#tp:focus{border-color:#b8860b}
+.tb{background:#edf0f5;border-color:#c8d4e0}
+.tb.ab{background:#fdf3d8;border-color:#b8860b}
+.tbl{color:#5a7898}
 
-/* ── Phasecards (signal boxes) ── */
-#tsig.ss{background:rgba(176,32,32,.10);border-color:#B02020;color:#B02020}
-#tsig.sl{background:rgba(10,112,53,.10);border-color:#0A7035;color:#0A7035}
-#tsig.sn{background:#EEF5FF;border-color:#8090A8;color:#5A7898}
+/* ── Signal boxes (tracker) ── */
+#tsig.ss{background:#fdf0f0;border-color:#d32f2f;color:#d32f2f}
+#tsig.sl{background:#edf7f1;border-color:#1b8a5a;color:#1b8a5a}
+#tsig.sn{background:#f4f6fa;border-color:#c8d4e0;color:#5a7898}
 
-/* ── Topdown / JSON / CSV preformatted ── */
-.tdo{background:#0C1828;border-color:#1E3048;color:#C0D8F0;border-radius:4px}
-#jo{background:#0C1828;border-color:#1E3048;color:#C0D8F0}
-#cr2{background:#EEF5FF;border-color:#8090A8;color:#0D2040}
+/* ── Topdown / JSON / CSV (écran sombre conservé) ── */
+.tdo{background:#0c1828;border-color:#1a2436;color:#c0d8f0;border-radius:4px}
+#jo{background:#0c1828;border-color:#1a2436;color:#c0d8f0}
+#cr2{background:#f4f6fa;border-color:#1a2436;color:#1a2436}
 
 /* ── Toast ── */
 #toast{background:#0E1A28;border-color:#C8A020;color:#C8A020}
