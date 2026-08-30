@@ -446,6 +446,7 @@ export default function Calculateur() {
   const [posSize,  setPosSize]  = useState('1')
   const [posDir,   setPosDir]   = useState<'LONG'|'SHORT'>('LONG')
 
+  const [wkCtxOpen, setWkCtxOpen] = useState(true)
   const [mpModal,  setMpModal]  = useState(false)
   const [mpText,   setMpText]   = useState('')
   const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
@@ -563,12 +564,12 @@ export default function Calculateur() {
       alnFiab:      '80.8',
     },
   }
-  const TD_SESSION_DATE = '2026-08-29'
+  const TD_SESSION_DATE = '2026-09-01'
   const SESSION_TD: Partial<TD> = {
     // MONTHLY NQ Août 2026 (Sierra Chart · Partie 19)
     mHigh: '30343',     mLow: '28313.50',  mPoc: '29614.75',
     mOtf:  'Neutral',   mVah: '30038.75',  mVal: '28617.75',
-    // WEEKLY NQ composite 4 semaines 8/3→8/28 (Sierra Chart)
+    // WEEKLY NQ — semaine précédente 8/3→8/28 (Sierra Chart)
     wHigh: '30343',     wLow: '28946',     wPoc: '29533.50',
     wOtf:  'Lower',     wVah: '30141.25',  wVal: '29135.50',
     // COMPOSITE SEMAINE (4 semaines Sierra Chart)
@@ -579,10 +580,40 @@ export default function Calculateur() {
     tpoOvnH: '29707',  tpoOvnL: '29578.25', pocMig: 'Stable',
     // DAILY BARS J-1 (28/08)
     excess: true,  poorHigh: false, poorLow: false, gapDay: false,
-    // ÉVÉNEMENTS semaine 1/09
-    events: 'Lundi 1 sept — Fête du Travail US (marché FERMÉ)\nMardi 2 sept — RTH open · OVN dimanche soir déterminant',
-    // MES LIGNES WE
-    lignes: '★★★ 29 849 — résistance haute balance daily\n★★★ 29 443 — pivot SD-2 / Single Print semaine\n★★★ 28 990 — support bas balance\n★★ POC weekly 29 533\n★★ Gap non comblé 29 789 → 30 057',
+    // CATALYSEURS semaine 01-05/09
+    events: '⚠️ MACRO : Warsh (Fed) hawkish — septembre à risque · Core PCE 3.3% YoY\nMar 02/09 : ISM Manufacturier + JOLTS\nMer 03/09 : ADP + Beige Book + AVGO earnings (test AI)\nJeu 04/09 : ISM Services + Waller (Fed)\n🔴 Ven 05/09 : NFP — CATALYSEUR PRINCIPAL (risque élevé)',
+    // ES BALANCE SEMAINE + NQ niveaux
+    lignes: '=== ES BALANCE STRUCTURE 01-05/09 ===\n★★★ 7 763 — Accélération haussière (close > 7763)\n★★★ 7 744 — Top balance ES\n★★  7 703 / 7 714 — Migration haussière (breakout)\n★★★ 7 660 - 7 703 — Balance basse ES (range)\n=== NQ NIVEAUX CLÉ ===\n★★★ 29 849 — résistance haute balance daily NQ\n★★★ 29 443 — pivot SD-2 / Single Print semaine\n★★★ 28 990 — support bas balance NQ\n★★ Gap NQ non comblé 29 789 → 30 057',
+  }
+
+  // Contexte semaine 01-05/09 — affiché dans renderTD (statique, lecture seule)
+  const WEEK_01_09 = {
+    label: 'SEMAINE 01 – 05 SEPT 2026',
+    macro: [
+      { icon: '🦅', txt: 'Warsh (Fed) hawkish — hausse septembre à risque' },
+      { icon: '📊', txt: 'Core PCE 3.3% YoY · consommateur réel faible' },
+      { icon: '🔴', txt: 'NFP vendredi = catalyseur principal · risque élevé' },
+      { icon: '🤖', txt: 'AVGO mercredi = 2e test narratif AI (post-NVDA)' },
+    ],
+    catalysts: [
+      { day: 'MAR 02', col: '#8899bb', events: 'ISM Manufacturier + JOLTS' },
+      { day: 'MER 03', col: '#ffc107', events: 'ADP + Beige Book + AVGO earnings' },
+      { day: 'JEU 04', col: '#ffc107', events: 'ISM Services + Waller (Fed)' },
+      { day: 'VEN 05', col: '#ff4d4d', events: '🔴 NFP — CATALYSEUR PRINCIPAL' },
+    ],
+    es: [
+      { lvl: '7 763', role: 'Accélération haussière (close > 7763)', star: '★★★', col: '#00ff88' },
+      { lvl: '7 744', role: 'Top balance ES',                         star: '★★★', col: '#ffd700' },
+      { lvl: '7 703 – 7 714', role: 'Migration haussière (breakout zone)', star: '★★',  col: '#ffc107' },
+      { lvl: '7 660 – 7 703', role: 'Balance basse (range — rotation)',    star: '★★★', col: '#8899bb' },
+    ],
+    nfpRisks: [
+      'Ne pas shorter avant le chiffre (stop-hunt probable)',
+      'Si NFP > consensus → Fed hawkish → NQ sell → short SD+2',
+      'Si NFP < consensus → Fed dovish → NQ rally → long sur LBF SD-2',
+      'Spread initial faux → attendre 2e barre 30min post-NFP',
+      'Inventaire OVN détermine le côté d\'entrée (R27 — gap rules)',
+    ],
   }
 
   const applySessionData = useCallback((forceOverwrite = false) => {
@@ -1721,6 +1752,77 @@ export default function Calculateur() {
 
   const renderTD = () => (
     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+
+      {/* ── CONTEXTE SEMAINE 01-05/09 ───────────────────────────────── */}
+      <div style={{ border:'1px solid rgba(255,193,7,0.30)', borderRadius:4, overflow:'hidden' }}>
+        <div
+          onClick={()=>setWkCtxOpen(o=>!o)}
+          style={{ padding:'5px 12px', background:'rgba(255,193,7,0.06)', borderBottom: wkCtxOpen ? '1px solid rgba(255,193,7,0.18)' : 'none', display:'flex', alignItems:'center', gap:8, cursor:'pointer', userSelect:'none' }}
+        >
+          <span style={orb(9, 900, { color:'#ffc107', letterSpacing:'0.20em', flex:1 })}>📅 {WEEK_01_09.label}</span>
+          <span style={{ fontSize:10, color:'rgba(255,193,7,0.50)' }}>{wkCtxOpen ? '▲' : '▼'}</span>
+        </div>
+        {wkCtxOpen && (
+          <div style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:10 }}>
+
+            {/* Macro */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:4 }}>
+              {WEEK_01_09.macro.map((m,i)=>(
+                <div key={i} style={{ display:'flex', gap:6, alignItems:'flex-start', padding:'3px 6px', background:'rgba(255,193,7,0.04)', borderRadius:2, border:'1px solid rgba(255,193,7,0.10)' }}>
+                  <span style={{ fontSize:13, lineHeight:1.4, flexShrink:0 }}>{m.icon}</span>
+                  <span style={jb(11, 400, { color:'#e2d4a0', lineHeight:1.4 })}>{m.txt}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Catalysts + ES Levels */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+
+              {/* Calendrier */}
+              <div>
+                <div style={jb(8, 700, { color:C.muted, letterSpacing:'0.14em', marginBottom:4 })}>CALENDRIER CATALYSEURS</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                  {WEEK_01_09.catalysts.map((c,i)=>(
+                    <div key={i} style={{ display:'flex', gap:8, alignItems:'center', padding:'3px 6px', background:`${c.col}08`, borderRadius:2, border:`1px solid ${c.col}28` }}>
+                      <span style={orb(9, 900, { color:c.col, minWidth:46, letterSpacing:'0.08em' })}>{c.day}</span>
+                      <span style={jb(11, 400, { color:'#cdd6f4', lineHeight:1.4 })}>{c.events}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ES Balance */}
+              <div>
+                <div style={jb(8, 700, { color:C.muted, letterSpacing:'0.14em', marginBottom:4 })}>ES — STRUCTURE SEMAINE</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                  {WEEK_01_09.es.map((e,i)=>(
+                    <div key={i} style={{ display:'flex', gap:6, alignItems:'center', padding:'3px 6px', background:`${e.col}07`, borderRadius:2, border:`1px solid ${e.col}25` }}>
+                      <span style={jb(9, 700, { color:`${e.col}99`, minWidth:22 })}>{e.star}</span>
+                      <span style={orb(10, 900, { color:e.col, minWidth:90, fontVariantNumeric:'tabular-nums', letterSpacing:'0.06em' })}>{e.lvl}</span>
+                      <span style={jb(10, 400, { color:'rgba(180,190,210,0.80)', lineHeight:1.3 })}>{e.role}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* NFP Risks */}
+            <div>
+              <div style={jb(8, 700, { color:'#ff6b6b', letterSpacing:'0.14em', marginBottom:4 })}>🔴 RISQUES NFP VENDREDI 05/09</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:3 }}>
+                {WEEK_01_09.nfpRisks.map((r,i)=>(
+                  <div key={i} style={{ display:'flex', gap:6, alignItems:'flex-start', padding:'2px 6px' }}>
+                    <span style={{ color:'rgba(255,107,107,0.55)', fontSize:12, lineHeight:1.5, flexShrink:0 }}>•</span>
+                    <span style={jb(11, 400, { color:'rgba(200,180,180,0.85)', lineHeight:1.45 })}>{r}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
+      </div>
+
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title="MONTHLY" col={C.gold}>
           <G3 ch={<><F l="High" v={td.mHigh} s={v=>upTD('mHigh',v)} /><F l="Low" v={td.mLow} s={v=>upTD('mLow',v)} /><F l="POC" v={td.mPoc} s={v=>upTD('mPoc',v)} /></>}/>
