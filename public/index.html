@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camel Market Cockpit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#060810;font-family:'JetBrains Mono',monospace;color:#fff;overflow-x:hidden}
+a{color:#c9a84c;text-decoration:none}
+a:hover{color:#f0d070}
+
+@keyframes glowPulse{0%,100%{text-shadow:0 0 20px rgba(201,168,76,.55),0 0 40px rgba(201,168,76,.2)}50%{text-shadow:0 0 44px rgba(201,168,76,1),0 0 90px rgba(201,168,76,.4),0 0 130px rgba(201,168,76,.12)}}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.85),0 0 10px rgba(0,255,136,.7)}60%{box-shadow:0 0 0 12px rgba(0,255,136,0),0 0 10px rgba(0,255,136,.7)}}
+@keyframes floatSlow{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+.fade-up{opacity:0;animation:fadeUp .8s ease both}
+.grid-bg{position:relative}
+.grid-bg::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(201,168,76,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.035) 1px,transparent 1px);background-size:44px 44px;pointer-events:none}
+section{padding:120px 80px}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 60px;z-index:100;background:rgba(6,8,16,.88);backdrop-filter:blur(12px);border-bottom:1px solid rgba(201,168,76,.12)}
+.nav-logo{display:flex;align-items:center;gap:12px}
+.nav-logo-camel{font-size:26px;filter:drop-shadow(0 0 10px rgba(201,168,76,.6))}
+.nav-logo-name{font-family:Orbitron,sans-serif;font-size:14px;font-weight:900;color:#c9a84c;letter-spacing:.18em}
+.nav-logo-by{font-family:Orbitron,sans-serif;font-size:7.5px;color:#f0d070;letter-spacing:.25em;opacity:.7;margin-top:2px}
+.nav-links{display:flex;align-items:center;gap:36px}
+.nav-links a{font-size:11px;color:#8899bb;letter-spacing:.1em}
+.nav-links a:hover{color:#c9a84c}
+.nav-cta{font-family:Orbitron,sans-serif;font-size:10px;font-weight:700;color:#060810 !important;letter-spacing:.12em;background:linear-gradient(135deg,#f0d070,#c9a84c);padding:11px 24px;border-radius:3px;box-shadow:0 0 24px rgba(201,168,76,.35)}
+.nav-cta:hover{opacity:.9;color:#060810 !important}
+
+/* HERO */
+#hero{min-height:100vh;padding-top:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;padding-bottom:80px}
+#hero .glow-bottom{position:absolute;bottom:0;left:0;right:0;height:50%;background:linear-gradient(to top,rgba(201,168,76,.1) 0%,transparent 100%);pointer-events:none}
+#hero .glow-right{position:absolute;top:-200px;right:-150px;width:600px;height:600px;background:radial-gradient(circle,rgba(30,179,188,.08),transparent 70%);pointer-events:none}
+
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);border-radius:20px;padding:7px 18px;margin-bottom:32px}
+.badge-dot{width:7px;height:7px;border-radius:50%;background:#00ff88;animation:pulseDot 2s ease-in-out infinite}
+.badge-text{font-family:Orbitron,sans-serif;font-size:9px;color:#00ff88;letter-spacing:.18em}
+
+h1{font-family:Orbitron,sans-serif;font-weight:900;font-size:64px;letter-spacing:.02em;line-height:1.15;max-width:920px;margin:0 auto 22px}
+h1 .accent{color:#c9a84c;animation:glowPulse 3s ease-in-out infinite}
+.hero-sub{font-size:16px;color:#8899bb;max-width:640px;line-height:1.6;margin:0 auto 44px}
+
+.hashtags{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:28px}
+.hashtag{font-size:11px;color:#1eb3bc;background:rgba(30,179,188,.08);border:1px solid rgba(30,179,188,.25);padding:5px 12px;border-radius:16px}
+
+.hero-btns{display:flex;gap:16px;margin-bottom:80px;flex-wrap:wrap;justify-content:center}
+.btn-primary{font-family:Orbitron,sans-serif;font-size:12px;font-weight:700;color:#060810;letter-spacing:.12em;background:linear-gradient(135deg,#f0d070,#c9a84c);padding:16px 34px;border-radius:4px;box-shadow:0 0 32px rgba(201,168,76,.4)}
+.btn-primary:hover{opacity:.9;color:#060810}
+.btn-outline{font-family:Orbitron,sans-serif;font-size:12px;font-weight:700;color:#c9a84c;letter-spacing:.12em;border:1px solid rgba(201,168,76,.35);padding:16px 34px;border-radius:4px}
+.btn-outline:hover{border-color:#c9a84c;background:rgba(201,168,76,.05);color:#f0d070}
+
+/* FLOATING CARD MOCK */
+.mock-wrap{position:relative;width:920px;max-width:92vw;margin:0 auto}
+.mock-card{position:relative;background:linear-gradient(180deg,#0c1220,#080d18);border:1px solid rgba(201,168,76,.25);border-radius:8px;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 60px rgba(201,168,76,.08);overflow:hidden;animation:floatSlow 6s ease-in-out infinite}
+.mock-header{height:40px;background:rgba(7,10,18,.9);border-bottom:1px solid rgba(201,168,76,.1);display:flex;align-items:center;padding:0 20px;gap:24px}
+.mock-sym{font-family:Orbitron,sans-serif;font-size:9px;font-weight:700;color:#c9a84c;letter-spacing:.2em}
+.mock-price{font-size:12px;color:#fff}
+.mock-chg{font-size:10px;color:#00ff88;text-shadow:0 0 8px rgba(0,255,136,.5)}
+.mock-dots{margin-left:auto;display:flex;gap:6px}
+.mock-dot{width:9px;height:9px;border-radius:50%;opacity:.4}
+.mock-body{padding:36px 40px;display:flex;align-items:center;justify-content:space-between}
+.mock-signal-lbl{font-family:Orbitron,sans-serif;font-size:9px;color:#8899bb;letter-spacing:.28em;margin-bottom:10px}
+.mock-signal{display:flex;align-items:center;gap:10px}
+.mock-signal-dot{width:10px;height:10px;border-radius:50%;background:#00ff88;animation:pulseDot 1.8s ease-in-out infinite}
+.mock-signal-val{font-family:Orbitron,sans-serif;font-size:32px;font-weight:900;color:#00ff88;letter-spacing:.16em;text-shadow:0 0 26px rgba(0,255,136,.7)}
+
+/* STATS */
+#stats{padding:80px;border-top:1px solid rgba(201,168,76,.08)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;max-width:1200px;margin:0 auto}
+.stat-item{text-align:center;padding:0 24px;border-right:1px solid rgba(255,255,255,.06)}
+.stat-item:last-child{border-right:none}
+.stat-val{font-family:Orbitron,sans-serif;font-size:42px;font-weight:900}
+.stat-lbl{font-size:11px;color:#8899bb;letter-spacing:.15em;margin-top:10px}
+
+/* METHOD */
+#method{max-width:1200px;margin:0 auto;text-align:center}
+.section-eyebrow{font-family:Orbitron,sans-serif;font-size:10px;color:#c9a84c;letter-spacing:.3em;margin-bottom:16px}
+h2{font-family:Orbitron,sans-serif;font-size:38px;font-weight:700;margin-bottom:20px}
+h2 .sep{color:#c9a84c}
+.section-sub{font-size:15px;color:#8899bb;max-width:680px;margin:0 auto 64px;line-height:1.7}
+.phases-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:left}
+.phase-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:4px;padding:20px;transition:transform .2s}
+.phase-card:hover{transform:translateY(-4px)}
+.phase-time{font-family:Orbitron,sans-serif;font-size:10px;font-weight:700;letter-spacing:.15em;margin-bottom:8px}
+.phase-name{font-size:13px;color:#fff;font-weight:600;margin-bottom:6px}
+.phase-desc{font-size:11px;color:#8899bb;line-height:1.5}
+
+/* MODULES */
+#modules{border-top:1px solid rgba(201,168,76,.08)}
+.modules-inner{max-width:1200px;margin:0 auto}
+.modules-header{text-align:center;margin-bottom:64px}
+.modules-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.module-card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:26px;transition:transform .2s,box-shadow .2s}
+.module-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(201,168,76,.1)}
+.module-icon{font-size:22px;margin-bottom:14px}
+.module-name{font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;color:#c9a84c;letter-spacing:.1em;margin-bottom:8px}
+.module-desc{font-size:12px;color:#8899bb;line-height:1.6}
+
+/* NOON HIGHLIGHT */
+#noon{max-width:1000px;margin:0 auto;text-align:center;padding:100px 80px}
+.noon-box{background:linear-gradient(135deg,rgba(201,168,76,.08),rgba(30,179,188,.04));border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:56px 60px}
+.noon-eyebrow{font-family:Orbitron,sans-serif;font-size:10px;color:#1eb3bc;letter-spacing:.3em;margin-bottom:18px}
+.noon-pct{font-family:Orbitron,sans-serif;font-size:56px;font-weight:900;color:#c9a84c;text-shadow:0 0 30px rgba(201,168,76,.5);margin-bottom:12px}
+.noon-desc{font-size:14px;color:#8899bb;max-width:520px;margin:0 auto;line-height:1.6}
+
+/* CTA */
+#cta{text-align:center;border-top:1px solid rgba(201,168,76,.08);position:relative;overflow:hidden}
+#cta .cta-glow{position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(to top,rgba(201,168,76,.1),transparent);pointer-events:none}
+#cta .cta-inner{position:relative}
+.cta-camel{font-size:36px;filter:drop-shadow(0 0 16px rgba(201,168,76,.6))}
+.cta-title{font-family:Orbitron,sans-serif;font-size:34px;font-weight:900;color:#c9a84c;letter-spacing:.05em;margin:24px 0 16px;animation:glowPulse 3.5s ease-in-out infinite}
+.cta-sub{font-size:14px;color:#8899bb;margin-bottom:36px}
+
+/* FOOTER */
+footer{padding:32px 80px;text-align:center;border-top:1px solid rgba(255,255,255,.05)}
+.footer-copy{font-family:Orbitron,sans-serif;font-size:9px;color:rgba(201,168,76,.35);letter-spacing:.2em}
+
+@media(max-width:900px){
+  nav{padding:0 20px}
+  .nav-links a:not(.nav-cta){display:none}
+  section{padding:80px 24px}
+  #hero{padding-left:24px;padding-right:24px}
+  h1{font-size:36px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:32px}
+  .stat-item{border-right:none}
+  .phases-grid{grid-template-columns:1fr 1fr}
+  .modules-grid{grid-template-columns:1fr 1fr}
+  #noon{padding:60px 24px}
+  .noon-box{padding:36px 24px}
+  footer{padding:24px}
+}
+@media(max-width:560px){
+  h1{font-size:28px}
+  .phases-grid,.modules-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <span class="nav-logo-camel">🐪</span>
+    <div>
+      <div class="nav-logo-name">CAMEL MARKET COCKPIT</div>
+      <div class="nav-logo-by">by SalahTataouine</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="#method">METHOD</a>
+    <a href="#modules">MODULES</a>
+    <a href="#stats">RESULTS</a>
+    <a href="./cockpit-v3.html" class="nav-cta">ACCESS THE COCKPIT</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero" class="grid-bg">
+  <div class="glow-bottom"></div>
+  <div class="glow-right"></div>
+
+  <div class="badge fade-up" style="animation-delay:0s">
+    <span class="badge-dot"></span>
+    <span class="badge-text">METHOD SALAH</span>
+  </div>
+
+  <h1 class="fade-up" style="animation-delay:.1s">
+    The cockpit that pilots<br>your trades <span class="accent">NQ · ES · GC · CL</span>
+  </h1>
+
+  <p class="hero-sub fade-up" style="animation-delay:.2s">
+    43 codified rules, 10 analysis modules, a method proven across thousands of sessions.
+    Move from market noise to structured decisions.
+  </p>
+
+  <div class="hashtags fade-up" style="animation-delay:.25s">
+    <span class="hashtag">#NQ100</span>
+    <span class="hashtag">#ES500</span>
+    <span class="hashtag">#MarketProfile</span>
+    <span class="hashtag">#VolumeProfile</span>
+  </div>
+
+  <div class="hero-btns fade-up" style="animation-delay:.3s">
+    <a href="./cockpit-v3.html" class="btn-primary">ENTER THE COCKPIT →</a>
+    <a href="#method" class="btn-outline">VIEW THE METHOD</a>
+  </div>
+
+  <!-- Floating price card mock -->
+  <div class="mock-wrap fade-up" style="animation-delay:.4s">
+    <div class="mock-card">
+      <div class="mock-header">
+        <span class="mock-sym">NQ</span>
+        <span class="mock-price">19 847.25</span>
+        <span class="mock-chg">▲ +156.50 +0.80%</span>
+        <div class="mock-dots">
+          <div class="mock-dot" style="background:#ff4444"></div>
+          <div class="mock-dot" style="background:#f0d070"></div>
+          <div class="mock-dot" style="background:#00ff88"></div>
+        </div>
+      </div>
+      <div class="mock-body">
+        <div>
+          <div class="mock-signal-lbl">ACTIVE SIGNAL</div>
+          <div class="mock-signal">
+            <span class="mock-signal-dot"></span>
+            <span class="mock-signal-val">BUY</span>
+          </div>
+        </div>
+        <svg width="380" height="90" viewBox="0 0 380 90" style="opacity:.9;max-width:55vw">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#c9a84c" stop-opacity="0.18"/>
+              <stop offset="100%" stop-color="#c9a84c" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polyline points="0,60 30,55 60,40 90,45 120,25 150,32 180,15 210,20 240,10 270,18 300,8 330,14 360,5"
+            fill="none" stroke="#c9a84c" stroke-width="2"
+            style="filter:drop-shadow(0 0 6px rgba(201,168,76,.6))"/>
+          <polygon points="0,60 30,55 60,40 90,45 120,25 150,32 180,15 210,20 240,10 270,18 300,8 330,14 360,5 360,90 0,90"
+            fill="url(#g1)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section id="stats" class="grid-bg">
+  <div class="stats-grid">
+    <div class="stat-item fade-up" style="animation-delay:0s">
+      <div class="stat-val" style="color:#c9a84c;text-shadow:0 0 20px rgba(201,168,76,.4)">43</div>
+      <div class="stat-lbl">CODIFIED RULES</div>
+    </div>
+    <div class="stat-item fade-up" style="animation-delay:.1s">
+      <div class="stat-val" style="color:#1eb3bc;text-shadow:0 0 20px rgba(30,179,188,.4)">10</div>
+      <div class="stat-lbl">ANALYSIS MODULES</div>
+    </div>
+    <div class="stat-item fade-up" style="animation-delay:.2s">
+      <div class="stat-val" style="color:#f0d070;text-shadow:0 0 20px rgba(240,208,112,.4)">2,571</div>
+      <div class="stat-lbl">NQ SESSIONS STUDIED</div>
+    </div>
+    <div class="stat-item fade-up" style="animation-delay:.3s">
+      <div class="stat-val" style="color:#00ff88;text-shadow:0 0 20px rgba(0,255,136,.4)">82%</div>
+      <div class="stat-lbl">NOON CURVE RELIABILITY</div>
+    </div>
+  </div>
+</section>
+
+<!-- METHOD -->
+<section id="method">
+  <div class="section-eyebrow fade-up">THE METHOD</div>
+  <h2 class="fade-up" style="animation-delay:.05s">METHOD SALAH <span class="sep">—</span> codified into a system</h2>
+  <p class="section-sub fade-up" style="animation-delay:.1s">
+    Every phase of the session — from prior close to next-day prep — follows precise rules,
+    not intuition. 43 validated rules, zero improvisation.
+  </p>
+  <div class="phases-grid">
+    <div class="phase-card fade-up" style="border-top:2px solid #c9a84c;animation-delay:0s">
+      <div class="phase-time" style="color:#c9a84c">PRIOR CLOSE</div>
+      <div class="phase-name">Top-Down Structure</div>
+      <div class="phase-desc">Monthly, Weekly, prior-day RTH, SD migration</div>
+    </div>
+    <div class="phase-card fade-up" style="border-top:2px solid #1eb3bc;animation-delay:.05s">
+      <div class="phase-time" style="color:#1eb3bc">6PM–8AM</div>
+      <div class="phase-name">Overnight</div>
+      <div class="phase-desc">OVN inventory, ALN pattern, cumulative delta</div>
+    </div>
+    <div class="phase-card fade-up" style="border-top:2px solid #d4af37;animation-delay:.1s">
+      <div class="phase-time" style="color:#d4af37">8AM–9:30AM</div>
+      <div class="phase-name">Pre-market</div>
+      <div class="phase-desc">Positioning ahead of the RTH open</div>
+    </div>
+    <div class="phase-card fade-up" style="border-top:2px solid #f0d070;animation-delay:.15s">
+      <div class="phase-time" style="color:#f0d070">9:30–10:30AM</div>
+      <div class="phase-name">Initial Balance</div>
+      <div class="phase-desc">IB classification, delta, NQ/ES conviction</div>
+    </div>
+    <div class="phase-card fade-up" style="border-top:2px solid #c9a84c;animation-delay:.2s">
+      <div class="phase-time" style="color:#c9a84c">10:30AM–12PM</div>
+      <div class="phase-name">AM Development</div>
+      <div class="phase-desc">SD bands, exhaustion, absorption, POC magnet</div>
+    </div>
+    <div class="phase-card fade-up" style="border-top:2px solid #00ff88;animation-delay:.25s">
+      <div class="phase-time" style="color:#00ff88">12PM</div>
+      <div class="phase-name">Noon Curve</div>
+      <div class="phase-desc">Q2 vs Q1 — most reliable signal, 82%</div>
+    </div>
+    <div class="phase-card fade-up" style="border-top:2px solid #1eb3bc;animation-delay:.3s">
+      <div class="phase-time" style="color:#1eb3bc">1PM–4PM</div>
+      <div class="phase-name">PM Execution</div>
+      <div class="phase-desc">Max conviction, SD+3 limit, value reintegration</div>
+    </div>
+    <div class="phase-card fade-up" style="border-top:2px solid #d4af37;animation-delay:.35s">
+      <div class="phase-time" style="color:#d4af37">4PM</div>
+      <div class="phase-name">Close</div>
+      <div class="phase-desc">Recap, day type, next-day plan</div>
+    </div>
+  </div>
+</section>
+
+<!-- MODULES -->
+<section id="modules" class="grid-bg">
+  <div class="modules-inner">
+    <div class="modules-header">
+      <div class="section-eyebrow fade-up">INSIDE THE COCKPIT</div>
+      <h2 class="fade-up" style="animation-delay:.05s">10 analysis modules</h2>
+    </div>
+    <div class="modules-grid">
+      <div class="module-card fade-up" style="animation-delay:0s">
+        <div class="module-icon">⬇</div>
+        <div class="module-name">LOAD SESSION</div>
+        <div class="module-desc">AVWAP, sigma, IB, prior-day snapshot, ALN pattern — all in one screen.</div>
+      </div>
+      <div class="module-card fade-up" style="animation-delay:.05s">
+        <div class="module-icon">◉</div>
+        <div class="module-name">SETUP LAUNCHER</div>
+        <div class="module-desc">43 checkpoints organized by session phase, from prior close to close.</div>
+      </div>
+      <div class="module-card fade-up" style="animation-delay:.1s">
+        <div class="module-icon">▲</div>
+        <div class="module-name">TOP-DOWN DALTON</div>
+        <div class="module-desc">Live NQ/ES SD bands, HTF structure, generated morning plan.</div>
+      </div>
+      <div class="module-card fade-up" style="animation-delay:.15s">
+        <div class="module-icon">⊕</div>
+        <div class="module-name">LIVE TRACKER</div>
+        <div class="module-desc">Current price vs reference levels, in real time.</div>
+      </div>
+      <div class="module-card fade-up" style="animation-delay:.2s">
+        <div class="module-icon">⚙</div>
+        <div class="module-name">IB/OR SETTINGS</div>
+        <div class="module-desc">SD bands, R:R calc, IB classification, breach probabilities.</div>
+      </div>
+      <div class="module-card fade-up" style="animation-delay:.25s">
+        <div class="module-icon">◈</div>
+        <div class="module-name">SD-2 BACKTEST</div>
+        <div class="module-desc">Sierra Chart CSV import, auto setup detection, trade stats.</div>
+      </div>
+      <div class="module-card fade-up" style="animation-delay:.3s">
+        <div class="module-icon">⬡</div>
+        <div class="module-name">ACTIVE POSITION</div>
+        <div class="module-desc">Live PnL, risk, R:R while in a trade.</div>
+      </div>
+      <div class="module-card fade-up" style="animation-delay:.35s">
+        <div class="module-icon">◐</div>
+        <div class="module-name">NOON CURVE</div>
+        <div class="module-desc">The cockpit's most reliable signal — 82% accuracy.</div>
+      </div>
+      <div class="module-card fade-up" style="animation-delay:.4s">
+        <div class="module-icon">📋</div>
+        <div class="module-name">JSON EXPORT</div>
+        <div class="module-desc">Structured export for AI analysis of the session.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NOON CURVE HIGHLIGHT -->
+<section id="noon">
+  <div class="noon-box fade-up">
+    <div class="noon-eyebrow">THE COCKPIT'S MOST RELIABLE SIGNAL</div>
+    <div class="noon-pct">82.12%</div>
+    <p class="noon-desc">
+      When Q2 (10am–12pm) breaks Q1's High (8am–10am) without breaking its Low —
+      the afternoon is bullish 82% of the time.
+      Noon Curve, just one of the cockpit's 10 modules.
+    </p>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section id="cta" class="grid-bg">
+  <div class="cta-glow"></div>
+  <div class="cta-inner fade-up">
+    <div class="cta-camel">🐪</div>
+    <div class="cta-title">CAMEL MARKET COCKPIT</div>
+    <p class="cta-sub">by SalahTataouine · NQ · ES · GC · CL</p>
+    <a href="./cockpit-v3.html" class="btn-primary">ENTER THE COCKPIT →</a>
+  </div>
+</section>
+
+<footer>
+  <span class="footer-copy">CAMEL MARKET COCKPIT © 2026 · by SalahTataouine</span>
+</footer>
+
+<script>
+// Intersection observer pour déclencher les animations .fade-up au scroll
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.fade-up').forEach(el => {
+  el.style.animationPlayState = 'paused';
+  io.observe(el);
+});
+</script>
+</body>
+</html>
