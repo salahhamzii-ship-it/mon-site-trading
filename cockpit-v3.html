@@ -210,6 +210,7 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   <div class="ni" data-s="reglages" onclick="nav(this)"><span class="ni-ico">⚙</span>RÉGLAGES IB/OR</div>
   <div class="ni" data-s="backtest" onclick="nav(this)"><span class="ni-ico">◈</span>BACKTEST SD-2</div>
   <div class="ni" data-s="position" onclick="nav(this)"><span class="ni-ico">⬡</span>POSITION ACTIVE</div>
+  <div class="ni" data-s="aln-ib-noon" onclick="nav(this)"><span class="ni-ico">◐</span>ALN · IB · NOON</div>
 </nav>
 <main id="main">
 
@@ -596,6 +597,77 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
       <div class="pm"><div class="pm-l">Risque ($)</div><div class="pm-v" id="pp-rusd" style="color:var(--muted)">—</div></div>
       <div class="pm"><div class="pm-l">Target (pts)</div><div class="pm-v" id="pp-tpts" style="color:var(--muted)">—</div></div>
     </div></div>
+</div>
+
+<!-- ── ALN · IB · NOON ── -->
+<div class="sec" id="sec-aln-ib-noon">
+  <div class="sh"><h2>◐ ALN · IB · NOON CURVE</h2></div>
+  <div class="cg">
+
+    <!-- ALN Pattern -->
+    <div class="cc"><div class="ch"><div class="ctit">ALN PATTERN</div><div class="csub">Asia · London · New York</div></div>
+    <div class="cb">
+      <p style="font-size:10px;color:var(--muted);margin-bottom:9px;line-height:1.5">Pattern classifié à la clôture 08h00 ET (dernière barre London). Mesure comment London interagit avec Asia pour prédire New York.</p>
+      <div class="fr"><label title="Asia session 20h00–02h00 ET — High du range overnight asiatique">Asia High ⓘ</label><input type="number" id="aln-ah" placeholder="29750" step=".25"></div>
+      <div class="fr"><label title="Asia session 20h00–02h00 ET — Low du range overnight asiatique">Asia Low ⓘ</label><input type="number" id="aln-al" placeholder="29620" step=".25"></div>
+      <div class="fr"><label title="London session 02h00–08h00 ET — High de la session européenne">London High ⓘ</label><input type="number" id="aln-lh" placeholder="29800" step=".25"></div>
+      <div class="fr"><label title="London session 02h00–08h00 ET — Low de la session européenne">London Low ⓘ</label><input type="number" id="aln-ll" placeholder="29680" step=".25"></div>
+      <button class="calc-btn" onclick="calcALN()">CLASSIFIER ▶</button>
+      <div class="cr" id="aln-results">
+        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl" title="Pattern identifié selon la relation London / Asia">Pattern</div><div class="rv gold" id="aln-pat">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Fréquence historique sur 2479 sessions NQ (10 ans)">Fréquence</div><div class="rv" id="aln-freq">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="% de sessions NY où le London High est cassé">% Casse London H</div><div class="rv green" id="aln-ph">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl" title="% de sessions NY où le London Low est cassé">% Casse London L</div><div class="rv red" id="aln-pl">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--amber)"></div><div class="rl" title="Biais directionnel NY déduit du pattern">Biais NY</div><div class="rv" id="aln-bias">—</div></div>
+        <div id="aln-verdict" class="vb" style="display:none"></div>
+        <div id="aln-note" style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.55;padding:7px 0;border-top:1px solid var(--border)"></div>
+      </div></div></div>
+
+    <!-- IB Position -->
+    <div class="cc"><div class="ch"><div class="ctit">IB POSITION</div><div class="csub">Close vs Mid · Breach Stats</div></div>
+    <div class="cb">
+      <p style="font-size:10px;color:var(--muted);margin-bottom:9px;line-height:1.5">IB = 09h30–10h30 ET. Position du close IB + séquence H/L → probabilité de breach IB High ou Low (n = 2 571 sessions NQ).</p>
+      <div class="fr"><label title="IB High = plus haut imprimé entre 09h30 et 10h30">IB High ⓘ</label><input type="number" id="ibp-h" placeholder="29704" step=".25"></div>
+      <div class="fr"><label title="IB Low = plus bas imprimé entre 09h30 et 10h30">IB Low ⓘ</label><input type="number" id="ibp-l" placeholder="29629" step=".25"></div>
+      <div class="fr"><label title="Prix de clôture à 10h30 — détermine la position dans le range IB. Si le close > midpoint → signal haussier.">IB Close (10h30) ⓘ</label><input type="number" id="ibp-c" placeholder="29689" step=".25"></div>
+      <div class="fr"><label title="Low First = le Low IB a été imprimé AVANT le High (setup haussier). High First = le High imprimé en premier (setup baissier).">Séquence ⓘ</label><select id="ibp-seq"><option value="lowfirst">Low First (High Last)</option><option value="highfirst">High First (Low Last)</option></select></div>
+      <button class="calc-btn" onclick="calcIBPos()">ANALYSER ▶</button>
+      <div class="cr" id="ibp-results">
+        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl" title="Position du close dans le range IB — 0% = IB Low, 100% = IB High">% dans range ⓘ</div><div class="rv gold" id="ibp-pct">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Q1=0–25% · Q2=25–50% · Q3=50–75% · Q4=75–100% du range IB">Quartile ⓘ</div><div class="rv" id="ibp-q">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Close au-dessus du midpoint → signal haussier. En dessous → signal baissier.">Close vs Mid ⓘ</div><div class="rv" id="ibp-mid">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="Probabilité que IB High soit cassé avant 12h00 (noon)">IB H breach · Noon ⓘ</div><div class="rv green" id="ibp-bhn">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="Probabilité que IB High soit cassé avant 16h00 (close)">IB H breach · Close ⓘ</div><div class="rv green" id="ibp-bhc">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl" title="Probabilité que IB Low soit cassé avant 12h00 (noon)">IB L breach · Noon ⓘ</div><div class="rv red" id="ibp-bln">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--red)"></div><div class="rl" title="Probabilité que IB Low soit cassé avant 16h00 (close)">IB L breach · Close ⓘ</div><div class="rv red" id="ibp-blc">—</div></div>
+        <div id="ibp-verdict" class="vb" style="display:none"></div>
+      </div></div></div>
+
+    <!-- Noon Curve -->
+    <div class="cc"><div class="ch"><div class="ctit">NOON CURVE</div><div class="csub">TBR 08h–16h · Q2 vs Q1</div></div>
+    <div class="cb">
+      <p style="font-size:10px;color:var(--muted);margin-bottom:9px;line-height:1.5">Q1 = 08h–10h · Q2 = 10h–12h. Quand Q2 casse Q1 High → PM haussier 82.12%. Quand Q2 casse Q1 Low → PM baissier 72.42%. Signal le plus fiable du cockpit.</p>
+      <div class="fr"><label title="Q1 = fenêtre 08h00–10h00 ET (pré-marché). High = plus haut de ces 2 heures. Correspond à la plage qui précède l'IB.">Q1 High (08h–10h) ⓘ</label><input type="number" id="nc-q1h" placeholder="29703" step=".25"></div>
+      <div class="fr"><label title="Q1 Low = plus bas de la fenêtre 08h00–10h00 ET. Q1 établit le AM initial range.">Q1 Low (08h–10h) ⓘ</label><input type="number" id="nc-q1l" placeholder="29562" step=".25"></div>
+      <div class="fr"><label title="Q2 = fenêtre 10h00–12h00 ET. Si Q2 High > Q1 High → signal PM haussier 82%.">Q2 High (10h–12h) ⓘ</label><input type="number" id="nc-q2h" placeholder="29811" step=".25"></div>
+      <div class="fr"><label title="Q2 Low. Si Q2 Low < Q1 Low → signal PM baissier 72%. Si Q2 casse les deux ou aucun → pas d'edge.">Q2 Low (10h–12h) ⓘ</label><input type="number" id="nc-q2l" placeholder="29700" step=".25"></div>
+      <p style="font-size:10px;color:var(--muted);margin:6px 0 4px">Optionnel — classification post-session</p>
+      <div class="fr"><label title="AM High = plus haut de toute la fenêtre AM (08h–12h). Optionnel — pour classifier Opposite/Both AM après session.">AM High ⓘ</label><input type="number" id="nc-amh" placeholder="" step=".25"></div>
+      <div class="fr"><label title="AM Low = plus bas de la fenêtre AM (08h–12h).">AM Low ⓘ</label><input type="number" id="nc-aml" placeholder="" step=".25"></div>
+      <div class="fr"><label title="PM High = plus haut de la fenêtre PM (12h–16h). Avec AM H/L, permet de déterminer si session est Opposite (72%) / Both AM (22%) / Both PM (5%).">PM High ⓘ</label><input type="number" id="nc-pmh" placeholder="" step=".25"></div>
+      <div class="fr"><label title="PM Low = plus bas de la fenêtre PM (12h–16h).">PM Low ⓘ</label><input type="number" id="nc-pml" placeholder="" step=".25"></div>
+      <button class="calc-btn" onclick="calcNoon()">ANALYSER ▶</button>
+      <div class="cr" id="nc-results">
+        <div class="rr"><div class="rb" style="background:var(--gold)"></div><div class="rl" title="Action de Q2 par rapport au range Q1 — détermine le signal">Q2 vs Q1 ⓘ</div><div class="rv gold" id="nc-q2act">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--amber)"></div><div class="rl" title="FORT = edge clair · PAS DE SIGNAL = spectateur">Signal ⓘ</div><div class="rv amber" id="nc-sig">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--green)"></div><div class="rl" title="Direction probable de la session PM (12h–16h)">Biais PM ⓘ</div><div class="rv" id="nc-bias">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Probabilité statistique sur 10 ans (n=2479 sessions NQ)">Probabilité PM ⓘ</div><div class="rv" id="nc-prob">—</div></div>
+        <div class="rr"><div class="rb" style="background:var(--muted)"></div><div class="rl" title="Classification session si AM/PM H/L fournis: Opposite (73%) / Both AM (22%) / Both PM (5%)">Type session ⓘ</div><div class="rv" id="nc-type">—</div></div>
+        <div id="nc-verdict" class="vb" style="display:none"></div>
+        <div id="nc-note" style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.55;padding:7px 0;border-top:1px solid var(--border)"></div>
+      </div></div></div>
+
+  </div>
 </div>
 
 </main>
@@ -1138,6 +1210,143 @@ function bindTD(){
     el.addEventListener('input',saveTD);
     el.addEventListener('change',saveTD);
   });
+}
+
+// ── ALN PATTERN ───────────────────────────────────────
+const ALN_DATA={
+  P1:{name:'P1 · London Engulfs Asia',freq:'22.0% (558 sessions)',ph:'71.5%',pl:'70.4%',pboth:'42.5%',
+    note:'London High > Asia High ET London Low < Asia Low. Les deux côtés cassent avec probabilité similaire — pattern symétrique 50/50 High First / Low First. Pas d\'edge directionnel clair. Observer l\'IB pour le biais.'},
+  P2:{name:'P2 · Asia Engulfs London',freq:'6.9% (175 sessions)',ph:'81.1%',pl:'74.9%',pboth:'56.0%',
+    note:'London comprimée INSIDE Asia. Pattern rare (7%). NY casse TOUJOURS un niveau (0 session neutre sur 10 ans). Si Low First → IB haussier probable. Attendre la direction de l\'IB.'},
+  P3:{name:'P3 · Partial Engulf Up',freq:'41.0% (1042 sessions)',ph:'80.8%',pl:'65.5%',pboth:'47.6%',
+    note:'London H > Asia H · London L reste INSIDE Asia. Signal haussier AM. IB haussier confirmé dans 100% des P3 haussiers. ATTENTION: si Low First → edge High réduit à 51.2% (-29.6pp). Si High First → signal très fiable 80.8%.'},
+  P4:{name:'P4 · Partial Engulf Down',freq:'30.2% (767 sessions)',ph:'68.6%',pl:'75.0%',pboth:'44.6%',
+    note:'London L < Asia L · London H reste INSIDE Asia. IB baissier confirmé 56% seulement (quasi coin-flip). Counter Auction fréquente (65%): le RTH peut faire l\'INVERSE du signal OVN. Ne jamais shorter un P4 sans confirmation IB. Trend Day haussier possible (15%).'}
+};
+function calcALN(){
+  const ah=gv('aln-ah'),al=gv('aln-al'),lh=gv('aln-lh'),ll=gv('aln-ll');
+  if(!ah||!al||!lh||!ll){toast('Entrez les 4 niveaux ALN');return;}
+  let pat='';
+  if(lh>ah&&ll<al) pat='P1';
+  else if(ah>lh&&al<ll) pat='P2';
+  else if(lh>ah&&ll>=al) pat='P3';
+  else if(ll<al&&lh<=ah) pat='P4';
+  else{toast('Pattern indéterminé — vérifiez les valeurs');return;}
+  const d=ALN_DATA[pat];
+  const el=document.getElementById('aln-results');el.classList.add('visible');
+  document.getElementById('aln-pat').textContent=d.name;
+  document.getElementById('aln-freq').textContent=d.freq;
+  document.getElementById('aln-ph').textContent=d.ph+' cassent London High';
+  document.getElementById('aln-pl').textContent=d.pl+' cassent London Low';
+  let biasText='',biasCls='',vCls='caution',vTxt='';
+  if(pat==='P3'){biasText='HAUSSIER AM — 80.8% si High Last';biasCls='green';vCls='go';vTxt='P3 · LONG BIAS · Attendre IB Bull A pour confirmation';}
+  else if(pat==='P4'){biasText='AMBIGU — IB confirmé 56% · Counter 65%';biasCls='amber';vCls='caution';vTxt='P4 · ATTENDRE IB — Ne pas shorter aveuglément';}
+  else if(pat==='P1'){biasText='NEUTRE — Symétrique 50/50';biasCls='';vCls='caution';vTxt='P1 · NEUTRE — Suivre l\'IB direction';}
+  else if(pat==='P2'){biasText='DIRECTIONNEL — NY casse toujours un niveau';biasCls='gold';vCls='go';vTxt='P2 · FORT — 0 session neutre / Suivre IB';}
+  const biasEl=document.getElementById('aln-bias');
+  biasEl.textContent=biasText;
+  biasEl.className='rv'+(biasCls?' '+biasCls:'');
+  const vEl=document.getElementById('aln-verdict');
+  vEl.className='vb '+vCls;vEl.textContent=vTxt;vEl.style.display='block';
+  document.getElementById('aln-note').textContent=d.note;
+}
+
+// ── IB POSITION ───────────────────────────────────────
+function calcIBPos(){
+  const h=gv('ibp-h'),l=gv('ibp-l'),c=gv('ibp-c');
+  const seq=document.getElementById('ibp-seq').value;
+  if(!h||!l||!c){toast('Entrez IB High, Low et Close');return;}
+  const range=h-l;
+  if(range<=0){toast('IB High doit être > IB Low');return;}
+  if(c<l||c>h){toast('IB Close hors du range IB');return;}
+  const pct=(c-l)/range*100;
+  const mid=(h+l)/2;
+  const aboveMid=c>mid;
+  let quartile;
+  if(pct>=75) quartile='Q4 (75–100%) · Zone haute';
+  else if(pct>=50) quartile='Q3 (50–75%) · Au-dessus midpoint';
+  else if(pct>=25) quartile='Q2 (25–50%) · En dessous midpoint';
+  else quartile='Q1 (0–25%) · Zone basse';
+  // Probabilités selon CLAUDE.md stats (n=2571 sessions NQ)
+  let bhn,bhc,bln,blc,vTxt,vCls;
+  if(aboveMid&&seq==='lowfirst'){
+    bhn='74.0%';bhc='84.0%';bln='N/A';blc='N/A';
+    vTxt='BULL ★★★ · Close>Mid + Low First → 84% IB High breach by close';vCls='go';
+  }else if(aboveMid&&seq==='highfirst'){
+    bhn='70.1%';bhc='82.3%';bln='N/A';blc='N/A';
+    vTxt='BULL · Close>Mid + High First → 82.3% IB High breach by close';vCls='go';
+  }else if(!aboveMid&&seq==='highfirst'){
+    bhn='N/A';bhc='N/A';bln='67.9%';blc='78.0%';
+    vTxt='BEAR ★★★ · Close<Mid + High First → 78% IB Low breach by close';vCls='nogo';
+  }else{
+    bhn='N/A';bhc='N/A';bln='65.8%';blc='76.5%';
+    vTxt='BEAR · Close<Mid + Low First → 76.5% IB Low breach by close';vCls='nogo';
+  }
+  const res=document.getElementById('ibp-results');res.classList.add('visible');
+  document.getElementById('ibp-pct').textContent=pct.toFixed(1)+'% ('+((c-l).toFixed(2))+' pts/'+range.toFixed(2)+' pts)';
+  document.getElementById('ibp-q').textContent=quartile;
+  document.getElementById('ibp-mid').textContent=aboveMid?'Au-dessus · +'+(c-mid).toFixed(2)+' pts':'En dessous · '+(c-mid).toFixed(2)+' pts';
+  document.getElementById('ibp-bhn').textContent=bhn;
+  document.getElementById('ibp-bhc').textContent=bhc;
+  document.getElementById('ibp-bln').textContent=bln;
+  document.getElementById('ibp-blc').textContent=blc;
+  const vEl=document.getElementById('ibp-verdict');
+  vEl.className='vb '+vCls;vEl.textContent=vTxt;vEl.style.display='block';
+}
+
+// ── NOON CURVE ────────────────────────────────────────
+function calcNoon(){
+  const q1h=gv('nc-q1h'),q1l=gv('nc-q1l'),q2h=gv('nc-q2h'),q2l=gv('nc-q2l');
+  if(!q1h||!q1l||!q2h||!q2l){toast('Entrez Q1 et Q2 High/Low');return;}
+  const q2BreaksH=q2h>q1h,q2BreaksL=q2l<q1l;
+  let act='',sig='',bias='',prob='',vCls='',vTxt='',note='';
+  if(q2BreaksH&&!q2BreaksL){
+    act='Q2 casse Q1 High (sans Q1 Low)';sig='FORT ★★★';bias='HAUSSIER PM';
+    prob='82.12% — AM=TBR Low · PM=TBR High';vCls='go';
+    vTxt='PM HAUSSIER · 82% — TBR High se formera en PM';
+    note='Q2 casse Q1 High → les acheteurs AM s\'épuisent au-dessus → le TBR Low est déjà posé en Q1 avant la cassure → PM monte vers le TBR High. 44% des sessions opposées (794/1805). Signal le plus fort du Noon Curve.';
+  }else if(!q2BreaksH&&q2BreaksL){
+    act='Q2 casse Q1 Low (sans Q1 High)';sig='FORT ★★★';bias='BAISSIER PM';
+    prob='72.42% — AM=TBR High · PM=TBR Low';vCls='nogo';
+    vTxt='PM BAISSIER · 72% — TBR Low se formera en PM';
+    note='Q2 casse Q1 Low → TBR High posé en AM → PM descend vers TBR Low. 35% des sessions opposées (631/1805). Signal fiable mais légèrement moins fort que le haussier (72% vs 82%).';
+  }else if(q2BreaksH&&q2BreaksL){
+    act='Q2 casse Q1 High ET Q1 Low';sig='PAS DE SIGNAL';bias='NEUTRE';
+    prob='~50/50 (54% vs 46%)';vCls='caution';
+    vTxt='NEUTRE · Q2 casse les deux · Pas d\'edge · Spectateur';
+    note='Q2 a cassé les deux côtés de Q1. 14% des sessions opposées. Aucun signal directionnel. Rester spectateur ou attendre Q3 (12h–14h) pour une indication.';
+  }else{
+    act='Q2 Inside Q1 (aucune cassure)';sig='PAS DE SIGNAL';bias='NEUTRE';
+    prob='~50/50 (52% vs 48%)';vCls='caution';
+    vTxt='NEUTRE · Q2 Inside · Attendre Q3 (12h–14h)';
+    note='Q2 n\'a cassé aucun niveau de Q1. Phase de coiling — énergie accumulée. 7% des sessions opposées. Attendre Q3 pour une indication directionnelle.';
+  }
+  // Classification post-session si AM/PM fournis
+  const amh=gv('nc-amh'),aml=gv('nc-aml'),pmh=gv('nc-pmh'),pml=gv('nc-pml');
+  let sessionType='— (optionnel)';
+  if(amh&&aml&&pmh&&pml){
+    const amMadeTBRH=amh>pmh,amMadeTBRL=aml<pml,pmMadeTBRH=pmh>amh,pmMadeTBRL=pml<aml;
+    const oppSides=(amMadeTBRH&&pmMadeTBRL)||(pmMadeTBRH&&amMadeTBRL);
+    const bothAM=amMadeTBRH&&amMadeTBRL;
+    const bothPM=pmMadeTBRH&&pmMadeTBRL;
+    if(oppSides) sessionType='Opposite Sides ★ (72.81%) — TBR H et L sur fenêtres différentes';
+    else if(bothAM) sessionType='Both in AM (21.82%) — High ET Low posés en AM';
+    else if(bothPM) sessionType='Both in PM (5.37%) — High ET Low posés en PM';
+    else sessionType='Indéterminé';
+  }else if(amh&&aml){
+    sessionType='AM: H='+amh.toFixed(2)+' / L='+aml.toFixed(2)+' (PM manquant)';
+  }
+  const res=document.getElementById('nc-results');res.classList.add('visible');
+  document.getElementById('nc-q2act').textContent=act;
+  document.getElementById('nc-sig').textContent=sig;
+  const biasEl=document.getElementById('nc-bias');
+  biasEl.textContent=bias;
+  biasEl.className=bias.includes('HAUSSIER')?'rv green':bias.includes('BAISSIER')?'rv red':'rv amber';
+  document.getElementById('nc-prob').textContent=prob;
+  document.getElementById('nc-type').textContent=sessionType;
+  const vEl=document.getElementById('nc-verdict');
+  vEl.className='vb '+vCls;vEl.textContent=vTxt;vEl.style.display='block';
+  document.getElementById('nc-note').textContent=note;
 }
 
 // ── AUTO-INIT SESSION 28/08 ───────────────────────────
