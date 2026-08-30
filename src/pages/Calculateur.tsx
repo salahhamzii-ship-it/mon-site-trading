@@ -96,6 +96,16 @@ const RTH_TIMES: Record<Tab, string[]> = {
 const mkRthRowsForTab = (t:Tab): RthRow[] => RTH_TIMES[t].map(h=>({ id:h, heure:h, open:'', high:'', low:'', close:'', vwap:'', sp1:'', sm1:'', sp2:'', sm2:'' }))
 const mkRthRows = (): Record<Tab, RthRow[]> => ({ NQ:mkRthRowsForTab('NQ'), ES:mkRthRowsForTab('ES'), GC:mkRthRowsForTab('GC'), CL:mkRthRowsForTab('CL') })
 
+interface Bar78Row { id:string; label:string; high:string; low:string; close:string; bidVol:string; askVol:string }
+const BAR78_LABELS: Record<Tab, string[]> = {
+  NQ: ['09:30–10:48','10:48–12:06','12:06–13:24','13:24–14:42','14:42–16:00'],
+  ES: ['09:30–10:48','10:48–12:06','12:06–13:24','13:24–14:42','14:42–16:00'],
+  GC: ['08:20–09:38','09:38–10:56','10:56–12:14','12:14–13:32','13:32–14:50'],
+  CL: ['09:00–10:18','10:18–11:36','11:36–12:54','12:54–14:12','14:12–15:30'],
+}
+const mkBar78ForTab = (t:Tab): Bar78Row[] => BAR78_LABELS[t].map((label,i)=>({ id:`b78-${i}`, label, high:'', low:'', close:'', bidVol:'', askVol:'' }))
+const mkBar78 = (): Record<Tab, Bar78Row[]> => ({ NQ:mkBar78ForTab('NQ'), ES:mkBar78ForTab('ES'), GC:mkBar78ForTab('GC'), CL:mkBar78ForTab('CL') })
+
 // Clear IB/ORB/signal only when a NEW RTH session starts (09:30 ET).
 // During OVN phases (Asie 18h-02h, Londres 02h-08h, pré-RTH 08h-09h30) the
 // previous session's levels stay visible as reference.
@@ -408,6 +418,7 @@ export default function Calculateur() {
   const [rthRowsJ1,   setRthRowsJ1]   = useState<Record<Tab,RthRow[]>>(()=>{ const s=loadLS(); return s?.rthRowsJ1??mkRthRows() })
   const [tpoLetters,  setTpoLetters]  = useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLetters??mkTpoLetters() })
   const [tpoLettersJ1,setTpoLettersJ1]= useState<Record<Tab,TpoLetter[]>>(()=>{ const s=loadLS(); return s?.tpoLettersJ1??mkTpoLetters() })
+  const [bar78,        setBar78]       = useState<Record<Tab,Bar78Row[]>>(()=>{ const s=loadLS(); if(!s?.bar78) return mkBar78(); return { NQ:mkBar78ForTab('NQ').map((r,i)=>({...r,...s.bar78?.NQ?.[i]})), ES:mkBar78ForTab('ES').map((r,i)=>({...r,...s.bar78?.ES?.[i]})), GC:mkBar78ForTab('GC').map((r,i)=>({...r,...s.bar78?.GC?.[i]})), CL:mkBar78ForTab('CL').map((r,i)=>({...r,...s.bar78?.CL?.[i]})) } })
   const [showSaved,   setShowSaved]   = useState(false)
   const [csvMsg,      setCsvMsg]      = useState<{text:string;ok:boolean}|null>(null)
   const [jsonModal,   setJsonModal]   = useState(false)
@@ -448,10 +459,10 @@ export default function Calculateur() {
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1 })) } catch {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1, bar78 })) } catch {}
     triggerSaved()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
+  }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1, bar78])
 
   // Données session — auto-appliquées au mount si date ET correspond
   const SESSION_DATE = '2026-08-28'
@@ -856,7 +867,7 @@ export default function Calculateur() {
   const handleReset = () => {
     localStorage.removeItem(LS_KEY)
     setTab('NQ'); setTdOpen(true); setTrOpen(false); setStOpen(false)
-    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC()); setRthRows(mkRthRows()); setRthRowsJ1(mkRthRows()); setTpoLetters(mkTpoLetters()); setTpoLettersJ1(mkTpoLetters())
+    setTd(mkTD()); setII({NQ:mkI(),ES:mkI(),GC:mkI(),CL:mkI()}); setCfg(mkC()); setRthRows(mkRthRows()); setRthRowsJ1(mkRthRows()); setTpoLetters(mkTpoLetters()); setTpoLettersJ1(mkTpoLetters()); setBar78(mkBar78())
   }
 
   const upTD = <K extends keyof TD>(k:K, v:TD[K]) => setTd(p=>({...p,[k]:v}))
@@ -960,6 +971,7 @@ export default function Calculateur() {
   }
   const upTpoLetterJ1  = (t:Tab, id:string, k:keyof TpoLetter, v:string) => setTpoLettersJ1(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
   const delTpoLetterJ1 = (t:Tab, id:string) => setTpoLettersJ1(p=>({...p,[t]:p[t].filter(r=>r.id!==id)}))
+  const upBar78 = (t:Tab, id:string, k:keyof Bar78Row, v:string) => setBar78(p=>({...p,[t]:p[t].map(r=>r.id===id?{...r,[k]:v}:r)}))
 
   const csvInputRef  = useRef<HTMLInputElement>(null)
   const csvSectionRef = useRef<'rthJ1'|'tpoJ1'|'ovnNQ'|'ovnES'|'ovnGC'|'ovnCL'>('rthJ1')
@@ -1808,6 +1820,55 @@ export default function Calculateur() {
         </Sec>
         <Sec title={`SUIVI RTH DU JOUR · ${tab} · ${freq}`} col={col}>
           {rthTableBlock(rthRows[tab], times, (id,k,v)=>upRthRow(tab,id,k,v))}
+        </Sec>
+
+        {/* BARRES 78 MIN + DELTA BID/ASK */}
+        <Sec title={`BARRES 78 MIN · ${tab} · DELTA BID/ASK`} col={col}>
+          {(() => {
+            const bars = bar78[tab]
+            const inSt: CSSProperties = { width:'100%', background:'#1a2236', border:'1px solid rgba(201,168,76,0.22)', borderRadius:2, padding:'3px 6px', fontSize:11, fontWeight:500, color:'#fff', fontFamily:'"JetBrains Mono",monospace', outline:'none', boxSizing:'border-box', textAlign:'right' }
+            const cols = ['Barre','High','Low','Close','BidVol','AskVol','Delta','']
+            const colW = 'minmax(80px,1.4fr) 1fr 1fr 1fr 1fr 1fr 1fr 60px'
+            let prevVol = 0
+            return (
+              <div style={{ display:'flex', flexDirection:'column', gap:4, overflowX:'auto' }}>
+                <div style={{ display:'grid', gridTemplateColumns:colW, gap:3, marginBottom:2, minWidth:560 }}>
+                  {cols.map((h,i)=><div key={i} style={jb(7,600,{color:C.muted})}>{h}</div>)}
+                </div>
+                {bars.map((b, idx) => {
+                  const bid = pf(b.bidVol), ask = pf(b.askVol)
+                  const delta = ask - bid
+                  const vol = bid + ask
+                  const deltaCol = delta > 0 ? C.up : delta < 0 ? C.down : C.muted
+                  const volTrend = prevVol > 0 && vol > 0 ? (vol < prevVol * 0.8 ? 'down' : vol > prevVol * 1.2 ? 'up' : 'flat') : 'flat'
+                  if (vol > 0) prevVol = vol
+                  const exhaustion = idx > 0 && vol > 0 && prevVol > 0 && vol < prevVol * 0.7 && Math.abs(delta) < vol * 0.05
+                  return (
+                    <div key={b.id} style={{ display:'grid', gridTemplateColumns:colW, gap:3, alignItems:'center', minWidth:560, background: idx%2===0?'rgba(0,0,0,0.15)':'transparent', borderRadius:2, padding:'1px 0' }}>
+                      <div style={jb(9,600,{color:col,padding:'2px 4px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'})}>{b.label}</div>
+                      <input type="text" inputMode="decimal" value={b.high}   onChange={e=>upBar78(tab,b.id,'high',  normNum(e.target.value))} style={inSt} placeholder="—" />
+                      <input type="text" inputMode="decimal" value={b.low}    onChange={e=>upBar78(tab,b.id,'low',   normNum(e.target.value))} style={inSt} placeholder="—" />
+                      <input type="text" inputMode="decimal" value={b.close}  onChange={e=>upBar78(tab,b.id,'close', normNum(e.target.value))} style={inSt} placeholder="—" />
+                      <input type="text" inputMode="decimal" value={b.bidVol} onChange={e=>upBar78(tab,b.id,'bidVol',normNum(e.target.value))} style={{...inSt,color:C.down}} placeholder="0" />
+                      <input type="text" inputMode="decimal" value={b.askVol} onChange={e=>upBar78(tab,b.id,'askVol',normNum(e.target.value))} style={{...inSt,color:C.up}} placeholder="0" />
+                      <div style={jb(11,700,{color:deltaCol,textAlign:'right',fontVariantNumeric:'tabular-nums',padding:'2px 4px'})}>
+                        {bid>0||ask>0 ? `${delta>=0?'+':''}${delta.toFixed(0)}` : '—'}
+                      </div>
+                      <div style={{ display:'flex', gap:3, alignItems:'center', justifyContent:'center' }}>
+                        {volTrend==='down'&&<span style={{ fontSize:9, color:C.amber }}>↓vol</span>}
+                        {exhaustion&&<span style={{ fontSize:8, padding:'1px 4px', background:'rgba(255,68,68,0.15)', border:'1px solid rgba(255,68,68,0.40)', borderRadius:2, color:C.down, fontFamily:'Orbitron,monospace', fontWeight:700, letterSpacing:'0.08em' }}>EPUIS</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+                <div style={{ marginTop:4, padding:'5px 8px', background:'rgba(136,153,187,0.04)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:2 }}>
+                  <span style={jb(7.5,400,{color:C.muted,lineHeight:1.5})}>
+                    <span style={{color:C.up,fontWeight:600}}>AskVol</span> = acheteurs agressifs · <span style={{color:C.down,fontWeight:600}}>BidVol</span> = vendeurs agressifs · <span style={{color:C.amber,fontWeight:600}}>Delta = AskVol − BidVol</span> · <span style={{color:C.down,fontWeight:600}}>EPUIS</span> = volume décroissant + delta effondré → signal d&apos;épuisement (Règle R34)
+                  </span>
+                </div>
+              </div>
+            )
+          })()}
         </Sec>
       </div>
     )
@@ -3023,6 +3084,23 @@ export default function Calculateur() {
     const noonAMSet: Status = isNoon?(amHigh>0?'ok':'wait'):'na'
     const noonPM: Status = isNoon&&amHigh>0&&lp>0 ? (Math.abs(lp-amHigh)<(pf(I.atr)||5)*0.35?'ok':lp<amHigh?'wait':'no') : 'na'
 
+    // 6. CADRE E+G (visible dès 13h00)
+    const isCadre = totMin >= 13 * 60
+    const tpoLettrs = tpoLetters[tab]
+    const letterE = tpoLettrs[4]   // E = 5e lettre (index 4)
+    const vahE  = letterE ? pf(letterE.vah) : 0
+    const valE  = letterE ? pf(letterE.val) : 0
+    const pocE  = letterE ? pf(letterE.poc) : 0
+    const rthGRow = rthRows[tab].find(r => r.heure === '12:30')
+    const closeG  = rthGRow ? pf(rthGRow.close) : 0
+    let cadreVerdict = '—'
+    let cadreStatus: Status = 'na'
+    if (vahE > 0 && valE > 0 && closeG > 0) {
+      if (closeG > vahE)      { cadreVerdict = 'HAUSSIER CONFIRMÉ'; cadreStatus = 'ok' }
+      else if (closeG < valE) { cadreVerdict = 'BAISSIER CONFIRMÉ'; cadreStatus = 'no' }
+      else                    { cadreVerdict = 'RANGE / NEUTRE';    cadreStatus = 'wait' }
+    }
+
     // Signal direction + score
     const checks: Status[] = [valAccepted, pocMigStatus, p9All, otfStatus, vwapStatus]
     const okCnt = checks.filter(s=>s==='ok').length
@@ -3117,6 +3195,18 @@ export default function Calculateur() {
               {sHdr('5 · NOON CURVE (12h–14h)')}
               <Row2 s={noonAMSet} label="High AM posé"              val={amHigh>0?fmt2(amHigh):''} />
               <Row2 s={noonPM}    label="PM retour vers High AM"     val={amHigh>0&&lp>0?`Δ${Math.abs(lp-amHigh).toFixed(2)}`:''} />
+            </>)}
+
+            {isCadre && (<>
+              {sHdr('6 · CADRE E+G (13h00)')}
+              <Row2 s={vahE>0?'ok':'na'} label="VAH E  (cumul A→E)" val={vahE>0?fmt2(vahE):''} />
+              <Row2 s={pocE>0?'ok':'na'} label="POC E  (cumul A→E)" val={pocE>0?fmt2(pocE):''} />
+              <Row2 s={valE>0?'ok':'na'} label="VAL E  (cumul A→E)" val={valE>0?fmt2(valE):''} />
+              <Row2 s={closeG>0?'ok':'na'} label="Close G  (12:30→13h)" val={closeG>0?fmt2(closeG):''} />
+              <div style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 0', marginTop:2, borderTop:'1px solid rgba(201,168,76,0.12)' }}>
+                <span style={{ fontSize:14, lineHeight:1, minWidth:18, textAlign:'center' }}>{cadreStatus==='ok'?'✅':cadreStatus==='no'?'❌':cadreStatus==='wait'?'⏳':'⬜'}</span>
+                <span style={jb(12, cadreStatus!=='na'?700:400, { color: cadreStatus==='ok'?C.up:cadreStatus==='no'?C.down:cadreStatus==='wait'?C.amber:C.muted, flex:1 })}>{cadreVerdict}</span>
+              </div>
             </>)}
           </div>
 
