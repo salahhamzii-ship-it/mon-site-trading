@@ -222,15 +222,15 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
         <div class="r2"><div class="f"><label>AVWAP 18H 👑</label><input id="s-avwap" type="number" step=".25" placeholder="29638.54" oninput="oSI()"></div>
         <div class="f"><label>Sigma σ</label><input id="s-sigma" type="number" step=".25" placeholder="11.88" oninput="oSI()"></div></div></div>
       <div class="card"><div class="ct" style="color:var(--blue)">ES · AVWAP 18H + SIGMA</div>
-        <div class="r2"><div class="f"><label>ES AVWAP 18H 👑</label><input id="s-es-avwap" type="number" step=".25" placeholder="5285.50" oninput="oSI()"></div>
-        <div class="f"><label>ES Sigma σ</label><input id="s-es-sigma" type="number" step=".25" placeholder="8.25" oninput="oSI()"></div></div></div>
+        <div class="r2"><div class="f"><label>ES AVWAP 18H 👑</label><input id="s-es-avwap" type="number" step=".25" placeholder="7739.88" oninput="oSI()"></div>
+        <div class="f"><label>ES Sigma σ</label><input id="s-es-sigma" type="number" step=".25" placeholder="8.62" oninput="oSI()"></div></div></div>
       <div class="card"><div class="ct" style="color:var(--blue)">ES · J-1 RTH</div>
-        <div class="r3"><div class="f"><label>ES VAH</label><input id="s-es-vah" type="number" step=".25" placeholder="5312.50" oninput="oSI()"></div>
-        <div class="f"><label>ES VAL</label><input id="s-es-val" type="number" step=".25" placeholder="5270.00" oninput="oSI()"></div>
-        <div class="f"><label>ES POC</label><input id="s-es-poc" type="number" step=".25" placeholder="5291.00" oninput="oSI()"></div></div>
-        <div class="r3" style="margin-top:8px"><div class="f"><label>ES High</label><input id="s-es-j1h" type="number" step=".25" placeholder="5330.00" oninput="oSI()"></div>
-        <div class="f"><label>ES Low</label><input id="s-es-j1l" type="number" step=".25" placeholder="5255.00" oninput="oSI()"></div>
-        <div class="f"><label>ES Settle</label><input id="s-es-settle" type="number" step=".25" placeholder="5280.50" oninput="oSI()"></div></div></div>
+        <div class="r3"><div class="f"><label>ES VAH</label><input id="s-es-vah" type="number" step=".25" placeholder="7770.00" oninput="oSI()"></div>
+        <div class="f"><label>ES VAL</label><input id="s-es-val" type="number" step=".25" placeholder="7716.00" oninput="oSI()"></div>
+        <div class="f"><label>ES POC</label><input id="s-es-poc" type="number" step=".25" placeholder="7738.00" oninput="oSI()"></div></div>
+        <div class="r3" style="margin-top:8px"><div class="f"><label>ES High</label><input id="s-es-j1h" type="number" step=".25" placeholder="7782.50" oninput="oSI()"></div>
+        <div class="f"><label>ES Low</label><input id="s-es-j1l" type="number" step=".25" placeholder="7711.75" oninput="oSI()"></div>
+        <div class="f"><label>ES Settle</label><input id="s-es-settle" type="number" step=".25" placeholder="7722.50" oninput="oSI()"></div></div></div>
       <div class="card"><div class="ct">IB (09h30–10h30)</div>
         <div class="r2"><div class="f"><label>IB High</label><input id="s-ibh" type="number" step=".25" placeholder="29704" oninput="oSI()"></div>
         <div class="f"><label>IB Low</label><input id="s-ibl" type="number" step=".25" placeholder="29629" oninput="oSI()"></div></div></div>
@@ -1140,12 +1140,38 @@ function bindTD(){
   });
 }
 
+// ── AUTO-INIT SESSION 28/08 ───────────────────────────
+const DEF_SESSION={
+  avwap:'29638.54', sigma:'11.88',
+  'es-avwap':'7739.88','es-sigma':'8.62',
+  'es-vah':'7770.00','es-val':'7716.00','es-poc':'7738.00',
+  'es-j1h':'7782.50','es-j1l':'7711.75','es-settle':'7722.50',
+  ibh:'29704.25',ibl:'29629',
+  vah:'29664',val:'29443',poc:'29496',
+  j1h:'29811.50',j1l:'29436.25',settle:'29509.25',
+  mpoc:'29614.75',mvah:'30038.75',mval:'28617.75',
+  ovnh:'29707',ovnl:'29578.25',
+  aln:'P3',
+  notes:'28/08 — NQ LBF SD-2 (29436) excess bas confirmé. Close 29509 near POC.\nES settle sur SD-2 exact (7722.50). Lundi 1 sept FERMÉ. RTH mardi 2 sept.'
+};
+function autoInitSession(){
+  const t=todayKey();
+  if(t!=='2026-08-29'&&t!=='2026-08-30')return;
+  if(gv('s-avwap'))return; // données déjà saisies
+  SF.forEach(f=>{const el=document.getElementById('s-'+f);if(el&&DEF_SESSION[f])el.value=DEF_SESSION[f];});
+  SD.avwap=parseFloat(DEF_SESSION.avwap);SD.sigma=parseFloat(DEF_SESSION.sigma);
+  SD.es_avwap=parseFloat(DEF_SESSION['es-avwap']);SD.es_sigma=parseFloat(DEF_SESSION['es-sigma']);
+  ['es-vah','es-val','es-poc','es-j1h','es-j1l','es-settle'].forEach(k=>{if(DEF_SESSION[k])SD[k.replace(/-/g,'_')]=parseFloat(DEF_SESSION[k]);});
+  SD.ibh=parseFloat(DEF_SESSION.ibh);SD.ibl=parseFloat(DEF_SESSION.ibl);
+  rSD();rIB();rJ1();updTD_SD();
+}
+
 // ── INIT ──────────────────────────────────────────────
 (function(){
   PHASES.forEach(p=>{const b=document.getElementById('body-'+p);if(b)b.classList.add('open');});
   document.getElementById('body-interdits').classList.add('open');
   document.getElementById('bt-date').value=todayKey();
   loadCBs();bindCBs();updProgress();updPhaseCounts();
-  loadSession();loadPos();rBT();loadTD();bindTD();
+  loadSession();autoInitSession();loadPos();rBT();loadTD();bindTD();
 })();
 </script>
