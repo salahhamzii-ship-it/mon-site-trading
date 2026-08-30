@@ -149,11 +149,11 @@ const mkTpoLetters = (): Record<Tab, TpoLetter[]> => ({ NQ:[], ES:[], GC:[], CL:
 interface SierraRow { time:string; open:string; high:string; low:string; last:string; vwap:string; sp1:string; sm1:string; sp2:string; sm2:string; tpoPoc:string; tpoVah:string; tpoVal:string }
 interface BtBar   { date:string; time:string; open:number; high:number; low:number; close:number; vwap:number; sp1:number; sm1:number; sp2:number; sm2:number }
 interface BtTrade { date:string; entryTime:string; entry:number; stop:number; c1:number; c2:number; c3:number; hitC1:boolean; hitC2:boolean; hitC3:boolean; exitPrice:number; result:number; win:boolean }
-function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
+function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string; rejected:{line:number;reason:string}[] } {
   // Strip BOM and normalize line endings (handles \r\n, \n, \r)
   const clean = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const lines = clean.split('\n').filter(l=>l.trim())
-  if (lines.length < 2) return { rows:[], error:'Fichier vide ou trop court.' }
+  if (lines.length < 2) return { rows:[], rejected:[], error:'Fichier vide ou trop court.' }
   // Auto-detect delimiter from header line
   const hdrLine = lines[0]
   const cntSemi  = (hdrLine.match(/;/g)||[]).length
@@ -180,7 +180,7 @@ function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
   const idxVal  = find('tpo val')
   const timeCol = idxTime >= 0 ? idxTime : idxDate
   const sepName = sep===',' ? 'virgule' : sep===';' ? 'point-virgule' : 'tab'
-  if (timeCol < 0) return { rows:[], error:`Colonne horaire introuvable (${sepName}). En-têtes : ${raw.slice(0,8).join(' | ')}` }
+  if (timeCol < 0) return { rows:[], rejected:[], error:`Colonne horaire introuvable (${sepName}). En-têtes : ${raw.slice(0,8).join(' | ')}` }
   // Extract HH:MM from any time string: HH:MM[:SS], H:MM[:SS], HHMM, HH:MM AM/PM
   const extractTime = (s:string): string => {
     s = s.trim()
@@ -197,6 +197,7 @@ function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
     return ''
   }
   const rows:SierraRow[] = []
+  const rejected:{line:number;reason:string}[] = []
   let firstTimeRaw = ''
   let firstTimeParsed = ''
   for (let i=1;i<lines.length;i++) {
@@ -207,11 +208,14 @@ function parseSierraCSV(text:string): { rows:SierraRow[]; error?:string } {
     if (i===1) firstTimeRaw = timeRaw
     const time = extractTime(timeRaw)
     if (i===1) firstTimeParsed = time
-    if (!time) continue
+    if (!time) { rejected.push({line:i+1, reason:`Heure non parsable : "${timeRaw}"`}); continue }
+    const h = parseFloat(get(idxHigh)) || 0
+    const l = parseFloat(get(idxLow))  || 0
+    if (h > 0 && l > 0 && h < l) { rejected.push({line:i+1, reason:`High (${h}) < Low (${l})`}); continue }
     rows.push({ time, open:get(idxOpen), high:get(idxHigh), low:get(idxLow), last:get(idxLast), vwap:get(idxVwap), sp1:get(idxSp1), sm1:get(idxSm1), sp2:get(idxSp2), sm2:get(idxSm2), tpoPoc:get(idxPoc), tpoVah:get(idxVah), tpoVal:get(idxVal) })
   }
-  if (!rows.length) return { rows:[], error:`Aucune heure valide. Colonne ${timeCol} (${raw[timeCol]}), valeur brute : "${firstTimeRaw}", parsé : "${firstTimeParsed}"` }
-  return { rows }
+  if (!rows.length) return { rows:[], rejected, error:`Aucune heure valide. Colonne ${timeCol} (${raw[timeCol]}), valeur brute : "${firstTimeRaw}", parsé : "${firstTimeParsed}"` }
+  return { rows, rejected }
 }
 
 function parseBtCsv(text: string): { bars: BtBar[]; error?: string } {
@@ -442,6 +446,8 @@ export default function Calculateur() {
   const [posSize,  setPosSize]  = useState('1')
   const [posDir,   setPosDir]   = useState<'LONG'|'SHORT'>('LONG')
 
+  const [mpModal,  setMpModal]  = useState(false)
+  const [mpText,   setMpText]   = useState('')
   const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
   const [calc, setCalc] = useState({ avwap:'', sigma:'', rrEntry:'', rrStop:'', rrTarget:'', rrContracts:'1', ibH:'', ibL:'', ibAvwap:'', scClose:'', scAvwap:'', scIbh:'', scIbl:'', scSeq:'' })
   const upCalc = (k: keyof typeof calc, v: string) => setCalc(p=>({...p,[k]:v}))
@@ -998,8 +1004,9 @@ export default function Calculateur() {
     reader.onload = ev => {
       const text = ev.target?.result as string
       if (!text) { showCsvMsg('Fichier illisible.', false); return }
-      const { rows, error } = parseSierraCSV(text)
+      const { rows, error, rejected } = parseSierraCSV(text)
       if (error || !rows.length) { showCsvMsg(error ?? 'Aucune ligne valide.', false); return }
+      const rejSuffix = rejected.length > 0 ? ` · ⚠️ ${rejected.length} ligne(s) rejetée(s) : ${rejected.slice(0,3).map(r=>`L${r.line} — ${r.reason}`).join(' | ')}` : ''
       if (section === 'rthJ1') {
         setRthRowsJ1(prev => {
           const updated = prev[t].map(row => {
@@ -1078,7 +1085,7 @@ export default function Calculateur() {
         else                msg += ` · IB ⚠ non détecté (hors plage ?)`
         if (orbRows.length) msg += orbExact ? ` · ORB exact (${orbRows.length}b)` : ` · ORB PROXY ⚠ barres ${barMin}min`
         else                msg += ` · ORB non détecté`
-        showCsvMsg(msg, true)
+        showCsvMsg(msg + rejSuffix, true)
       } else if (section === 'tpoJ1') {
         let cumH=-Infinity, cumL=Infinity
         const letters:TpoLetter[] = rows.slice(0,13).map((r,i)=>{
@@ -1088,7 +1095,7 @@ export default function Calculateur() {
           return { id:`csv-${Date.now()}-${i}`, letter:TPO_RTH_LETTERS[i]||'?', high:cumH>-Infinity?String(cumH):'', low:cumL<Infinity?String(cumL):'', poc:r.tpoPoc, vah:r.tpoVah, val:r.tpoVal }
         })
         setTpoLettersJ1(prev=>({...prev,[t]:letters}))
-        showCsvMsg(`✓ ${letters.length} lettres TPO importées (${t})`, true)
+        showCsvMsg(`✓ ${letters.length} lettres TPO importées (${t})${rejSuffix}`, true)
       } else if (section === 'ovnNQ' || section === 'ovnES' || section === 'ovnGC' || section === 'ovnCL') {
         const t2 = (section === 'ovnNQ' ? 'NQ' : section === 'ovnES' ? 'ES' : section === 'ovnGC' ? 'GC' : 'CL') as Tab
         const isAsia   = (r: SierraRow) => r.time >= '18:00' || r.time < '02:00'
@@ -1110,7 +1117,7 @@ export default function Calculateur() {
         const oC=aggC(rows);       if (oC) updates.oClose      = oC
         if (Object.keys(updates).length) {
           setII(prev=>({...prev,[t2]:{...prev[t2],...updates}}))
-          showCsvMsg(`✓ ${rows.length} barres OVN importées (${t2})`, true)
+          showCsvMsg(`✓ ${rows.length} barres OVN importées (${t2})${rejSuffix}`, true)
         } else {
           showCsvMsg('Aucune donnée OVN extraite du fichier.', false)
         }
@@ -2320,6 +2327,111 @@ export default function Calculateur() {
     </div>
   )
 
+  const buildMorningPlan = () => {
+    const I2 = II[tab]
+    const fmt = (v:string) => v && pf(v)>0 ? v : '—'
+    const fmtOtf = (v:string) => v||'—'
+    const alnBiais = I2.alnPattern==='P3'?'Haussier (P3)':I2.alnPattern==='P4'?'Baissier (P4)':I2.alnPattern?`${I2.alnPattern}`:'—'
+    const ibCls = I2.ibClass||'—'
+    const ibOrd = I2.ibOrdre||'—'
+    const nqIb = `H:${fmt(I2.ibHigh)} / L:${fmt(I2.ibLow)} / C:${fmt(I2.ibClose)}`
+    const esIb = `H:${fmt(II.ES.ibHigh)} / L:${fmt(II.ES.ibLow)} / C:${fmt(II.ES.ibClose)}`
+    const vwap18 = fmt(I2.vwap18h)
+    const sd2h = fmt(I2.ovnSd2h), sd1h = fmt(I2.ovnSd1h), sd1l = fmt(I2.ovnSd1l), sd2l = fmt(I2.ovnSd2l)
+    const oHigh = fmt(I2.oHigh), oLow = fmt(I2.oLow), oClose = fmt(I2.oClose)
+    const ovnInv = (() => {
+      const settle = pf(I2.rSettle), oc = pf(I2.oClose)
+      if (!settle||!oc) return '—'
+      const d = oc - settle
+      return d > 0 ? `Long +${d.toFixed(2)}` : d < 0 ? `Short ${d.toFixed(2)}` : 'Neutre'
+    })()
+    const ovnVsVal = (() => {
+      const oc = pf(I2.oClose), vah = pf(I2.rVah), val = pf(I2.rVal)
+      if (!oc||(!vah&&!val)) return '—'
+      if (vah>0&&oc>vah) return `Outside (au-dessus VAH ${I2.rVah})`
+      if (val>0&&oc<val) return `Outside (en-dessous VAL ${I2.rVal})`
+      return `Inside VA (${I2.rVal}–${I2.rVah})`
+    })()
+    // Noon Curve
+    const noonRows = rthRows[tab]
+    const q1Rows = noonRows.filter(r=>{ const t2m=(s:string)=>{const[h,m]=s.split(':').map(Number);return h*60+(m||0)}; const m=t2m(r.heure); return m>=480&&m<720 })
+    const q2Rows = noonRows.filter(r=>{ const t2m=(s:string)=>{const[h,m]=s.split(':').map(Number);return h*60+(m||0)}; const m=t2m(r.heure); return m>=720&&m<960 })
+    const q1H = q1Rows.reduce((a,r)=>{ const v=pf(r.high); return v>a?v:a },0)
+    const q2H = q2Rows.reduce((a,r)=>{ const v=pf(r.high); return v>a?v:a },0)
+    const noonVerdict = q1H>0&&q2H>0 ? (q2H>q1H?'🟢 HAUSSIER (Q2 > Q1 High)':q2H<q1H?'🔴 BAISSIER (Q2 < Q1 High)':'⚖️ RANGE') : '—'
+    // Cadre E+G
+    const tpoL = tpoLetters[tab]
+    const eL = tpoL[4]
+    const vahE = eL?fmt(eL.vah):'—', valE = eL?fmt(eL.val):'—', pocE = eL?fmt(eL.poc):'—'
+    const gRow = rthRows[tab].find(r=>r.heure==='12:30')
+    const closeG = gRow?fmt(gRow.close):'—'
+    const cadreV = (() => {
+      if (!eL||!gRow) return '—'
+      const cg=pf(gRow.close),vh=pf(eL.vah),vl=pf(eL.val)
+      if (!cg||!vh||!vl) return '—'
+      return cg>vh?'🟢 HAUSSIER CONFIRMÉ':cg<vl?'🔴 BAISSIER CONFIRMÉ':'⚖️ RANGE / NEUTRE'
+    })()
+    // Key zones
+    const zones: string[] = []
+    if (pf(I2.ovnSd2h)>0) zones.push(`★★★ ${I2.ovnSd2h} — SD+2`)
+    if (pf(I2.rVah)>0)    zones.push(`★★  ${I2.rVah} — VAH J-1`)
+    if (pf(I2.vwap18h)>0) zones.push(`★★★ ${I2.vwap18h} — AVWAP 18h 👑`)
+    if (pf(I2.rPoc)>0)    zones.push(`★★  ${I2.rPoc} — POC J-1`)
+    if (pf(I2.rVal)>0)    zones.push(`★★  ${I2.rVal} — VAL J-1`)
+    if (pf(I2.ovnSd2l)>0) zones.push(`★★★ ${I2.ovnSd2l} — SD-2`)
+    const zonesStr = zones.length ? zones.join('\n• ') : '— (remplis les niveaux SD/VA)'
+    const today = new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
+    const plan = `☀️ MORNING PLAN ${tab} — ${today}
+
+📊 STRUCTURE
+• Monthly : ${fmtOtf(td.mOtf)}${td.mHigh?` (H:${td.mHigh} / L:${td.mLow})`:''}
+• Weekly  : ${fmtOtf(td.wOtf)}${td.wHigh?` (H:${td.wHigh} / L:${td.wLow})`:''}
+• Daily J-1: H:${fmt(I2.rHigh)} / L:${fmt(I2.rLow)} / Settle:${fmt(I2.rSettle)}
+  VAH:${fmt(I2.rVah)} / VAL:${fmt(I2.rVal)} / POC:${fmt(I2.rPoc)}
+
+🌙 OVN (18h → 09h30)
+• High OVN : ${oHigh} / Low OVN : ${oLow} / Close : ${oClose}
+• Inventaire vs Settle : ${ovnInv}
+• Position vs J-1 Value : ${ovnVsVal}
+• ALN Pattern : ${alnBiais}
+
+📐 BANDES SD (AVWAP 18h)
+• SD+2 : ${sd2h}  SD+1 : ${sd1h}
+• AVWAP : ${vwap18}
+• SD-1 : ${sd1l}  SD-2 : ${sd2l}
+
+📊 IB (${IB_H[tab]})
+• ${tab} IB : ${nqIb} · Ordre : ${ibOrd} · Classe : ${ibCls}
+• ES  IB : ${esIb} · Ordre : ${II.ES.ibOrdre||'—'}
+• §9 Alignement : ${p9Align||'—'}
+
+🕐 NOON CURVE (12h)
+• ${noonVerdict}
+
+📋 CADRE E+G (13h)
+• VAH E : ${vahE} / POC E : ${pocE} / VAL E : ${valE}
+• Close G (12:30) : ${closeG}
+• → ${cadreV}
+
+📊 ZONES CRITIQUES
+• ${zonesStr}
+
+📈 LONGS
+• ${p9Align==='Aligné'&&II.NQ.ibOrdre==='HL'?`Setup Bull A confirmé → cible SD+1 (${sd1h}) puis SD+2 (${sd2h})`:'Attendre confirmation IB Bull A + §9 Aligné'}
+
+📉 SHORTS
+• ${p9Align==='Aligné'&&II.NQ.ibOrdre==='LH'?`Setup Bear A confirmé → cible SD-1 (${sd1l}) puis SD-2 (${sd2l})`:'Attendre confirmation IB Bear A + §9 Aligné'}
+
+⚠️ RÈGLES DU JOUR
+• R41 : Attendre la barre TPO 30 min complète
+• R7  : Pas de trade par anxiété à l'ouverture
+• §9  : NQ + ES doivent être alignés
+
+⏳ RTH Open 09h30 décidera.`
+    setMpText(plan)
+    setMpModal(true)
+  }
+
   const renderInstr = () => {
     if (isSimple) return renderSimpleInstr()
     return (
@@ -2328,12 +2440,14 @@ export default function Calculateur() {
         <Sec title="RTH J-1" col={col}>
           <G4 ch={<><F l="Open" v={I.rOpen} s={v=>upI(tab,'rOpen',v)} /><F l="High" v={I.rHigh} s={v=>upI(tab,'rHigh',v)} /><F l="Low" v={I.rLow} s={v=>upI(tab,'rLow',v)} /><F l="Settle" v={I.rSettle} s={v=>upI(tab,'rSettle',v)} /></>}/>
           <G4 ch={<><F l="VAH" v={I.rVah} s={v=>upI(tab,'rVah',v)} /><F l="VAL" v={I.rVal} s={v=>upI(tab,'rVal',v)} /><F l="POC" v={I.rPoc} s={v=>upI(tab,'rPoc',v)} /><F l="Half Back" ro dv={halfBack} /></>}/>
+          {pf(I.rVah)>0&&pf(I.rVal)>0&&pf(I.rVah)<pf(I.rVal)&&<div style={{background:'rgba(255,77,77,0.12)',border:'1px solid rgba(255,77,77,0.45)',borderRadius:3,padding:'3px 8px',fontSize:11,color:'#ff4d4d',fontWeight:600}}>⚠ VAH ({I.rVah}) &lt; VAL ({I.rVal}) — incohérent</div>}
         </Sec>
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:8 }}>
         <Sec title={`IB · ${IB_H[tab]}`} col={col}>
           <G4 ch={<><F l="IB High" v={I.ibHigh} s={v=>upI(tab,'ibHigh',v)} /><F l="IB Low" v={I.ibLow} s={v=>upI(tab,'ibLow',v)} /><F l="IB Close" v={I.ibClose} s={v=>upI(tab,'ibClose',v)} /><F l="IB Mid" ro dv={ibMid} /></>}/>
+          {pf(I.ibHigh)>0&&pf(I.ibLow)>0&&pf(I.ibHigh)<pf(I.ibLow)&&<div style={{background:'rgba(255,77,77,0.12)',border:'1px solid rgba(255,77,77,0.45)',borderRadius:3,padding:'3px 8px',fontSize:11,color:'#ff4d4d',fontWeight:600}}>⚠ IB High ({I.ibHigh}) &lt; IB Low ({I.ibLow}) — incohérent</div>}
           <G3 ch={<><F l="IB AVWAP" v={I.ibAvwap} s={v=>upI(tab,'ibAvwap',v)} /><F l="Ordre HL" v={I.ibOrdre} s={v=>upI(tab,'ibOrdre',v)} opts={['HL','LH']} /><F l="Classification" v={I.ibClass} s={v=>upI(tab,'ibClass',v)} opts={['Normal','Wide IB','Narrow IB','Rotational']} /></>}/>
         </Sec>
         <Sec title={`ORB · ${OR_H[tab]}`} col={col}>
@@ -3516,6 +3630,11 @@ export default function Calculateur() {
           title="Importer CSV Sierra Chart → auto-remplit SD, VWAP, J-1"
           style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(0,255,136,0.10)', outline:'1px solid rgba(0,255,136,0.40)', color:'#00ff88', transition:'all 0.14s' }}
         >📊 SC CSV</button>
+        {!isSimple && <button
+          onClick={buildMorningPlan}
+          title="Générer le Morning Plan structuré"
+          style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(255,193,7,0.12)', outline:'1px solid rgba(255,193,7,0.45)', color:'#ffc107', transition:'all 0.14s' }}
+        >☀️ MORNING PLAN</button>}
         {!isSimple && <Btn label="◉ SETUP LAUNCHER"   active={slOpen} col='#00d4ff' onClick={()=>setSlOpen(o=>!o)} />}
         {!isSimple && <Btn label="▲ TOP-DOWN DALTON"  active={tdOpen} col={C.goldL} onClick={()=>setTdOpen(o=>!o)} />}
         {!isSimple && <Btn label="⊕ LIVE TRACKER"     active={trOpen} col={C.up}    onClick={()=>setTrOpen(o=>!o)} />}
@@ -3659,6 +3778,34 @@ export default function Calculateur() {
           {jsonAnalyse.alertes?.map((a,i)=>(
             <div key={i} style={jb(10, 400, { color:C.amber, marginTop:2 })}>⚠ {a}</div>
           ))}
+        </div>
+      )}
+
+      {/* Modal Morning Plan */}
+      {mpModal && (
+        <div style={{ position:'fixed', inset:0, zIndex:10000, background:'rgba(0,0,0,0.80)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }} onClick={e=>{ if(e.target===e.currentTarget) setMpModal(false) }}>
+          <div style={{ background:'#0d1526', border:'1px solid rgba(255,193,7,0.45)', borderRadius:6, padding:20, width:'100%', maxWidth:640, display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ display:'flex', alignItems:'center' }}>
+              <span style={orb(10, 900, { color:'#ffc107', letterSpacing:'0.18em', flex:1 })}>☀️ MORNING PLAN — {tab}</span>
+              <button onClick={()=>setMpModal(false)} style={{ background:'none', border:'none', color:C.muted, cursor:'pointer', fontSize:18, lineHeight:1 }}>×</button>
+            </div>
+            <textarea
+              value={mpText}
+              onChange={e=>setMpText(e.target.value)}
+              rows={24}
+              style={{ width:'100%', background:'#111827', border:'1px solid rgba(255,193,7,0.25)', borderRadius:3, padding:'8px 10px', fontSize:11, color:'#e2e8f0', fontFamily:'"JetBrains Mono",monospace', outline:'none', resize:'vertical', boxSizing:'border-box', lineHeight:1.6 }}
+            />
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button
+                onClick={()=>{ navigator.clipboard.writeText(mpText).catch(()=>{}) }}
+                style={{ padding:'5px 14px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(255,193,7,0.15)', outline:'1px solid rgba(255,193,7,0.50)', color:'#ffc107' }}
+              >📋 COPIER</button>
+              <button
+                onClick={()=>setMpModal(false)}
+                style={{ padding:'5px 14px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(136,153,187,0.10)', outline:'1px solid rgba(136,153,187,0.30)', color:C.muted }}
+              >FERMER</button>
+            </div>
+          </div>
         </div>
       )}
 
