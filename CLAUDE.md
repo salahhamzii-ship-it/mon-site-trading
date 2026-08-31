@@ -1549,3 +1549,96 @@ Balancement +/- 30 pts pendant 15h. SD±2 ne dépassent pas 30 pts de l'AVWAP �
 
 **En une phrase** : Le 30min IB dit QUI prend le contrôle. Le 19m30s RTH dit QUAND le contrôle s'épuise. Le 78min OVN dit QUI arrive avec quel inventaire. Trois lentilles, une décision.
 
+---
+
+## PROTOCOLE FIN DE SÉANCE — À COMPLÉTER CHAQUE RTH CLOSE
+
+> Ajouter une PARTIE numérotée après chaque session significative.
+> Format standard ci-dessous — copier/adapter.
+
+---
+
+## PARTIE 24 — SESSION RTH 31/08/2026 (FIN DE MOIS AOÛT)
+
+### Données clés
+
+| Donnée | NQ | ES |
+| :--- | :--- | :--- |
+| Open RTH | 29 437.75 | 7 701.25 |
+| **High RTH** | **29 538.25** (15h30) | **7 708.25** (15h30) |
+| **Low RTH** | **29 355.00** (10h00) | **7 674.75** (10h00) |
+| **Settle officiel** | **29 507** | — |
+| Close bar 16h00 | 29 516.50 | 7 698.00 |
+
+### Profil Mensuel Août — Références Sierra Chart
+
+| Niveau | Valeur | Note |
+| :--- | :--- | :--- |
+| Monthly VAH | 29 861.25 | — |
+| **Monthly VPOC** | **29 598.75** | Aimant septembre ★★★ |
+| **Monthly TPO POC** | **29 537.50** | Résistance clé septembre |
+| Settle août | **29 507** | Pivot septembre |
+| Monthly VAL | 29 192.25 | Support ultime |
+
+→ **Août clôture 30 pts sous TPO POC** → biais baissier structurel mensuel
+→ **VPOC 29 598.75 non touché** → aimant septembre (R17 actif)
+
+### NQ 78min RTH — Barres complètes (footprint)
+
+| Bar | Heure | High | Low | Close | Delta | Ask@H | Bid@L | HVN | LVN |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| B1 | 09:30 | **29 516.75** | **29 355** | 29 410 | **-611** | **188** | -746 | 29 420 | **29 516.75** |
+| B2 | 10:48 | 29 445.75 | 29 365 | 29 368 | -385 | 118 | -91 | 29 435 | 29 433 |
+| B3 | 12:06 | 29 443.25 | **29 362.50** | 29 424 | **+724** | 65 | -67 | 29 421 | 29 416.50 |
+| B4 | 13:24 | 29 464.25 | 29 388 | 29 390 | +81 | 81 | -56 | 29 455.25 | **29 464.25** |
+| **B5** | **14:42** | **29 538.25** | 29 382.50 | **29 506.75** | **+843** | 91 | **-613** | **29 524.25** | **29 538.25** |
+| Close | 16:00 | 29 525.75 | 29 503.75 | 29 516.50 | +9 | 95 | -32 | — | — |
+
+### Leçons clés session
+
+**1. Poor High B1 (Ask@High = 188 contrats)**
+Spike 09:30 à 29 516.75 = LVN = quasi zéro acheteurs au High = piège retail → crash 29 355 immédiat.
+Règle : Ask@High < 200 contrats sur spike IB = Poor High = ne pas suivre.
+
+**2. Low 29 355 = Single Print semaine 29 359 − 4 pts**
+Le vrai Low du jour à 10h00 (B1 période) = 4 pts sous la cible Single Print hebdo.
+LBF absorbé. B3 delta +724 = reversal confirmé midi.
+
+**3. ES MOC 15h30 — Distribution institutionnelle**
+| Donnée | Valeur |
+| :--- | :--- |
+| Volume barre 15h30 ES | **231 191** (×4 barres précédentes) |
+| Delta ES 15h30 | **−8 557** |
+| Signal | Institutions VENDENT dans le MOC month-end |
+
+§9 divergence close : NQ delta +389 / ES delta −8 557 → **signal baissier OVN potentiel**
+
+**4. OVN 21h validé — "Let the trade come to you"**
+RTH = 3 lows sans excès + IB Bear A + retournement fin de mois = journée illisible en RTH.
+OVN 21h ET (dimanche) = entrée propre, structured, §9 aligné → IB Terminus exit.
+**RTH "n'a pas comé"** → zéro trade RTH = capital préservé = profit.
+
+**5. Règle de Processus — Morning Plan à la clôture RTH**
+Données à tracer avant 18h ET (Globex open) :
+- Nouveau AVWAP 18H (ancre fraîche)
+- Nouveaux SD±1/2/3
+- J-1 : High/Low/Settle/VAH/VAL/POC
+- Monthly POC septembre = 29 537.50 (résistance)
+- VPOC septembre = 29 598.75 (aimant)
+
+### Références pour Mardi 01/09/2026
+
+| Niveau | Prix | Note |
+| :--- | :--- | :--- |
+| Monthly VPOC | **29 598.75** | Aimant nord septembre ★★★ |
+| Monthly TPO POC | **29 537.50** | Résistance clé |
+| J-1 High | **29 538.25** | = Monthly POC zone |
+| **J-1 Settle** | **29 507** | Pivot référence |
+| J-1 VAH | ~29 460-29 480 | À calculer sur TPO |
+| Single Print weekly | **29 359** | Touché à 4 pts (29 355) — aimant baissier |
+| Monthly VAL | **29 192.25** | Support ultime |
+
+**News demain : ISM Manufacturing 10h00 ET = IB Terminus OVN**
+→ Entrée OVN ce soir 20h-22h ET si signal LBF/LAF + §9
+→ Sortie London 05h-07h ET (Tunis 10h-12h) ou ISM spike 10h00
+
