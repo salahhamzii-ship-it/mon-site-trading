@@ -2058,3 +2058,127 @@ Dalton et Salah confirment : tant que l'AVWAP 18H descend, le rebond PM = couver
 **7. "Le chameau regarde et boit son thé"**
 Post 14h ET : observation pure (R6 implicite). Flash vient sans forcer. Dalton dit les mêmes mots en live le même jour.
 
+---
+
+### ★★★ DONNÉES COMPLÈTES PM — K / L / M (14:00–16:00 ET)
+
+#### K Bar (14:00–14:30 ET) — SD-3 EXACT ★★★★★
+
+| Paramètre | NQ | ES |
+| :--- | :--- | :--- |
+| High | ~29 106 | ~7 640 |
+| **Low** | **29 002** | **7 621** |
+| Close | ~29 037 | ~7 627 |
+| **SD-3 à cette heure** | **29 002 EXACT** ★★★★★ | — |
+| **Bottom Band 4** | **28 955.81** | — |
+| Weekly Poor Low | **28 947** (8 pts de Bottom Band 4) | — |
+| 78-min Delta K bar | **+2 895** | — |
+| Signal | **LBF SD-3 — Poor Low** | **R36 : LBF + Higher Low = LONG potentiel** |
+| BidVol@Low K bar | **-102** (POOR LOW confirmé) | — |
+| Décision | **R8 actif → Zéro trade** | §9 non requis |
+
+**Note critique :** NQ Low 29 002 = SD-3 exact. Bottom Band 4 (28 955) = 47 pts en dessous. Weekly RTH Low semaine précédente = 28 947 (8 pts de Bottom Band 4) — R24 : Poor Low hebdomadaire = cible de réparation mercredi.
+
+**Delta 78-min K bar +2 895** = acheteurs absorbant massivement au SD-3 malgré la cascade Iran-USA. Structure inversée : prix en bas, acheteurs actifs.
+
+---
+
+#### L Bar (15:00–15:30 ET) — Higher Low
+
+| Paramètre | NQ | ES |
+| :--- | :--- | :--- |
+| Low | **~29 090** (Higher Low vs K 29 002) | — |
+| High barrage | **~29 160** | — |
+| Signal | **R36 : Higher Low au-dessus SD-3 = absorption confirmée** | — |
+| AVWAP 18H | Encore en descente | Profil P actif |
+| Verdict | Rebond technique — short covering, pas de new money | R19/20 ✅ |
+
+→ **Higher Low L vs K = R24 appliqué intraday.** Deux lows sans excès (J 29 090 + K 29 002 + rebond) = forte probabilité de réparation mercredi.
+
+---
+
+#### M Bar (15:30–16:00 ET) + Settle
+
+| Paramètre | NQ | ES |
+| :--- | :--- | :--- |
+| Settle officiel | **~29 170–29 180** | ~7 637 |
+| **Settle ≈ POC** | ★★★ Rotationnel confirmé | — |
+| Type journée final | **Trend Day AM + Rotationnel PM** | — |
+| MOC impact | Allocation fin de mois Sept — volume élevé | — |
+
+---
+
+### Bilan 78-Min RTH — Session Complète
+
+| Barre | Période | High | Low | Delta | Note |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| B1 | 09:30 | 29 516.75 | 29 355 | **-611** | IB Bear A — Poor High |
+| B2 | 10:48 | 29 445.75 | 29 365 | -385 | Continuation baissière |
+| B3 | 12:06 | 29 443.25 | 29 362.50 | **+724** | Reversal partial — abs midi |
+| B4 | 13:24 | 29 464.25 | 29 388 | +81 | Iran news — range |
+| **B5** | **14:42** | **29 538.25** | **29 382.50** | **+843** | — |
+| **K 78min** | **14:00–15:18** | ~29 106 | **29 002** | **+2 895** | **SD-3 LBF — absorption massive** |
+
+→ K bar 78-min delta +2 895 = plus fort delta acheteur de la session **au point le plus bas** = signal institutionnel classique.
+
+---
+
+### TPO Final — J-1 pour Mercredi 02/09/2026
+
+| Niveau | Prix | Note |
+| :--- | :--- | :--- |
+| **RTH High J-1** | **29 317.75** | E bar — Poor High |
+| **RTH Low J-1** | **29 002** | K bar — SD-3 LBF |
+| **Settle J-1** | **~29 175** | ≈ POC |
+| **TPO VAH J-1** | **~29 280–29 320** | Zone No Man's Land |
+| **TPO VAL J-1** | **~29 090–29 110** | L bar Higher Low |
+| **TPO POC J-1** | **~29 175** | = Settle |
+
+---
+
+### Aimants Confirmés pour Mercredi 02/09/2026
+
+| Priorité | Niveau | Prix | Type |
+| :--- | :--- | :--- | :--- |
+| ★★★★★ | POC orphelin 31/08 | **29 537.50** | R17 — aimant majeur nord |
+| ★★★★★ | Weekly Poor Low | **28 947** | R24 — réparation attendue |
+| ★★★★ | Gap non comblé J-1 | **29 112 → 29 355** | R27 — zone air baissier |
+| ★★★★ | Single Prints J-1 | **29 320 → 29 440** | Air — aimant haussier |
+| ★★★★ | Bottom Band 4 | **28 955.81** | Limite extrême si cassure |
+| ★★★ | Monthly TPO POC Août | **29 537.50** | Double confluence avec POC 31/08 |
+| ★★★ | J-1 VAH | **~29 300** | Résistance |
+| ★★ | J-1 Settle / POC | **~29 175** | Pivot |
+| ★★ | J-1 VAL | **~29 100** | Support |
+
+**R29.2 actif — Archétype "Le Revirement" :**
+Lundi (Baissier piège) + Mardi (continuation piège) → Mercredi = Retournement potentiel.
+Condition : OVN Globex mardi soir haussier + IB Haussier mercredi.
+
+---
+
+### Engagement Communauté X (01/09/2026)
+
+**Post session résumé publié** :
+> "C1 was the plan. SD-3 poor low (BidVol@Low = -102) signaled absorption before the reclaim. Target defined before open. Executed. 🐪"
+
+**Reply reçu** : Observation sur le Low 29 002 post-C1 et le reclaim vers 29 120.
+
+**Reply Salah** :
+> "Always open to observations and discussion. The method is built to be questioned — that's how it gets sharper. 🐪"
+
+→ Règle : NE PAS CITER D'AUTRES TRADERS SANS LEUR ACCORD. Contenu public = analyse Salah uniquement, en anglais.
+
+---
+
+### Préparation Mercredi — Checklist 18:00 ET
+
+- [ ] Ancre AVWAP 18H : **01/09/2026 18:00 ET** (nouveau Globex)
+- [ ] Tracer nouveaux SD±1/2/3/4
+- [ ] Noter ALN Pattern (Asie → Londres)
+- [ ] Identifier P1/P2/P3/P4
+- [ ] Niveaux J-1 dans cockpit : High 29 317 / Low 29 002 / Settle ~29 175 / VAH / VAL / POC
+- [ ] Weekly Poor Low 28 947 — aimant actif (R24)
+- [ ] Gap non comblé : 29 112→29 355 (R27)
+- [ ] §9 NQ + ES alignés avant entrée
+
+
