@@ -1876,3 +1876,185 @@ Distribution 1 : 28 880-28 965 | Distribution 2 : 28 730-28 851
 - Liaison Claude ↔ Sierra Chart (données temps réel) — futur
 - RTH 4 août à finaliser (P3 en cours au moment du résumé)
 
+
+---
+
+## PARTIE 26 — SESSION RTH 01/09/2026 — P4 + GAP + MONTHLY VAL BREACH + IRAN-USA
+
+### Contexte macro / OVN
+
+| Donnée | Valeur |
+| :--- | :--- |
+| Fin de mois août | Settle 29 507 (NQ) / 7 722.50 (ES) |
+| ALN Pattern | **P4 ✅** — Londres H 29 276 < Asie H 29 379 / Londres L 29 044 < Asie L 29 195 |
+| IB Confirmation P4 | **Bear A confirmé 56%** → baissier validé |
+| Gap Down J-1 | RTH Low J-1 : **29 355** → RTH Open : **29 112** = **-243 pts** |
+| Règle gap (R27) | Gap non comblé rapidement → **GO WITH DOWN** ✅ FIRED |
+| Inventaire OVN | Short (vente nocturne continue depuis settle 29 507) |
+| AVWAP 18H ancre | 31/08/2026 18:00 ET |
+
+---
+
+### Données RTH — NQ + ES (01/09/2026)
+
+| Donnée | NQ | ES |
+| :--- | :--- | :--- |
+| Open RTH | **29 112** | ~7 700 |
+| High RTH | **29 317.75** (barre E ~11:30) | ~7 708 (IB High) |
+| Low RTH | **29 040.25** (C1 hit) / Low J ~29 090 | ~7 641.25 (I bar — SD-2) |
+| Settle | **~29 151** (dernière cotation confirmée ~14h10) | ~7 644 |
+| Type journée | **Trend Day baissier / Rotationnel PM** | Rotationnel |
+
+---
+
+### Séquence des Lettres TPO — Analyse complète
+
+| Lettre | Heure | Action | Signal |
+| :--- | :--- | :--- | :--- |
+| A–B | 09:30–10:30 | IB Bear A — Low First, Close < Mid | ✅ Bear A confirmé |
+| E | ~11:30 | High 29 317.75 — **Poor High** | R13 Excess ★★★★★ |
+| E→F | 11:30–12:00 | Lower High confirme rejet | Entrée SHORT Close E |
+| F | 12:00 | Breakdown sous VAL IB | Tendance OK |
+| G | 12:30–13:00 | **Verdict Dalton** — Below VAL matinée, POC descend | Baissier confirmé PM |
+| H | ~13:00 | **Double-Wide** — commitment baissier | Trend Day signature |
+| I | 13:00–13:30 | Low ES **7 641.25 = SD-2 exact** / NQ 29 090 | **LBF ★★★** — absorption |
+| I footprint | 13:00–13:30 | BidVol@Low NQ = **-34** (POOR LOW) / Delta +783 / Vol 3× | §9 divergence |
+| J | 13:30–14:00 | "J sage" malgré Iran news — NQ ~29 090 / ES tient | R8 actif |
+| K–M | 14:00–16:00 | **R8 geopolitique** — pas de trade | Cash = décision |
+
+---
+
+### Setups Clés
+
+**1. SHORT — E bar Excess (11:30 ET)**
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Signal | NQ 29 317.75 = Poor High (LVN au High, HVN 84 pts en dessous) |
+| Ask@High | Stagnant = acheteurs vides |
+| R13 Excess | Lettre suivante F = Lower High ✅ |
+| Entrée | Close barre E |
+| Stop | High E (29 317.75 + marge) |
+| Cible 1 | **29 040.25** = C1 HIT ✅ |
+| R19/20 | Profil en P (short covering sans new money) — pas de staying power |
+
+**2. Monthly VAL BREACH — Pivot R16**
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Monthly VAL NQ Août | **29 192.25** |
+| Action | Percée dès J1 septembre |
+| Règle R16 | Ancien support = nouvelle résistance |
+| Impact | Zone 29 192 → 29 320 = **No Man's Land** (single prints créés) |
+| Single Prints | **29 320 → 29 440** = 120 pts d'air |
+
+**3. §9 Divergence — I Bar (13:00–13:30 ET)**
+
+| | NQ | ES |
+| :--- | :--- | :--- |
+| Low I bar | **29 090** (sous SD-1) | **7 641.25** (= SD-2 exact) |
+| Comportement | New Low | Tient — LBF absorption |
+| Delta I | +783 (acheteurs) | +397 (acheteurs) |
+| Volume | Normal | **3× barre précédente** |
+| Signal §9 | **DIVERGENCE** — pas de confirmation bilatérale | |
+| Décision R35 | Questionable Low → **pas de nouveau short NQ** | |
+
+---
+
+### Événement Géopolitique — R8 Actif
+
+**~14:00–14:30 ET** : Reuters confirme — US launches new barrage of strikes on Iran around Strait of Hormuz. Trump warns severe retaliation if Iran responds.
+
+| Règle | Application |
+| :--- | :--- |
+| R8 | Marché déteste l'incertitude → stratégies normales échouent |
+| R28 | Options (straddles) pour définir le risque — pas de futures à découvert si vous ne pouvez pas dormir |
+| Décision | **Zéro trade K/L/M** — capital protégé = profit |
+| J bar | "J sage" malgré news — Reuters note "new barrage" = marché avait partiellement pricé (frappes du weekend précédent) |
+
+---
+
+### AVWAP 18H — Diagnostic PM
+
+| Heure | AVWAP 18H ES | Note |
+| :--- | :--- | :--- |
+| I bar (13:30) | **7 672.57** | Encore en baisse — NOT FLAT |
+| Conséquence | Short covering ≠ New Money | Profil P confirmé (R19/20) |
+| Verdict | Pas de retournement structurel | Rebond = couverture de shorts (mains faibles) |
+
+---
+
+### SD Bands ES à I bar (13:30 ET)
+
+| Bande | Valeur | Note |
+| :--- | :--- | :--- |
+| SD+1 | 7 686.59 | Résistance |
+| AVWAP 18H | 7 672.57 | Référence 👑 |
+| SD-1 | 7 658.55 | Support |
+| **SD-2** | **7 644.53** | **= Low I bar 7 641.25 ★★★** |
+| SD-3 | 7 629.32 | — |
+
+---
+
+### Aimants pour Mercredi 02/09/2026 — "La Bousculade"
+
+| Niveau | Prix | Type |
+| :--- | :--- | :--- |
+| POC orphelin 31/08 | **29 537.50** | R17 actif — aimant majeur |
+| Gap non comblé | **29 112 → 29 355** | R27 — gap day aimant |
+| Single Prints haut | **29 320 → 29 440** | Air à combler |
+| R29.2 | Retournement de Milieu de Semaine | Archétype applicable |
+
+→ **Mercredi = bousculade attendue** vers les 3 aimants au-dessus (si structure le permet)
+
+---
+
+### Validation Dalton Webinar (Live 01/09/2026)
+
+Dalton en live pendant la session a confirmé mot pour mot :
+- "Exactness kills" = **R9** ✅
+- Explicit vs Implicit thinking = **R6** ✅
+- "Inventory too short" (mechanical sells = weak hands) = **R11/12** ✅
+- "Poor low, no excess" → possible short covering rally = **R23/24** ✅
+- P-shape rally = **R19/20** ✅
+- Straddles in uncertainty = **R28** ✅
+- 30-min bars only = **R3** ✅
+- Trading diary = **R10** ✅
+
+→ **8/8 règles Bible validées par Dalton en live** — méthode cohérente
+
+---
+
+### Résultats Performance Session
+
+| Setup | Entrée | Cible | Résultat |
+| :--- | :--- | :--- | :--- |
+| SHORT E bar Excess 29 317 | Close E | C1 29 040 | ✅ **+277 pts** |
+| Pas de trade K/L/M | — | — | ✅ Capital préservé (R8) |
+| §9 divergence I bar | Pas d'entrée | — | ✅ Règle respectée |
+
+---
+
+### Leçons Session
+
+**1. P4 + Gap = confluence baissière maximale**
+P4 nocturne + gap down non comblé = double signal. R27 valide le momentum dès l'ouverture.
+
+**2. Monthly VAL = pivot instantané**
+29 192 percée J1 septembre. La salle de marché ne teste pas — elle accepte. Zone 29 192–29 320 devient No Man's Land.
+
+**3. E bar est la lettre fétiche de Salah**
+E = résumé de la matinée. Excess sur E = signal le plus propre. "Cinema" en TPO.
+
+**4. §9 protège du sur-trading**
+J bar NQ 29 090 sans ES = Questionable Low. Pas de short. Le lendemain, NQ repart possiblement vers les aimants. Sans §9, on aurait shorté le fond.
+
+**5. R8 + cash = profit**
+3 barres K/L/M non tradées pendant l'Iran-USA = capital intact. "Il faut bien s'amuser dans sa retraite" — mais prudemment.
+
+**6. AVWAP not flat = pas de retournement**
+Dalton et Salah confirment : tant que l'AVWAP 18H descend, le rebond PM = couverture de shorts, pas de new money. Profil P = trap haussier.
+
+**7. "Le chameau regarde et boit son thé"**
+Post 14h ET : observation pure (R6 implicite). Flash vient sans forcer. Dalton dit les mêmes mots en live le même jour.
+
