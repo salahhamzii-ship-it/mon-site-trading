@@ -1642,3 +1642,237 @@ Données à tracer avant 18h ET (Globex open) :
 → Entrée OVN ce soir 20h-22h ET si signal LBF/LAF + §9
 → Sortie London 05h-07h ET (Tunis 10h-12h) ou ISM spike 10h00
 
+
+---
+
+## PARTIE 25 — RÉSUMÉ SESSION JUILLET-AOÛT 2026 (RÉCUPÉRÉ)
+
+### Contexte permanent — Trader & Setup
+
+- **Trader** : Salah Tataouine (Chameau Ligiste). NQ Futures + ES (§9) + CL (macro). Tunisie, canicule 40°+, coupures STEG.
+- **Outils** : Sierra Chart, deux Claude en parallèle, communauté X (Ben @PatternProfits, Josh @tradewithprof, Aaron)
+- **Organisation 6 écrans** :
+  - Haut-gauche : Composite Previous Week OVN+RTH
+  - Haut-milieu : Composite Previous Week RTH seul
+  - Haut-droite : Bid/Ask Difference
+  - Bas-gauche : RTH seul + traits historiques
+  - Bas-milieu : Edge Zone VWAP+SD
+  - Bas-droite : Monthly Composite
+
+---
+
+### Genèse des Règles 13-17 (formalisées cette session)
+
+**Règle 13 — Excess comme signal maître**
+Né d'une réflexion pendant coupure STEG, déclenché par setup conditionnel de Ben (@PatternProfits).
+Niveau que le marché REFUSE d'accepter. Signature : lettre suivante rejette immédiatement (LH après excess haut, HL après excess bas).
+Entrée : Close lettre de rejet | Stop : derrière l'excess.
+
+**Règle 14 — Post Trend Day LBF**
+Post Trend Day qui fait LAF + Settle sous VAL = piège haussier. OTF Lower reprend dès la session suivante. Validé sur 20/7.
+
+**Règle 15** : Bon setup bien exécuté qui échoue = bon trade. Travail préalable détermine la qualité, pas le résultat.
+
+**Règle 16** : Stop = seule réponse au "tort ou raison". Défini AVANT l'entrée. MLL figé à +2000$.
+
+**Règle 17 — Universalité de l'Excess (TPO 18h→16h)**
+L'Excess s'applique identiquement sur Asie, Londres, RTH. Validé 5/5 sur TPO 22→23/7 (P4) et 8/9 sur TPO 19→20/7 (P3).
+
+---
+
+### Setup Excess + Stop OTF — Cas d'école 24 Juillet
+
+**Séquence** : A→B OTF Lower | C Stop Lower | C→F Higher (rebond) | F EXCESS HIGH | G Stop OTF Higher (rejet) | H Confirmation Lower | I faux signal "cinéma" | J Confirmation Lower validée.
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Entrée | Close G = 28 495 |
+| Stop | High G = 28 569 (74 pts de risque) |
+| §9 | ES+NQ alignés ✅ |
+| C1 | D Low 28 355 ✅ |
+| C2 | Low C 28 254 ✅ |
+| C3 | Put Shelf 28 235 ✅ |
+| C4 | 28 152 non atteint (-60 pts) |
+
+**Leçon lettre I "cinéma"** : une fois G+H confirmés, la lettre I qui semble contredire = faux signal. Ne pas sortir.
+
+---
+
+### Market Generated Information (MGI) — Chaîne Causale Jour/Jour
+
+**Principe** : chaque jour réagit en continuité au précédent. PH/PL du jour N = référence que N+1 va tester (LBF/LAF).
+
+**"Le 22 à Asnières"** — §9 inter-journalier parfait :
+- PH 22/7 NQ (28 748) → LBF exact 23/7 (28 754, écart 6 pts)
+- PH 22/7 ES (7 546.75) → LBF exact OVN (7 549.25, écart 2.5 pts)
+- Mêmes fenêtres horaires (01h30, 06h30) = §9 confirmé
+
+**Semaine 20-24 juillet — NQ + ES en chorale parfaite :**
+
+| Jour | Action | Rôle |
+| :--- | :--- | :--- |
+| Lundi | LAF PH vendredi, rotationnel | Pose les niveaux |
+| Mardi | LBF Low Lundi (exact), piège haussier, delta -2067 masqué | Pose Lower High (NQ 29 056, ES 7 503) |
+| Mercredi | Tente LAF Mardi sans y arriver, compresse | Pose PH (NQ 28 748, ES 7 546.75) |
+| Jeudi | Exécute mission — LBF PH Mercredi, prend 4 Lows consécutifs, cascade | — |
+| Vendredi | Coincé sous PH Jeudi, cède, OTF Lower scellé | — |
+
+→ **Lower High de Mardi (NQ 29 056, ES 7 503) = clé de voûte** de toute la semaine : testé Mercredi, explosé Jeudi, résistance Vendredi.
+→ **Transition Mercredi→Jeudi = la plus décisive de la semaine.**
+
+---
+
+### OTF Lower — Multi-Échelles (au 4 août 2026)
+
+**Monthly** : Mai→Juin→Juillet OTF Lower depuis 30 avril.
+
+**Weekly — 3 semaines consécutives :**
+| Semaine | High | Low |
+| :--- | :--- | :--- |
+| 6-10/7 | 30 094 | 29 034 |
+| 13-17/7 | 29 977 | 28 408 |
+| 20-24/7 | 29 342 | 28 212 |
+
+**Semaine 27-31/7** : Two-sided — Low 27 201 (mer 29/7) puis rebond vers 28 725 (ven 31/7), Settle 28 372.
+
+**"The key" (9 juin RTH Low 28 512)** :
+- Cassée 23/7 (28 447.75) et 24/7 (28 254) → Accept below confirmé semaine 27-28/7
+- Au 31/7-4/8 : marché remonté au-dessus → devient résistance à surveiller
+
+**Carte basse 4h — Paires de support :**
+| Paire | Niveau | Statut |
+| :--- | :--- | :--- |
+| #1 | 28 027 / 27 941 | ✅ Cassée |
+| #2 | 27 327 / 27 238 | Testée (Low 27 201) |
+| #3 | 26 906 / 26 801 | Prochaine |
+| #4 | 26 292 / 26 183 | Profonde |
+
+---
+
+### Semaine 27-31 Juillet — Bilan Complet
+
+| Jour | High | Low | Settle | Caractère |
+| :--- | :--- | :--- | :--- | :--- |
+| 27/7 | 28 620 | 27 939 | 28 203 | Cascade A (676 pts), LAF VAL Weekly |
+| 28/7 | 28 068 | 27 603 | 27 960 | Lower Low, OTF Lower |
+| 29/7 | 28 099 | 27 201 | 27 259 | Plancher absolu semaine |
+| 30/7 | 28 414 | 27 813 | 28 333 | Rebond fort, Higher Low |
+| 31/7 | 28 725 | 28 079 | 28 372 | Higher High, LAF haut du range |
+
+- **A du 27/7** : double signal (LAF VAL Weekly 28 570 + Bon Low avec single prints 28 266-28 334)
+- **Value finale 28/7** : VAH 28 066 | POC 27 966 | Halfback 27 840 | VAL 27 809 | PL 27 910
+
+---
+
+### Lundi 3 Août — P4 + Elongation (détail complet)
+
+**ALN** : Asie (28 698/28 471) | Londres (28 661/28 403) → P4 ✅
+Counter Auction 65% → **Trend Day haussier (15% rare sur P4) + Elongation Dalton**
+
+**SD Migration lundi — précision validée :**
+| Bande | Valeur | Référence | Écart |
+| :--- | :--- | :--- | :--- |
+| SD+2 | 29 045 | Asie High 29 048 | 3 pts ✅ |
+| SD+1 | 28 870 | Low OVN 28 864 | 6 pts ✅ |
+| VWAP | 28 694 | — | — |
+| SD-1 | 28 518 | — | — |
+| SD-2 | 28 345 | — | — |
+
+**Profile RTH** : High 28 965 | Low 28 313 | Settle 28 900 ≈ POC 28 891 (écart 9 pts)
+POC immobile CDEF à 28 790. Delta fin : L -419, M -735 → extension fragile.
+
+**Composite OTF Higher** : High 28 965 / Low 28 313 | VAH 28 683 / VAL 28 440 / POC 28 589
+Distribution 1 : 28 880-28 965 | Distribution 2 : 28 730-28 851
+
+**Gap haut non atteint** : 29 085 → cible pour la suite.
+
+---
+
+### Mardi 4 Août — P3 (données OVN)
+
+**ALN** : Asie (High 29 081.75 à 02h00 / Low 28 864.25 à 20h30) | Londres (High 29 245.75 à 07h00 / Low 29 007.50 à 05h00) → P3 ✅ (+164 pts High, +143 pts Low)
+
+- CL OVN : 80.24→81.01 (légère remontée, désescalade pricée vs sommet 92.82)
+- ES OVN : compression très serrée (range 20 pts vs 217 pts NQ) — divergence de volatilité
+- Inventory Long +337 pts (NQ 29 237 vs Settle 28 900)
+- Excess nocturne Low 20h30 (28 864) rejeté ✅
+- SD Migration : VWAP 28 694 | SD-1 28 518 ≈ "the key" (28 512) | SD-2 28 345
+
+**Routine validée** : noter VWAP+SD en fin RTH, tracer la migration Asie/Londres/RTH. Précision 3-6 pts constatée.
+
+---
+
+### Dalton — Week Ahead 1er Août
+
+> *"Trading range 6-7 jours. Marché a LAF le haut vendredi. Question : peut-on construire de la Value au-dessus ? Pas de héros. Stepping aside = no disgrace. Downside : 7 350 ES si cassure."*
+
+**Plan semaine 4-8 août :**
+| Scénario | Condition | Cible |
+| :--- | :--- | :--- |
+| Accept above | NQ tient > 28 372 (Settle 31/7), Value se construit | "The key" 28 512 → 28 700+ |
+| Reject | NQ rechute < 27 910 (PL 28/7) | Paire 4h #2 (27 327-27 238) |
+
+**Niveaux actifs semaine 4-8/8** :
+| Niveau | Rôle |
+| :--- | :--- |
+| Gap 29 085 (haut) | Non atteint — cible nord |
+| "The key" 28 512 | Résistance |
+| Settle 31/7 28 372 | Pivot |
+| PL 28/7 27 910 | Support |
+| Paire 4h #2 27 327-27 238 | Support profond |
+| ES Balance 7 411-7 550 | Range ES |
+| Pivot Dalton ES 7 470 | Pivot |
+| Downside Dalton 7 350 | Objectif baissier |
+
+---
+
+### ALN — Statistiques Complètes Validées
+
+| Pattern | Définition | Fréquence | IB Confirmation |
+| :--- | :--- | :--- | :--- |
+| P1 | Londres H > Asie H ET L < Asie L | 46% | Neutre |
+| P2 | Londres inside Asie | 1% | — |
+| P3 | Londres H > Asie H ET L > Asie L | 29% | **100% Haussier** |
+| P4 | Londres H < Asie H ET L < Asie L | 21% | 56% Baissier |
+
+**P4 — Break Probabilities NY (n=767, 30.2% des sessions) :**
+| Signal | % |
+| :--- | :--- |
+| Breaks London High | 68.6% |
+| Breaks London Low | 75.0% |
+| Breaks Both | 44.6% |
+| High first (44.6% sessions) → Low still breaks | 46.2% ↓ 28.8pp — **edge perdu** |
+| Low first (54.4% sessions) → High also breaks | 44.1% |
+| Breaks neither | 1.0% (8 sessions) |
+
+---
+
+### Hiérarchie Finale des Outils
+
+| Priorité | Outil | Rôle |
+| :--- | :--- | :--- |
+| 1 | MGI jour N-1 (LBF/LAF/Lower High) | Décide la direction |
+| 2 | ALN (P1-P4) | Contexte nocturne |
+| 3 | IB (Close B vs Mid) | Confirmation RTH Open |
+| 4 | Excess (Règle 13/17) | Timing d'entrée universel |
+| 5 | §9 NQ+ES alignés | Bonus de conviction |
+| 6 | Stop (Règle 16) + MLL | Gestion du risque |
+
+---
+
+### Communauté X
+
+- **Ben (@PatternProfits)** : GEX/OI, utilise Claude. Setup conditionné ES → déclenché Règle 13. Feuille SignalP adoptée (score /9, Checklist 9 critères, Risk explicite).
+- **Josh (@tradewithprof)** : clin d'œil "the key" 26 juin. Signal TRCT 23/7 (7/9, invalidé 11h30 — Accept IB).
+- **Aaron** : niveaux 29 123-29 138 cohérents avec GEX Ben.
+
+---
+
+### Chantiers Pending (au 4 août 2026)
+
+- P1 au labo (46% des dates) — **priorité haute**
+- P2 au labo (1%) — à documenter
+- Amélioration feuille de route après P1/P2
+- Liaison Claude ↔ Sierra Chart (données temps réel) — futur
+- RTH 4 août à finaliser (P3 en cours au moment du résumé)
+
