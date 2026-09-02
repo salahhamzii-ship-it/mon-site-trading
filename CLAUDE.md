@@ -2520,3 +2520,211 @@ Box 3 LOW                 27 213.75 −1743 pts ↓    Objectif terminal baissie
 > La fragitilé de juillet (Box 3 P-shape) + les travaux non achevés d'août = la dette que septembre va régler.
 > Le chameau connaît la carte. 🐪
 
+
+---
+
+## PARTIE 29 — SESSION RTH 02/09/2026 — P4 COUNTER + GEX PIN 708 + AVWAP CEILING
+
+### Contexte macro / OVN
+
+| Donnée | Valeur |
+| :--- | :--- |
+| Pattern ALN | **P4 ✅** — Londres H 29 276 < Asie H 29 379 / Londres L 29 044 < Asie L 29 195 |
+| LBF déclencheur | London Low 28 927 rejeté → **Counter Auction activé** |
+| IB résultat | **Bull A** (confirmé au retour de coupure STEG) |
+| Biais counter | Haussier (P4 Counter Auction 65%) — compressé par GEX pin |
+| STEG coupure | Pendant IB → trader absent → pas d'entrée optimale → zéro perte |
+| GEX Pin Sep 2 | QQQ 708 = volume MAX (calls 335k + puts 489k) → NQ ~29 170 aimant |
+
+### Données RTH — NQ + ES (02/09/2026)
+
+| Donnée | NQ | ES |
+| :--- | :--- | :--- |
+| Session High | **29 197.25** (PM — Double Poor High) | ~7 681.50 |
+| Session Low | IB zone (TBD) | TBD |
+| Settle officiel | **29 191.00** | **~7 678.25** |
+| AVWAP 18H clôture | **29 180.76** | **~7 679.00** |
+| Type journée | **Rotationnel / P-shape** | Rotationnel |
+| Monthly VAL | 29 192.25 | — |
+| Settle vs Monthly VAL | **-1.25 pt** ← couteau | — |
+
+### AVWAP 18H — Plafond puis Réconciliation
+
+| Bar | AVWAP 18H | Tentative haussière | Résultat |
+| :--- | :--- | :--- | :--- |
+| I (13:30) | ~29 173.75 | 29 199 | **REJET — CEILING** |
+| J (14:00) | ~29 175 | 29 199 | Double top — **REJET** |
+| K (14:30) | ~29 175 | 29 197.25 | **REJET encore** |
+| L (15:00) | ~29 176.36 | ~29 197 | Flirtait — n'osait pas |
+| **M (15:30)** | **29 180.76** | **29 197.25** | **Close 29 190.50 > AVWAP ★★★** |
+| Close (16:00) | — | 29 202.25 | Settle 29 191 |
+
+→ 4 rejets consécutifs puis MOC flow réconcilie NQ avec AVWAP.
+→ AVWAP en légère montée (29 173 → 29 181) = convergence prix/AVWAP vers la clôture.
+
+### M Bar Footprint (15:30-16:00 ET)
+
+| Paramètre | NQ | ES |
+| :--- | :--- | :--- |
+| Open | 29 167.00 | 7 681.25 |
+| High | **29 197.25** | 7 681.50 |
+| Low | 29 155.25 | 7 674.00 |
+| Close | **29 190.50** | 7 678.25 |
+| Volume | 24 352 (↑ MOC) | 118 656 |
+| BidVol | 11 477 | 59 742 |
+| AskVol | 12 875 | 58 914 |
+| **Delta** | **+1 398** | **-828** |
+| AVWAP 18H | 29 180.76 | ~7 679.00 |
+| **Close vs AVWAP** | **+9.74 pts AU-DESSUS** ★★★ | **-0.75 pt EN DESSOUS** |
+
+→ §9 : NQ passe au-dessus AVWAP 18H, ES reste légèrement en dessous.
+→ Convergence mais alignement imparfait — biais jeudi haussier mais à confirmer à l'IB.
+
+### Double Poor High 29 197.25 — WWSHD Carried Forward
+
+| Bar | Heure | High | LVN (Price@Min) | Caractère |
+| :--- | :--- | :--- | :--- | :--- |
+| 19m30s | 14:42 | **29 197.25** | **29 197.25** | **Poor High** (LVN = High) ★★★★★ |
+| M bar | 15:30 | **29 197.25** | — | **Deuxième test identique** |
+| Close bar | 16:00 | 29 202.25 | 38 contrats@High | Post-RTH : perce brièvement |
+
+→ R24 appliqué à la résistance : double test sans acceptance = suspended auction.
+→ Close 16:00 à 29 202.25 = preview de ce que jeudi peut faire sans le pin.
+→ **WWSHD 29 197.25 : actif jusqu'à acceptance RTH confirmée.**
+
+### Rising Floor Structure (PM Session)
+
+| Bar | Low | Delta bar | Note |
+| :--- | :--- | :--- | :--- |
+| I | ~29 127 | +534 | LBF #1 |
+| J | ~29 125 | — | LBF #2 double |
+| K | 29 130.25 | +1 822 | LBF #3 — delta fort |
+| L | ~29 139 | — | LBF #4 |
+| **M** | **29 155.25** | **+1 398** | **LBF #5 — floor monte** |
+
+→ 5 Higher Lows consécutifs = plancher institutionnel en construction.
+→ Delta positif sur les bars de floor = absorption (acheteurs défendent activement).
+
+### GEX Analyse Sep 2 vs Sep 3
+
+**Sep 2 (expiry mercredi) — PIN ACTIF toute la journée :**
+| Strike | Call Vol | Put Vol | NQ équiv. |
+| :--- | :--- | :--- | :--- |
+| QQQ 707 | 168 635 | 354 102 | ~29 128 |
+| **QQQ 708** | **335 392** | **489 477** | **~29 170** ← MAX PAIN |
+| QQQ 709 | 492 976 | 262 377 | ~29 211 |
+| QQQ 710 | 488 428 | 81 814 | ~29 252 |
+
+→ Settle 29 191 = entre QQQ 708 et 709 = exactement dans la zone pin. ✅
+
+**Sep 3 (expiry jeudi) — LIBERTÉ DIRECTIONNELLE :**
+| Strike | Call Vol | Put Vol | Ratio C/P |
+| :--- | :--- | :--- | :--- |
+| QQQ 707 | 20 443 | 24 873 | 0.82 |
+| QQQ 708 | 36 045 | 44 782 | 0.80 |
+| **QQQ 709** | **45 135** | **30 337** | **1.49** ← Calls dominent |
+| **QQQ 710** | **40 785** | **14 415** | **2.83** ← Calls dominent |
+| QQQ 711 | 18 323 | 2 975 | 6.16 ← Écrasant |
+| QQQ 712 | 15 523 | 3 048 | 5.09 |
+
+→ Dealers SHORT calls 709-712 (marché maker standard) → ACHÈTENT futures pour delta-couvrir.
+→ **Biais GEX jeudi : HAUSSIER** (gamma buying dips).
+→ Volume total jeudi 8× inférieur à mercredi → contrainte directionnelle réduite.
+→ Put wall jeudi : 29 128 (QQQ 707). Call wall : 29 211-29 294 (709-710).
+
+### Leçons Clés Session
+
+**1. GEX pin = prison parfaite**
+QQQ 708 max pain → NQ oscille 29 127–29 197 pendant 4h30 sans sortie.
+Règle : le pin GEX est une force, pas une suggestion. Le marché obéit.
+À 16h00 : pin expire → la prison s'ouvre → jeudi = liberté.
+
+**2. AVWAP 18H = plafond absolu jusqu'au MOC**
+4 rejets successifs au tick exact (29 173–29 176). P-shape confirmé (R19/20).
+M bar MOC : AVWAP monte à 29 181, prix close à 29 191. Réconciliation.
+Règle : AVWAP en descente = tout rebond = couverture de shorts. AVWAP qui remonte vers prix = shift.
+
+**3. Double Poor High = l'invitation de jeudi**
+Deux touches identiques de 29 197.25 (14h42 et 15h30), toutes les deux des Poor Highs.
+Suspended auction × 2 = R24 appliqué à la résistance.
+La pression s'accumule. Sans le pin, l'auction reprend.
+
+**4. STEG et le détachement**
+Absent pendant IB. Retour = Bull A déjà joué. Capital intact.
+Dalton : "Miss a trade — so what." Le chameau ne court pas après le train. 🐪
+
+**5. Monthly VAL : le seuil de bascule**
+29 192.25 = Monthly VAL. Settle à 29 191 = -1.25 pt.
+Un tick au-dessus jeudi = Monthly VAL devient support → espace libre jusqu'à 29 537.
+Un rejet = rechute potentielle vers 29 002.
+Règle : les seuils mensuels ne font pas de compromis.
+
+**6. P4 Counter Auction — bilan**
+London Low rejeté → Counter Auction → journée haussière structurellement.
+Mais GEX + STEG = traders "regardent" mais n'agissent pas.
+Capital protégé = victoire silencieuse.
+
+### X Post — Settle (English only)
+
+> "Wednesday = Balance. GEX 708 pin held all session.
+> AVWAP ceiling: rejected 4 times. One close above in M bar.
+> Double Poor High 29,197 carried forward.
+> Thursday: the cell door opens. Camel ready. 🐪"
+
+---
+
+### MORNING PLAN JEUDI 03/09/2026 — R29.5 THURSDAY COUNTER
+
+```
+☀️ MORNING PLAN NQ100 / ES — JEUDI 03/09/2026
+
+📅 NEWS
+• ISM Services 10h00 ET → potentiel IB Terminus si surprise
+• NFP vendredi 04/09 08h30 → ne pas surexposer jeudi soir
+
+📊 STRUCTURE
+• Mega-Balance 14 juil → en cours : 27 213 → 30 307 (inside intact)
+• Settle J-1 : 29 191 = -1.25 pt sous Monthly VAL 29 192.25 ★★★★
+• 2 jours balance (Mar+Mer) → R29.5 Thursday Counter candidat
+• GEX pin Sep 2 expiré → liberté directionnelle retrouvée jeudi
+• Biais gamma jeudi : calls 709-712 dominent → dealers acheteurs sur dips
+
+🎯 ALN
+• Pattern : TBD (Asie + Londres à observer cette nuit)
+• Inventaire vs Settle 29 191 : TBD (Globex dimanche soir → mardi)
+
+🚨 SITUATION LIVE
+• NQ ~29 191 / ES ~7 678
+• Double Poor High 29 197.25 — WWSHD ★★★★★
+• Monthly VAL 29 192.25 — pivot absolu
+• AVWAP 18H : recalibrer ancre 18h00 ET 02/09/2026
+
+📊 ZONES CLÉS (hiérarchisées)
+★★★★★  29 598.75  Virgin VPOC mensuel — WWSHD permanent nord
+★★★★★  29 537.50  Monthly POC + POC orphelin 31/08 — WWSHD nord
+★★★★★  29 197.25  Double Poor High J-1 — WWSHD carried forward (pivot absolu)
+★★★★   29 192.25  Monthly VAL — pivot haussier si accept above
+★★★★   29 191.00  Settle J-1 — référence
+★★★    AVWAP 18H  recalibrer 18h00 👑
+★★★    29 128.00  GEX Put wall jeudi (QQQ 707) — support magnétique
+★★★    29 002.00  Low Sep 1 (SD-3 LBF) — support profond
+
+📈 LONGS (si R29.5 : IB Haussier + §9 ✅)
+• R42 : Break 29 197.25 + Retest + Higher Low → Entrée
+• C1 : 29 317.75 (Poor High Sep 1 — WWSHD) → C2 : 29 537.50 (Monthly POC)
+• C3 : 29 598.75 (Virgin VPOC) → max 16h15 ET
+
+📉 SHORTS (si R29.5 n'est pas confirmé)
+• LAF 29 197 + Lower High + §9 baissier
+• C1 : 29 128 (put wall) → C2 : 29 002 (SD-3 Sep 1) → C3 : 28 947 (Weekly Poor Low)
+
+⚠️ RÈGLES
+• R29.5 : Jeudi Counter → IB DOIT confirmer (attendre 10h30)
+• R42 : Break + Retest + Rejet — jamais en poursuite du prix
+• ISM 10h00 : attendre la réaction avant d'entrer si IB Terminus
+• R8 : Escalade géopolitique → cash immédiat
+• MLL figé. Stop défini AVANT l'entrée (R16)
+
+⏳ RTH Open 09h30 décidera. Double Poor High attend. 🐪
+```
+
