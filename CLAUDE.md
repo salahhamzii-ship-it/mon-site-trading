@@ -2325,3 +2325,42 @@ Le Pullback Low/High devient la **référence clé du lendemain** :
 - Violé → changement de structure potentiel
 
 → Connexion : R14, R16, OTF
+
+### Poor High / Poor Low Carried Forward — La Règle du Lendemain
+Un Poor High ou Poor Low créé en fin de session RTH = **Auction Suspendue** non résolue.
+Il n'est pas abandonné — il est **emporté vers la session suivante (Carried Forward)**.
+
+**Séquence complète Dalton (Silent Highlight #4 — March 30, 2017) :**
+1. 2-Day Balance + OVN inventory long → Poor High piège en early RTH
+2. Vrai signal : break au-dessus 2-Day Balance High + jamais retourné inside → GO WITH UP
+3. Poor High créé en RTH → "price stayed here too long" = exhaustion
+4. PM : "The market balances for the remainder of the session" → nouvelle VA au-dessus
+5. Clôture : **"POOR HIGH IS CARRIED FORWARD"** → devient aimant J+1 ★★★★★
+
+**Règle :**
+> Tout Poor High/Low non sécurisé à la clôture RTH est automatiquement le WWSHD de la session suivante.
+> La probabilité de revisiter ce niveau en J+1 est élevée.
+
+→ Connexion : WWSHD, Suspended Auction, R24, Spike Rules
+
+### WWSHD — Would / Will / Should Have Done
+Objectif non atteint durant la session = le marché a "voulu" y aller mais n'est pas arrivé.
+→ Devient l'aimant automatique de la prochaine session. Reste actif jusqu'au contact.
+
+**Exemples permanents :**
+- Poor High J-1 non sécurisé → WWSHD aujourd'hui (voir Carried Forward)
+- Gap non comblé → WWSHD jusqu'à comblement (R27)
+- Monthly VPOC non touché → WWSHD mensuel
+
+**Virgin VPOC** : VPOC jamais touché depuis sa création = WWSHD permanent jusqu'au premier contact.
+→ Connexion : R17 (POC immobile), Suspended Auction, Poor High Carried Forward
+
+### 2-Day Balance Break — Règle GO WITH
+| Condition | Action |
+| :--- | :--- |
+| Break au-dessus 2-Day High + jamais retourné inside | GO WITH UP — laisser courir |
+| Break en dessous 2-Day Low + jamais retourné inside | GO WITH DOWN — laisser courir |
+| Retour inside la balance après break | Trade annulé — FADER |
+| "Price stayed too long" au sommet/fond | Poor High/Low → EXIT + WWSHD J+1 |
+
+→ Connexion : R27 (break outside balance), R31 (balance trading), Suspended Auction
