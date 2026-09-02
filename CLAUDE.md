@@ -3,6 +3,79 @@
 
 ---
 
+## 🧭 PARTIE 0 — COCKPIT D'URGENCE (CHARGÉ EN PREMIER)
+
+> Quand perdu, stressé, ou nouveau contexte → lire ceci en 60 secondes.
+> Mot-clé : **"Salah perdu — cockpit"** → Claude relit et recentre en 3 lignes.
+
+### Checklist de réorientation immédiate
+
+```
+1. STRUCTURE TOP-DOWN
+   Monthly  : OTF Higher / OTF Lower / Balance ?
+   Weekly   : OTF Higher / OTF Lower / Balance ?
+   Daily    : J-1 type ? (Trend / Rotational / Balance)
+
+2. OVN INVENTAIRE
+   Long / Short / Neutre vs Settle J-1 ?
+   ALN Pattern : P1 / P2 / P3 / P4 ?
+
+3. BORNES DU JOUR
+   SD HIER haut = borne résistance réelle
+   SD HIER bas  = borne support réelle
+   AVWAP 18H   = référence principale 👑
+
+4. TRIPLE AVWAP CONVERGENCE
+   Daily 50% / Weekly 50% / Monthly 75% → même zone ?
+   → Confluence = niveau pivot ★★★★★
+
+5. RÈGLE D'ENTRÉE (R42 — jamais déroger)
+   Break → Retest → Rejet → Entrée
+   JAMAIS en poursuite du prix
+   "C'est une publicité" (Dalton)
+
+6. §9 VALIDATION
+   NQ + ES alignés ? → OUI = conviction
+                       NON = caution / pas de trade
+
+7. BALANCE OU TENDANCE ?
+   Inside balance → Rotation (Fade High / Buy Bottom) — petits trades
+   Outside balance → GO WITH (Break confirmé) — le vrai argent
+
+8. DOUTE ?
+   ZAR → Thé menthe → Attendre la prochaine barre 30 min
+```
+
+### Rappels critiques permanents
+
+| Règle | En une phrase |
+| :--- | :--- |
+| R7 | L'anxiété de l'ouverture tue → s'éloigner de l'écran |
+| R8 | Incertitude géopolitique → cash, zéro trade |
+| R9 | 60% d'information suffit → ne pas attendre 100% |
+| R16 | Stop défini AVANT l'entrée. MLL figé à +2000$ |
+| R23 | Ce qui ne se produit PAS est aussi important |
+| R27 | Gap non comblé rapidement → GO WITH sa direction |
+| R34/35 | SD±2 touché trop vite → Questionable High/Low |
+| R42 | Break + Retest + Rejet → jamais en poursuite |
+
+### Contrainte Prop Firm
+- **Flat avant 16h15 ET** — aucune position après la clôture RTH
+- Adapte les cibles : toujours atteignables avant 16h15
+- OVN nocturne : possible si cible réaliste le lendemain RTH
+
+### Cockpit Chart (architecture 4 écrans)
+| Chart | Contenu | Rôle |
+| :--- | :--- | :--- |
+| #7  | AVWAP Daily natif (Daily TF) | 50% = pivot quotidien |
+| #25 | AVWAP Weekly natif (Weekly TF) | 50% = pivot hebdo |
+| #26 | AVWAP Monthly natif (Monthly TF) | 75% = pivot mensuel |
+| #28 | AVWAP 18H + SD±1/2/3 intraday SEUL | Cockpit RTH — ne pas mélanger |
+
+> ⚠️ AVWAP sur son timeframe natif UNIQUEMENT — mixer les TF fausse la lecture visuelle.
+
+---
+
 ## 🔭 PARTIE 1 — STRUCTURE & TOP-DOWN
 
 **Règle 1** — Préparez-vous top-down chaque matin : mensuel → hebdo → daily → profils
