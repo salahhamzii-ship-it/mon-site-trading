@@ -2364,3 +2364,159 @@ Objectif non atteint durant la session = le marché a "voulu" y aller mais n'est
 | "Price stayed too long" au sommet/fond | Poor High/Low → EXIT + WWSHD J+1 |
 
 → Connexion : R27 (break outside balance), R31 (balance trading), Suspended Auction
+
+
+---
+
+## PARTIE 28 — STRUCTURE SEPTEMBRE 2026 — LA DETTE DE JUILLET-AOÛT
+
+### La Mega-Balance du 14 Juillet
+
+Depuis le 14 juillet 2026, le marché NQ n'a pas établi de tendance. Il tourne dans une balance géante.
+
+```
+MEGA-BALANCE 14 JUILLET → EN COURS
+────────────────────────────────────────────────────────
+HIGH    : 30 307.25  (BOX 5 top — B2 Poor High — 17 août)
+LOW     : 27 213.75  (BOX 3 bottom — crash 29 juillet)
+RANGE   : 3 093.50 pts
+HALFBACK: 28 760.50  ← Pivot absolu de la mega-balance
+────────────────────────────────────────────────────────
+```
+
+Les 6 sous-boxes sont des rotations internes. Tant que le prix reste entre 27 213 et 30 307, le marché est en **BALANCE**.
+
+| Direction | Condition de sortie | GO WITH |
+| :--- | :--- | :--- |
+| ↑ Haussier | Accept above 30 307.25 | Territoire nouveau — long fort |
+| ↓ Baissier | Accept below 27 213.75 | Territoire inconnu — short fort |
+
+---
+
+### Les 6 Boxes RTH (Anatomie)
+
+| Box | Période | Low | High | Caractère |
+| :--- | :--- | :--- | :--- | :--- |
+| BOX 2 | 14→23 juillet | 28 426 | 30 089.25 | Balance initiale |
+| BOX 3 | 27 juil→3 août | 27 213.75 | 28 974.50 | **P-SHAPE EXPLOSIF — LE PÉCHÉ ORIGINEL** |
+| BOX 4 | 3→17 août | 29 207.50 | 30 094.25 | Consolidation sur fondations fragiles |
+| BOX 5 | 17→22 août | 29 867 | 30 307.25 | Passage rapide — gap bas laissé |
+| BOX 6 | 17 août→1 sept | 28 922.50 | 29 798 | 11 RTH — meilleure consolidation |
+| OVN Spike | 1→2 sept | 28 957 | — | Test bottom Box 6 / Box 3 TOP |
+
+---
+
+### BOX 3 — Le Péché Originel (Dalton R19/20)
+
+**27 juillet → 3 août : 4 RTH OTF Higher explosif**
+
+- Montée de +1 761 pts en 4 sessions RTH SANS consolidation
+- Profil en **P-SHAPE MENSUEL** = short covering sans new money (R19/20)
+- Dalton : *"Such a short covering rally does not have staying power"*
+- R12 : rally sur références mécaniques = mains faibles
+- **Aucun niveau d'équilibre solide n'a été validé** pendant la montée
+
+**Conséquence structurelle :**
+> Box 4, Box 5 et Box 6 sont bâties sur cette fondation fragile.
+> La consolidation d'août (11 RTH Box 6) n'efface pas la fragilité de juillet.
+> Le marché doit revenir tester les niveaux non validés.
+
+---
+
+### Gap Non Comblé Box 5 (WWSHD Permanent)
+
+Box 5 est passée trop vite sans s'attarder, laissant un gap structural :
+
+```
+GAP BAS BOX 5 : 29 207.50 → 29 867 = 659 pts d'air
+→ WWSHD permanent (R27 + Poor Low Carried Forward)
+→ Aimant nord si rebond depuis Box 3 territory
+```
+
+---
+
+### La Dette Structurelle de Septembre
+
+**Position OVN Spike 02/09 : 28 957 = Box 3 TOP (28 974) — 17 pts**
+
+```
+Niveau                    Prix        Distance      Nature
+─────────────────────────────────────────────────────────────────
+Box 6 TOP                29 798      +841 pts ↑    Résistance balance
+Monthly POC (Virgin VPOC) 29 598.75  +641 pts ↑    WWSHD permanent nord
+Gap Box 5 bas             29 207.50  +250 pts ↑    WWSHD si rebond
+Box 3 TOP ← ON EST LÀ    28 974.50   +17 pts ↑    Ancien support → pivot
+OVN Spike Low (02/09)     28 957         —          Buying Tail trigger
+Weekly Poor Low           28 947.50  −  9 pts ↓    R24 — réparation urgente
+Bottom Band 4             28 955.81  −  1 pt  ↓    Limite extrême quotidienne
+Halfback Mega-Balance     28 760.50  −196 pts ↓    Prochain aimant si cassure
+Box 3 HALFBACK            28 094     −863 pts ↓    Destination P-shape réparation
+Box 3 LOW                 27 213.75 −1743 pts ↓    Objectif terminal baissier
+```
+
+**R4 Dalton — Les victimes de septembre :**
+> Les retardataires qui ont acheté Box 4/5 (29 207→30 307) croyant à la tendance sont positionnés exactement là où le marché retourne. Ils liquideront aux mauvais prix. C'est la définition du retardataire (R4).
+
+---
+
+### Morning Plan RTH 02/09/2026
+
+```
+☀️ MORNING PLAN NQ100 / ES — MERCREDI 02/09/2026
+
+📅 NEWS : Aucune avant RTH — Semaine NFP (vendredi 04/09 08:30 ET)
+
+📊 STRUCTURE MACRO
+• Mega-Balance 14 juil→en cours : 27 213 → 30 307
+• Position OVN spike : 28 957 = Box 3 TOP zone — lower half mega-balance
+• Monthly VPOC 29 598.75 = Virgin VPOC = WWSHD permanent nord ★★★★★
+• OTF Lower depuis Aug 17 = descente glissante 8 RTH consécutifs
+
+🎯 ALN : P4 ✅ (confirmé Sep 1) | IB Bear A 56%
+
+🚨 SPIKE RULES — PRIORITÉ ABSOLUE
+• OVN Spike Low NQ : 28 957 / ES : 7 623.25
+• Open > 28 957 → Buying Tail → POSITIF → Long bias
+• Open inside spike → Auction continue → GO WITH DOWN
+• Haut du spike = résistance si rebond faible
+
+📊 ZONES CLÉS
+★★★★★  29 598.75  Virgin VPOC mensuel — WWSHD permanent nord
+★★★★★  29 317.75  Poor High J-1 (E bar) — WWSHD carried forward
+★★★★   29 207.50  Gap Box 5 bas — air à combler si rebond
+★★★★   29 537.50  Monthly POC / POC orphelin 31/08
+★★★★   28 957     OVN Spike Low = Buying Tail trigger 👑
+★★★★   28 947.50  Weekly Poor Low — R24 réparation attendue
+★★★    28 974.50  Box 3 TOP — pivot charnière
+★★★    28 922.50  Box 6 bottom — si percé → GO WITH DOWN fort
+★★★    28 760.50  Halfback mega-balance — destination si cassure Box 6
+★★★    28 094     Box 3 halfback — objectif P-shape réparation
+
+📈 LONG (si Buying Tail)
+• Open > 28 957 + IB Haussier + §9 ✅
+• R42 : Break + Retest + Rejet obligatoire
+• C1 : Gap J-1 29 112 (+155) → C2 : Poor High 29 317 → C3 : Monthly POC 29 537
+
+📉 SHORT (si auction continue)
+• Open inside/below spike + IB Bear A + §9 ✅
+• Cible : 28 947 (Weekly Poor Low) → 28 922 (Box 6 bottom) → 28 760 (halfback)
+
+⚠️ RÈGLES
+• R27 : Open above spike → GO WITH UP (gap non comblé = momentum)
+• R42 : Jamais en poursuite — Break + Retest + Rejet
+• R24 : Weekly Poor Low 28 947 aimant — LBF possible si touché
+• R8  : Géopolitique → cash immédiat
+• MLL figé — stop défini AVANT l'entrée (R16)
+```
+
+---
+
+### Règle Synthèse — Boîtes et Balance (02/09/2026)
+
+> **"Une balance sinon rien."**
+> Le marché ne fait que deux choses : il construit une boîte, ou il casse une boîte.
+> À l'intérieur d'une boîte → rotation → thé menthe → attendre les bords.
+> À la cassure d'une boîte → GO WITH → laisser courir → ne pas fader.
+> La fragitilé de juillet (Box 3 P-shape) + les travaux non achevés d'août = la dette que septembre va régler.
+> Le chameau connaît la carte. 🐪
+
