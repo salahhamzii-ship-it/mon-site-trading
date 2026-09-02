@@ -189,6 +189,7 @@ Le marché a une « tonalité » pour la journée. Les traders court terme ne vo
 - **R39** : Cassure basse Value → viser l'opposite side (VAH) | Cassure haute Value → viser l'opposite side (VAL)
 - **R40** : Ne pas trader au milieu de la Value
 - **R41** : Attendre que le marché montre sa main sur la barre TPO 30 min
+- **R42** : Entrée GO WITH = Break + Retest + Rejet — Toute entrée directionnelle (P3/P4/cassure SD/cassure niveau) exige trois temps : (1) Cassure du niveau, (2) Retest du niveau depuis l'autre côté, (3) Rejet confirmé (Lower High pour short, Higher Low pour long) → Entrée. Vendre sur un retest échoué, jamais en poursuite du prix. "C'est une publicité" (Dalton) : le prix évident = le piège retail. Nous décidons OÙ et QUAND, pas le marché.
 
 ---
 
