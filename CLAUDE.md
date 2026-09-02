@@ -2256,3 +2256,72 @@ Condition : OVN Globex mardi soir haussier + IB Haussier mercredi.
 - [ ] §9 NQ + ES alignés avant entrée
 
 
+
+---
+
+## PARTIE 27 — GLOSSAIRE DALTON ÉTENDU
+
+### Buying Tail
+Single TPOs (une seule lettre) en **bas** du profil. Indicateur de la réaction agressive des acheteurs face à un prix bas annoncé. Plus le nombre de single TPOs est élevé → plus la réaction acheteuse est agressive.
+→ Connexion : R13 (Excess bas), R24 (Double Low sans excès)
+
+### Selling Tail
+Single TPOs en **haut** du profil. Indicateur de la réaction agressive des vendeurs face à un prix haut annoncé. Plus le nombre de single TPOs est élevé → plus la réaction vendeuse est agressive.
+→ Connexion : R13 (Excess haut), R34/35 (Questionable High/Low)
+
+### Spike — Règles (4+4)
+Sonde de prix tardive (haut ou bas) en fin de session. Non encore vérifiée comme acceptée ou rejetée. **Verdict rendu à l'ouverture RTH du lendemain.**
+
+**Spike haussier :**
+1. Open **sous** le spike = rejet → Selling Tail → NÉGATIF
+2. Open **dans** le spike = acceptation → rally intact
+3. Open **au-dessus** du spike = auction pas terminée → continue → HAUSSIER
+4. **Bas du spike = support**
+
+**Spike baissier :**
+1. Open **au-dessus** du spike = rejet → Buying Tail → POSITIF
+2. Open **dans** le spike = acceptation → baisse intacte
+3. Open **sous** le spike = auction pas terminée → continue → BAISSIER
+4. **Haut du spike = résistance**
+
+### Suspended Auction (Auction Suspendue)
+Une auction non terminée = poor high ou poor low non sécurisé. Après repos, l'auction originale est plus susceptible de retenter. Plus de tentatives = plus grande probabilité de réussir.
+→ Connexion : R24 (Double Low sans excès), Poor High/Low
+
+### Structure — Qualité MGI
+La qualité et la solidité de l'auction se lit dans le profil. **Indicateurs de structure faible :**
+- Poor Highs/Lows accumulés
+- POC large non revisité
+- Profils asymétriques et étirés (pas d'elevator stops)
+- Double/triple distribution
+
+Accumulation de MGI suspect = structure qui se détériore exponentiellement → rupture facilitée.
+
+### Symmetry (Symétrie)
+- **Trend day** : elongation proportionnelle = symétrie = confiance, facilitation
+- **Rotationnel** : accord de valeur entre acheteurs et vendeurs
+- **Manque de symétrie** : trading émotionnel, double/triple distribution, anomalies → odds élevées de revisiter
+
+### POC — Point of Control (Dalton)
+La ligne TPO la plus longue proche du centre du range journalier. Prix où le plus d'activité a eu lieu (basé sur le temps) = **prix jugé le plus équitable**. La migration du POC jour après jour est l'indicateur clé de l'activité longer-timeframe.
+→ Connexion : R17 (POC immobile = accumulation), R18 (ligne 45° POC/prix)
+
+### Poor / Unsecured Highs or Lows (Hauts/Bas Non Sécurisés)
+Une auction se termine de deux façons :
+1. **Counter-auction agressive** → Buying/Selling Tail → **SÉCURISÉ**
+2. **Épuisement** → arrêt progressif sans contra → **POOR / NON SÉCURISÉ**
+
+Un high/low poor = l'auction originale, après repos, est **plus susceptible de retenter**.
+- Poor High → causé par inventaire excessivement long
+- Poor Low → causé par inventaire excessivement court
+
+→ Connexion : R24 (Double Low sans excès), Suspended Auction, Spike Rules
+
+### Pullback Low / Rally High
+Applicable aux **Trend Days uniquement**. Migration tardive de l'après-midi contre la tendance dominante = ajustement d'inventaire.
+
+Le Pullback Low/High devient la **référence clé du lendemain** :
+- Non violé → pas de changement significatif → tendance J-1 intacte
+- Violé → changement de structure potentiel
+
+→ Connexion : R14, R16, OTF
