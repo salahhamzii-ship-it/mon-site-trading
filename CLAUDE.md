@@ -3163,6 +3163,40 @@ Prix sniffe VAH J-1 (monte vers VAH)
     → institutions acceptent prix plus hauts → GO WITH UP
 ```
 
+#### REJECT des deux côtés — VAL et VAH
+
+Le REJECT ne vient pas que d'en bas. Il peut venir des DEUX côtés.
+La question est toujours : **où la NOUVELLE VALUE se construit-elle ?**
+
+```
+VAL HIER — 2 façons de rejeter :
+  ① Venu d'EN BAS → sniffe VAL → LBF (Higher Low)
+      → New Value reste AU-DESSUS VAL
+      → LONG → opposite side VAH
+  ② Venu d'EN HAUT → tombe vers VAL → rebond (hold)
+      → New Value refuse de descendre sous VAL
+      → LONG aussi → VAH
+
+VAH HIER — 2 façons de rejeter :
+  ① Venu d'EN HAUT → sniffe VAH → LAF (Lower High)
+      → New Value reste EN DESSOUS VAH
+      → SHORT → opposite side VAL
+  ② Venu d'EN BAS → monte vers VAH → cap (refus)
+      → New Value refuse de monter au-dessus VAH
+      → SHORT aussi → VAL
+```
+
+**Décision finale — Nouvelle Value vs Ancienne Value :**
+
+```
+New Value > VAH hier   → ACCEPT au-dessus → GO WITH UP ★
+New Value < VAL hier   → ACCEPT en dessous → GO WITH DOWN ★
+New Value entre les 2  → MÊME VALUE → BALANCE → Fade bords
+```
+
+> La direction = où la NOUVELLE VALUE se construit.
+> Pas le prix — la VALUE.
+
 #### Cas d'école — Sep 3 2026 (New RTH vs Sep 2 RTH)
 
 | Référence | Valeur Sep 2 | Rôle Sep 3 |
