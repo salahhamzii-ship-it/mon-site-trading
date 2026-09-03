@@ -3222,18 +3222,28 @@ REJECT HAUT : venu d'en haut + rebond (hold)   → New Value > VAL → LONG auss
 > Trading Value Not Price : ce n'est pas le niveau touché qui décide.
 > C'est où la NOUVELLE VALUE se construit par rapport à l'ANCIENNE.
 
-#### Cas d'école — Sep 3 2026 (New RTH vs Sep 2 RTH)
+#### Cas d'école — Sep 3 2026 (New RTH vs Sep 2 RTH) — Niveaux confirmés chart #11
 
-| Référence | Valeur Sep 2 | Rôle Sep 3 |
+> **"D'UN COUP D'ŒIL LA VAL VOUS PARLE CLAIREMENT SANS CHICHI"** — Salah 03:00 ET
+
+La cascade VAL Aug 17→Sep 2 = toute l'histoire OTF Lower visible sans calcul.
+Trading Val Not Price : regarder où la VALUE s'est construite chaque jour → la direction s'impose.
+
+| Niveau | Prix | Rôle Sep 3 |
 | :--- | :--- | :--- |
-| VAH Sep 2 | ~29 197-29 213 | Première porte nord |
-| POC Sep 2 | ~29 170-29 193 | Pivot équilibre |
-| VAL Sep 2 | ~29 128-29 136 | **Porte de décision clé** |
+| 2-day HIGH | **29 317.50** | Scénario ① cible (Poor High Sep 1 — WWSHD) |
+| 2-day VAH | **29 220.00** | Résistance intermédiaire |
+| VAH Sep 2 | **29 168.50** | Première porte nord |
+| POC Sep 2 | **29 154.50** | Pivot équilibre |
+| VAL Sep 2 | **29 120.00** | **Première porte de décision clé** |
+| 2-day VAL | **29 066.50** | Support intermédiaire |
+| 2-day LOW | **29 000.00** | Scénario ② trigger (SD-3 LBF Sep 1) |
+| Box 6 bottom | **28 922.50** | GO WITH DOWN si cassé |
 
 ```
-Si Sep 3 VALUE > 29 213 → GO WITH UP → Monthly POC 29 537
-Si Sep 3 VALUE < 29 128 → GO WITH DOWN → 29 002 / 28 947
-Si Sep 3 VALUE entre 29 128-29 213 → ROTATION → Fade bords
+Si Sep 3 VALUE > 29 220 (2-day VAH) → GO WITH UP → 29 317 → Monthly POC 29 537
+Si Sep 3 VALUE < 29 066 (2-day VAL) → GO WITH DOWN → 29 000 → 28 947 (Weekly PL)
+Si Sep 3 VALUE entre 29 066-29 220   → ROTATION 2-day bloc → Fade bords
 ```
 
 #### CÔTÉ D'APPROCHE DE LA VALUE À L'OPEN RTH — Le Fil Conducteur
