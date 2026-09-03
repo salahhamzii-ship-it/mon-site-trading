@@ -3351,6 +3351,48 @@ VAH SNIFFÉE
 
 ---
 
+### CLASSIFICATION VALUE MIGRATION — LES 5 ÉTATS (PVAL Framework)
+
+> **"ON CLASSE VALUE"** — Salah 03:00 ET
+
+**PVAL** = Previous Value Area (VAH / POC / VAL du jour J-1) = ancre de référence absolue.
+
+La New Value du jour se classe en 5 états par rapport à PVAL :
+
+| # | État | Condition | Biais | Action |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | **VAL BROKE PVAL HIGH** | New VA entièrement **AU-DESSUS** Old VAH | 🟢🟢 GO WITH UP ★★★★★ | Laisser courir — institutions acceptent prix plus hauts |
+| 2 | **OVERLAPPING HIGH** | New VAH > Old VAH / New VAL **inside** Old VA | 🟢 Haussier ★★★ | Lean long — value migre nord partiellement |
+| 3 | **VAL INSIDE** | New VA **entièrement inside** Old VA | ⚖️ Balance | Fade bords — rotation — thé menthe |
+| 4 | **OVERLAPPING LOW** | New VAL < Old VAL / New VAH **inside** Old VA | 🔴 Baissier ★★★ | Lean short — value migre sud partiellement |
+| 5 | **VAL BROKE LOW** | New VA entièrement **EN DESSOUS** Old VAL | 🔴🔴 GO WITH DOWN ★★★★★ | Laisser courir — institutions acceptent prix plus bas |
+
+```
+PVAL HIGH (Old VAH)  ────────────────────────────────────
+                          ① VAL BROKE PVAL HIGH → GO WITH UP
+                          ② OVERLAPPING HIGH    → lean long
+                          ③ VAL INSIDE          → balance
+                          ④ OVERLAPPING LOW     → lean short
+                          ⑤ VAL BROKE LOW       → GO WITH DOWN
+PVAL LOW (Old VAL)   ────────────────────────────────────
+```
+
+**Règle de lecture quotidienne (à 16h00 ET) :**
+```
+1. Relever PVAL : VAH / POC / VAL du jour J-1
+2. Attendre que la NEW VALUE se développe (IB + barres D/E/F)
+3. Classifier l'état (1 à 5)
+4. État ① ou ⑤ → GO WITH sans résistance intérieure
+   État ② ou ④ → lean + attendre confirmation IB
+   État ③ → rotation → Fade VAH/VAL
+```
+
+**Application immédiate — Sep 2 vs Sep 1 :**
+- Sep 1 VA : VAH ~29 317 / POC ~29 159 / VAL ~29 124
+- Sep 2 VA : VAH ~29 213 / POC ~29 154 / VAL ~29 120
+- → New VAH (29 213) < Old VAH (29 317) ET New VAL (29 120) ≈ Old VAL (29 124)
+- → **VAL INSIDE** (③) — Value stagne dans Old VA → rotation confirmée ⚖️
+
 ### EN UNE PHRASE
 
 > SD+2 = fade. SD-2 = buy. VAL/VAH = les portes entre les deux. 1 trade à la fois. ZAR au milieu. Le camel dort et les points pleuvent. 🐪
