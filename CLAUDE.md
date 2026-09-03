@@ -3117,6 +3117,69 @@ Un seul setup à la fois = discipline = survie = profit.
 
 ---
 
+### VAL/VAH VISIBLE — LA COUCHE INTERMÉDIAIRE (ajout Sep 3 2026)
+
+Salah a ajouté les **Value Area Lines (VAL/VAH)** visibles sur chart #28.
+Elles servent de **décision intermédiaire** entre les bornes SD.
+
+#### Architecture complète (5 niveaux)
+
+```
+SD+2  ──── plafond absolu → FADE (LAF setup)
+VAH   ──── porte nord → ACCEPT=GO WITH UP / REJECT=LAF short → VAL
+VWAP  ──── équilibre gravitationnel (rouge)
+VAL   ──── porte sud → SNIFFE → ACCEPT ou REJECT
+SD-2  ──── plancher absolu → BUY (LBF setup)
+```
+
+#### Règle VAL Sniffée (R39 étendu)
+
+```
+VAL SNIFFÉE
+├─ ACCEPT (2 barres closes sous VAL) → GO WITH DOWN → cible SD-2
+│   └─ Equivalent R39 : cassure basse Value → viser l'opposite side
+└─ REJECT (Higher Low / LBF) → LONG → cible opposée VAH
+    └─ Equivalent R36 : LBF + Higher Low = LONG → target VAH
+```
+
+#### Règle VAH Sniffée (R39 étendu)
+
+```
+VAH SNIFFÉE
+├─ ACCEPT (2 barres closes au-dessus VAH) → GO WITH UP → cible SD+2
+│   └─ Equivalent R39 : cassure haute Value → viser l'opposite side
+└─ REJECT (Lower High / LAF) → SHORT → cible opposée VAL
+    └─ Equivalent R37 : LAF + Lower High = SHORT → target VAL
+```
+
+#### Cas d'école — RTH Sep 2 (chart 2)
+
+| Heure ET | Action | Niveau | Signal | Résultat |
+| :--- | :--- | :--- | :--- | :--- |
+| Multiple fois PM | VAL sniffée | ~29 088-29 120 | LBF → Higher Low | ✅ Retour VAH ~29 197 |
+| High RTH | VAH sniffée | 29 213 | Poor High WWSHD | ✅ Reject → retour VAL |
+
+→ **Toute la PM Sep 2 = oscillation VAL/VAH** avec reject aux deux extrêmes.
+→ VAL/VAH = les "vrais bords" intraday. SD±2 = les bornes de sécurité absolues.
+
+#### Confluences prioritaires
+
+| Confluence | Signal |
+| :--- | :--- |
+| VAL = SD-1 | ★★★★★ Support double — LBF très fiable |
+| VAH = SD+1 | ★★★★★ Résistance double — LAF très fiable |
+| VAL = SD-2 | ★★★★★ Plancher absolu — absorption institutionnelle |
+| VAH = SD+2 | ★★★★★ Plafond absolu — exhaustion garantie |
+| VWAP entre VAL et VAH | ⚖️ Rotation normale — ZAR |
+
+**Sierra Chart #28 — Configuration recommandée :**
+- AVWAP 18H (rouge/jaune) + SD±1/2/3 (vert)
+- TPO VAH ligne jaune horizontale
+- TPO VAL ligne jaune horizontale
+- → Les 5 niveaux lisibles d'un coup d'œil
+
+---
+
 ### EN UNE PHRASE
 
-> SD+2 = fade. SD-2 = buy. 1 trade à la fois. ZAR entre les deux. Le camel dort et les points pleuvent. 🐪
+> SD+2 = fade. SD-2 = buy. VAL/VAH = les portes entre les deux. 1 trade à la fois. ZAR au milieu. Le camel dort et les points pleuvent. 🐪
