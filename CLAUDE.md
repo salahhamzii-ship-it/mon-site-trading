@@ -3064,6 +3064,38 @@ ENTRE SD+2 ET SD-2
 
 ---
 
+### ⚠️ RÈGLE ABSOLUE — 1 POSITION À LA FOIS (PAS DE CUMUL)
+
+**Les 4 setups cette nuit = 4 trades SÉQUENTIELS, jamais simultanés.**
+
+```
+18h → Setup (1) SELL SD+2 → ENTRÉE → TARGET ou STOP → SORTIE TOTALE
+                                                              ↓
+                                               Attendre le prochain setup
+22h → Setup (2) BUY SD-1  → ENTRÉE → TARGET ou STOP → SORTIE TOTALE
+                                                              ↓
+                                               Attendre le prochain setup
+00h → Setup (3) SELL SD+2 → ENTRÉE → TARGET ou STOP → SORTIE TOTALE
+                                                              ↓
+                                               Attendre le prochain setup
+01h → Setup (4) BUY SD-2  → ENTRÉE → TARGET ou STOP → SORTIE TOTALE
+```
+
+**Jamais :**
+- Short SD+2 ET long SD-2 en même temps
+- Ajouter à une position perdante en attendant le rebond
+- "Tenir" si la cible n'est pas atteinte et le suivant arrive
+
+**Toujours :**
+- Sortir proprement (target ou stop) → flat → recommencer
+- Stop défini AVANT l'entrée (R16) — inviolable
+- MLL figé : si le MLL est atteint sur un setup → STOP journée OVN
+
+**Pourquoi :** 4 positions ouvertes simultanément = levier ×4 = destruction de compte.
+Un seul setup à la fois = discipline = survie = profit.
+
+---
+
 ### EN UNE PHRASE
 
-> SD+2 = fade. SD-2 = buy. Attendre les bords. Laisser venir. Le camel dort et les points pleuvent. 🐪
+> SD+2 = fade. SD-2 = buy. 1 trade à la fois. ZAR entre les deux. Le camel dort et les points pleuvent. 🐪
