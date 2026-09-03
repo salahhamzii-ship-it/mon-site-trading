@@ -3177,6 +3177,39 @@ Si Sep 3 VALUE < 29 128 → GO WITH DOWN → 29 002 / 28 947
 Si Sep 3 VALUE entre 29 128-29 213 → ROTATION → Fade bords
 ```
 
+#### CÔTÉ D'APPROCHE DE LA VALUE À L'OPEN RTH — Le Fil Conducteur
+
+> **"C'est par où la Value est abordée à l'Open RTH qui dit l'opposite side visé."**
+
+```
+Open RTH vient D'EN BAS (sous VAL J-1)
+  → Prix entre dans Value par le bas
+  → Cible = OPPOSITE SIDE = VAH J-1
+  → LONG bias — AB sequence monte
+
+Open RTH vient D'EN HAUT (au-dessus VAH J-1)
+  → Prix entre dans Value par le haut
+  → Cible = OPPOSITE SIDE = VAL J-1
+  → SHORT bias — AB sequence descend
+
+Open RTH INSIDE Value (entre VAL et VAH J-1)
+  → Côté neutre — IB décide
+  → Break + Accept = GO WITH côté cassé
+```
+
+**Cas d'école — Sep 2 RTH :**
+- Open venu d'EN BAS (sous VAL 29 124)
+- AB sequence → monte dans Value depuis le bas
+- Opposite side visé = VAH (29 194.50)
+- High Sep 2 = 29 213 ✅
+
+**Niveaux J-1 à marquer sur chart :**
+- VAL YESTERDAY (bas Value) → porte sud
+- POC YESTERDAY → pivot équilibre
+- VAH YESTERDAY (haut Value) → porte nord
+
+L'open RTH dit de quel côté on arrive. Le côté d'arrivée dit l'opposite side cible. Simple. Mécanique.
+
 #### IMPORTANT — Balance déjà cassée
 
 La mega-balance (27 213 → 30 307) EST CASSÉE depuis Sep 1.
