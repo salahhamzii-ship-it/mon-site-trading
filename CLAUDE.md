@@ -4105,3 +4105,118 @@ Ratio Gain/Risque moyen : ~1.7:1
 
 > Tendance + LAF/LBF Delta-filtré + 2 micros + patience jusqu'à 16H = 3 swings par semaine = profit régulier.
 > Le chameau sait combien d'oasis il y a sur la route avant de partir. 🐪
+
+---
+
+## PARTIE 36 — P1 LABO — CADRE D'ANALYSE (À COMPLÉTER AVEC DONNÉES)
+
+### Définition P1 — OUTSIDE / ENGULF
+
+```
+P1 = Londres H > Asie H  ET  Londres L < Asie L
+→ Londres englobe les deux côtés d'Asie = Outside Bar
+→ Fréquence : 46% des sessions
+→ Signal : SYMÉTRIQUE — pas de biais directionnel a priori
+```
+
+**Statistiques de base (à valider par le labo) :**
+| Signal | % connu |
+| :--- | :--- |
+| Cassure London High en RTH | **71.5%** |
+| Cassure London Low en RTH | **70.4%** |
+| Biais directionnel net | **~50/50** (symétrique) |
+
+---
+
+### Protocole d'Analyse P1
+
+#### Étape 1 — Identification nocturne (18:00 → 09:30 ET)
+
+| Mesure | Formule | Signification |
+| :--- | :--- | :--- |
+| Asie High | Max(High) entre 18:00 et ~01:00 ET | Borne haute asiatique |
+| Asie Low | Min(Low) entre 18:00 et ~01:00 ET | Borne basse asiatique |
+| London High | Max(High) entre ~03:00 et 09:30 ET | Borne haute londonienne |
+| London Low | Min(Low) entre ~03:00 et 09:30 ET | Borne basse londonienne |
+| **P1 valide** | London H > Asia H **ET** London L < Asia L | Pattern confirmé |
+
+#### Étape 2 — Inventaire OVN
+
+| Mesure | Calcul | Lecture |
+| :--- | :--- | :--- |
+| Inventaire | Close OVN 09:30 − Settle J-1 | + = Long / − = Short |
+| Position vs AVWAP | Close OVN vs AVWAP 16H | Au-dessus = acheteurs / En dessous = vendeurs |
+| Delta OVN cumulé | Σ(AskVol − BidVol) sur toute la nuit | Positif = accumulation / Négatif = distribution |
+
+#### Étape 3 — IB RTH (09:30 → 10:30 ET)
+
+| Mesure | Calcul |
+| :--- | :--- |
+| IB High / IB Low | Max/Min des 2 premières barres 30min |
+| Close IB | Close de la barre 10:00 |
+| Midpoint IB | (IB High + IB Low) / 2 |
+| **IB Bullish** | Close > Midpoint ET Close > AVWAP |
+| **IB Bearish** | Close < Midpoint ET Close < AVWAP |
+| IB Delta | AskVol − BidVol sur les 2 premières barres |
+
+#### Étape 4 — Résolution RTH
+
+| Mesure | Observation |
+| :--- | :--- |
+| Break London High ? | High RTH > London High → OUI/NON |
+| Break London Low ? | Low RTH < London Low → OUI/NON |
+| Both breaks ? | Les deux → OUI/NON |
+| Settle vs London H/L | Settle > London High = Accept / Settle < London Low = Accept |
+| Type journée | Trend / Rotational / Balance |
+
+---
+
+### Tableau de Collecte P1 (à remplir avec données)
+
+| # | Date | Asia H | Asia L | London H | London L | P1 ✅ | IB | Break H | Break L | Both | Settle | Type |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | | | | | | | | | | | | |
+| 2 | | | | | | | | | | | | |
+| 3 | | | | | | | | | | | | |
+| 4 | | | | | | | | | | | | |
+| 5 | | | | | | | | | | | | |
+
+---
+
+### Questions clés du labo
+
+1. **IB filtre-t-il le P1 ?**
+   - P1 + IB Haussier → Break London High plus probable ?
+   - P1 + IB Baissier → Break London Low plus probable ?
+
+2. **Inventaire OVN filtre-t-il le P1 ?**
+   - P1 + Inventaire Long → Break London High ?
+   - P1 + Inventaire Short → Break London Low ?
+
+3. **Delta OVN filtre-t-il le P1 ?**
+   - Δ OVN positif + P1 → IB Haussier → Break H ?
+   - Δ OVN négatif + P1 → IB Baissier → Break L ?
+
+4. **P1 + Both Breaks — qui est touché en premier ?**
+   - High First → edge directionnel ?
+   - Low First → edge directionnel ?
+
+5. **OVN SD System sur P1 — setup valide ou mort ?**
+   - P1 = symétrique → deux côtés SD touchés → signaux OVN abondants
+   - Filtre nécessaire pour direction ?
+
+---
+
+### Format CSV attendu
+
+Même format que Sep 2→3 avec colonnes confirmées :
+```
+Date, Time, Open, High, Low, Last, Volume, Trades, OHLC, HLC, HL,
+BidVol, AskVol,
+AVWAP(16H), SD+1, SD-1, SD+2, SD-2, SD+3, SD-3,
+AskVol(sub), BidVol(neg), ZeroLine, Difference(=Delta)
+```
+Session complète : 18:00 ET → 16:00 ET RTH suivant (44 barres 30min)
+
+**→ Fournir 5 à 10 sessions P1 récentes pour démarrer le labo.**
+
