@@ -3197,6 +3197,31 @@ New Value entre les 2  → MÊME VALUE → BALANCE → Fade bords
 > La direction = où la NOUVELLE VALUE se construit.
 > Pas le prix — la VALUE.
 
+#### Cas d'école REJECT — DEUX EXEMPLES RÉELS (28/08 et 26-27/08/2026)
+
+**① REJECT BAS — venu d'EN BAS (Aug 28/31 RTH)**
+- VAL zone : ~29 355 (ligne rouge chart #11)
+- P-shape profil = short covering sans new money (R19/20)
+- Prix venu D'EN BAS → sniffe VAL → LBF → Higher Low
+- New Value reste AU-DESSUS VAL → LONG → opposite side VAH
+- **Leçon** : le LBF classique = REJECT venu d'en bas = New Value refuse le dessous
+
+**② REJECT HAUT — venu d'EN HAUT (Aug 26/27 RTH)**
+- PVAL (Previous VAL) : ~29 320 (ligne rouge chart #11)
+- GAP 29 370 = air structurel entre les deux sessions
+- Prix venu D'EN HAUT → tombe vers PVAL → rebond (hold)
+- New Value refuse de descendre sous PVAL → LONG aussi → New VAL s'installe au-dessus
+- **Leçon** : pas de LBF nécessaire — le simple rebond depuis VAL suffit si New Value reste au-dessus
+
+**Les deux cas = même règle, deux directions d'approche :**
+```
+REJECT BAS  : venu d'en bas + LBF + Higher Low → New Value > VAL → LONG
+REJECT HAUT : venu d'en haut + rebond (hold)   → New Value > VAL → LONG aussi
+```
+
+> Trading Value Not Price : ce n'est pas le niveau touché qui décide.
+> C'est où la NOUVELLE VALUE se construit par rapport à l'ANCIENNE.
+
 #### Cas d'école — Sep 3 2026 (New RTH vs Sep 2 RTH)
 
 | Référence | Valeur Sep 2 | Rôle Sep 3 |
