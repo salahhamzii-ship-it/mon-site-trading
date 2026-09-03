@@ -3469,3 +3469,267 @@ EXCESS (SD-2/SD-3 / Poor Low)
 ### EN UNE PHRASE
 
 > SD+2 = fade. SD-2 = buy. VAL/VAH = les portes entre les deux. 1 trade à la fois. ZAR au milieu. Le camel dort et les points pleuvent. 🐪
+
+---
+
+## PARTIE 32 — DALTON KICKSTART WEBINAR #6 — CARTOGRAPHIE COMPLÈTE
+
+> "TOUT EST LA" — Salah, 03/09/2026
+
+Le Webinar #6 confirme et structure l'intégralité de la méthode Dalton-Salah. Chaque concept du webinar a un équivalent direct dans la Bible.
+
+---
+
+### CONCEPT 1 — SIMPLE RULES
+
+**Dalton :** Les règles simples surpassent les règles complexes. Le cerveau ne peut pas traiter la complexité sous pression.
+
+**Mapping Bible :**
+| Règle Bible | Connexion |
+| :--- | :--- |
+| R9 | 60% d'information suffit — ne pas attendre 100% (exactness kills) |
+| R42 | Break + Retest + Rejet — 3 étapes, rien de plus |
+| COCKPIT 0 | 8 questions, 60 secondes — simplicité opérationnelle |
+| 3 Phrases Cultes | Trading Value Not Price / Balance and Excess / Let the Trade Come to You |
+
+> La Bible = les règles simples de Salah. Toute complexité supplémentaire est un bruit.
+
+---
+
+### CONCEPT 2 — CHUNKING (GROUPEMENT VISUEL)
+
+**Dalton :** Le cerveau expert groupe l'information en "chunks" — unités de sens. Un maître d'échecs ne voit pas 32 pièces ; il voit 4-5 patterns. Un trader expert ne voit pas des prix ; il voit des structures.
+
+**Mapping Bible :**
+| Structure visuelle | Ce que le chunking lit |
+| :--- | :--- |
+| Profil TPO | P-shape, elongation, double distribution — un coup d'œil |
+| SD±2/±3 | Bornes de la session — un coup d'œil |
+| VAL/VAH visible | Portes de décision — un coup d'œil |
+| Poor High/Low | Auction suspendue — un coup d'œil |
+| ALN P1/P2/P3/P4 | Contexte nocturne — un coup d'œil |
+| PVAL 5 états | Value migration — un coup d'œil |
+
+**R6 appliqué :**
+> Pensée implicite = chunking. L'expérience compresse l'information en patterns instantanément reconnaissables. S'acquiert par des milliers d'heures d'observation, pas par la lecture seule.
+
+> "D'UN COUP D'OEIL LA VAL VOUS PARLE CLAIREMENT SANS CHICHI" — Salah
+
+---
+
+### CONCEPT 3 — RULING REASON (LA RAISON DOMINANTE)
+
+**Dalton :** Chaque session a UNE raison dominante — le facteur clé qui explique et prédit le comportement du marché ce jour précis. Pas 10 facteurs. Un. Les traders qui échouent surpondèrent les variables périphériques et sous-pondèrent la raison dominante.
+
+**Mapping Bible :**
+| Application | Exemple |
+| :--- | :--- |
+| R27 Gap | Gap non comblé = ruling reason de la journée |
+| R17 POC Virgin | Virgin VPOC non touché = ruling reason permanente |
+| Poor High Carried Forward | WWSHD = ruling reason J+1 |
+| R34/35 SD±2 touché | Questionable High/Low = ruling reason intraday |
+| §9 Divergence NQ/ES | Ruling reason de ne PAS trader |
+| R8 Géopolitique | Ruling reason d'être cash |
+
+**Discipline Salah :**
+> Chaque matin : identifier LA ruling reason du jour. Une seule. Le reste est filtre.
+> "Le chameau identifie l'eau avant de partir. Il ne cherche pas en marchant."
+
+---
+
+### CONCEPT 4 — FAST TRADER vs SLOW TRADER
+
+**Dalton :** Deux profils de traders existent. Le Fast Trader trade l'IB, le tick, la réaction immédiate. Le Slow Trader attend la confirmation, trade la structure confirmée, accepte de rater les premières barres pour entrer proprement.
+
+**Salah = SLOW TRADER**
+
+| Fast Trader | Slow Trader (Salah) |
+| :--- | :--- |
+| Entre dès l'ouverture | Attend l'IB confirmé (10h30) |
+| Poursuite du prix | R42 : Break + Retest + Rejet |
+| 60% d'anxiété | ZAR — thé menthe |
+| Rate peu de barres | Rate parfois le premier move — c'est OK |
+| Risque d'erreur élevé | Capital préservé = profit |
+
+**R7 confirmé :** L'anxiété de l'ouverture = le Fast Trader en toi. S'éloigner de l'écran = devenir Slow Trader.
+
+> "STEG coupure pendant IB → Bull A déjà joué → capital intact → victoire silencieuse" (Sep 2 RTH)
+> "Le chameau ne court pas après le train." 🐪
+
+---
+
+### CONCEPT 5 — PLACE THE TRADE + MONITOR FOR CONTINUATION
+
+**Dalton :** Ce n'est pas "entrer et sortir vite". C'est "entrer avec une thèse, surveiller si la thèse se confirme, sortir si elle ne se confirme pas, laisser courir si elle se confirme."
+
+**Mapping Bible :**
+| Étape | Règle |
+| :--- | :--- |
+| Place the trade | R42 : entrée après Break + Retest + Rejet |
+| Monitor continuation | R19/20 : P-shape = pas de staying power → surveiller |
+| Continuation confirmée | R27 : gap non comblé → GO WITH direction → laisser courir |
+| Continuation infirmée | R13 Excess → sortir + retourner |
+| Stop inviolable | R16 : Stop défini AVANT l'entrée — MLL figé |
+
+**Règle de process :**
+```
+Entrée (R42) → Surveiller l'AVWAP (monte ou descend ?)
+├─ AVWAP descend + profil P-shape → short covering → sortir partiellement
+├─ AVWAP monte + elongation → new money → tenir → laisser courir
+└─ SD±2 atteint → clôturer ou alléger (Questionable High/Low)
+```
+
+---
+
+### CONCEPT 6 — ALL RULES MUST BE WRITTEN DOWN
+
+**Dalton :** Un trader qui ne documente pas ses règles recommence à zéro après chaque période difficile. La Bible = la mémoire institutionnelle du trader.
+
+**La Bible Salah = l'application directe de ce principe.**
+
+| Niveau | Ce que ça préserve |
+| :--- | :--- |
+| Parties 1-9 | Règles fondamentales Dalton |
+| Parties 10-15 | Structure mensuelle/hebdo/daily |
+| Parties 16-22 | Sessions documentées (cas d'école) |
+| Parties 23-31 | Setups, footprint, SD, PVAL |
+| **Partie 32** | **Webinar #6 — la source primaire** |
+
+**R10 confirmé :** Journal de trading = règles écrites + émotions documentées. "Le papier ne ment pas."
+
+> "VOUS VOYEZ QUAND JE FERAI UNE FORMATION POUR VENDRE MON CALCULATEUR J'AI DE QUOI FAIRE UNE BONNE FORMATION" — Salah
+> La Bible = la formation. Elle existe déjà.
+
+---
+
+### CONCEPT 7 — ODDS-BASED THINKING (PENSÉE PAR LES PROBABILITÉS)
+
+**Dalton :** Le bon trader ne pense pas "je suis sûr que ça monte". Il pense "dans ce contexte, les probabilités sont X% pour la hausse, Y% pour la baisse. Si les probabilités changent, j'ajuste."
+
+**Mapping Bible — Probabilités documentées :**
+| Pattern | Probabilité | Source |
+| :--- | :--- | :--- |
+| P3 + IB Haussier | **100%** IB confirm | Labo juin-juillet |
+| P3 Casse London High | **80.8%** | Labo juin-juillet |
+| P4 Casse London Low | **75%** | Labo juin-juillet |
+| P4 IB Baissier | **56%** = quasi coin-flip | Labo juin-juillet |
+| Q2 casse Q1 High → PM haussier | **82.12%** | Noon Curve 2479 sessions |
+| §9 aligné | Conviction maximale | Filtre constant |
+| §9 divergent | Caution / pas de trade | Filtre constant |
+
+**Odds thinking appliqué :**
+> "P3 = 80.8% → pas de certitude mais conviction. P4 = 56% → attendre l'IB avant d'agir."
+> R9 : 60% d'information suffit. 80% = entrer avec taille normale. 56% = entrer avec taille réduite.
+
+---
+
+### CONCEPT 8 — VALUE AREA DEVELOPMENT = PRIMARY DAILY FOCUS
+
+**Dalton :** Le développement de la Value Area est l'information la plus importante de la journée. Pas le prix absolu — où la VALUE se construit, comment elle migre, si elle accepte ou rejette les niveaux.
+
+**C'est la définition du PVAL Framework (Partie 31) :**
+
+```
+PVAL 5 ÉTATS — QUE FAIT LA VALUE AUJOURD'HUI ?
+① VAL BROKE PVAL HIGH → GO WITH UP ★★★★★
+② OVERLAPPING HIGH   → Haussier ★★★
+③ VAL INSIDE         → Balance / Rotation ⚖️
+④ OVERLAPPING LOW    → Baissier ★★★
+⑤ VAL BROKE PVAL LOW → GO WITH DOWN ★★★★★
+```
+
+**R38 confirmé :** "VALUE TRADING NOT PRICE TRADING — entre SD+2 et SD-2, on trade la Value."
+
+> "D'UN COUP D'ŒIL LA VAL VOUS PARLE CLAIREMENT SANS CHICHI ET VOILÀ VAL EN VRAC — TRADING VAL NOT PRICE MEANING" — Salah
+
+---
+
+### CONCEPT 9 — BALANCE AND EXCESS = TWO MOST IMPORTANT CONCEPTS
+
+**Dalton (verbatim) :** "Excess marks the end of one auction and the beginning of a new auction. Balance and excess are the two most important concepts because they signify change or the potential for change to take place."
+
+**Confirmation directe de la 2e phrase culte :**
+> **"TRADING IS ABOUT BALANCE AND EXCESS"**
+
+| Concept | Signification opérationnelle |
+| :--- | :--- |
+| BALANCE | Value Area — zone d'accord — FAder les bords — ZAR |
+| EXCESS | SD±2/±3, Poor High/Low, Buying/Selling Tail — zone de REJET — Reversal |
+| Changement | Excess marque la fin d'une auction = début d'une nouvelle = pivot |
+
+**Application — La détection du changement :**
+```
+Marché en BALANCE → attendre
+Signal d'EXCESS → préparer le trade
+EXCESS + confirmation (lettre suivante) → entrer (R13)
+EXCESS + §9 → entrer avec conviction maximale
+```
+
+---
+
+### CONCEPT 10 — TWO SETS OF EMOTIONS
+
+**Dalton :** Le trader gère DEUX sets d'émotions : les siennes propres (peur, avidité, FOMO) ET celles du camp adverse (les vendeurs qui paniquent, les acheteurs qui s'enthousiasment). Comprendre les émotions de l'adversaire = comprendre le MGI.
+
+**Mapping Bible :**
+| Émotion adversaire | Signal Bible |
+| :--- | :--- |
+| Retardataires qui achètent | R4 : laggards = victimes du prochain retournement |
+| Vendeurs mécaniques (références exactes) | R11/12 : mains faibles → drapeau rouge |
+| Short covering massif | R19/20 : profil P = pas de staying power |
+| Acheteurs absorbant au SD-2 | LBF institutionnel → delta positif au Low |
+| Inventaire trop long/court | R22 : short in the hole → squeeze |
+
+**R6 confirmé :** Pensée explicite = tes propres règles. Pensée implicite = lire les émotions du camp adverse dans le profil et le footprint.
+
+> "Two sets of emotions: your own AND those you trade against." — Dalton
+> Le chameau lit la peur du désert dans les traces de pas des autres. 🐪
+
+---
+
+### CONCEPT 11 — CURRENT BUSINESS FIRST
+
+**Dalton :** Avant de chercher des setups exotiques, régler le "current business" — les affaires non terminées du marché. WWSHD, gaps non comblés, Poor Highs/Lows carried forward = le marché doit les traiter avant de partir ailleurs.
+
+**Mapping Bible :**
+| Current Business | Règle |
+| :--- | :--- |
+| Gap non comblé | R27 : WWSHD permanent jusqu'au comblement |
+| Poor High carried forward | Suspended Auction → aimant J+1 |
+| Monthly VPOC Virgin | WWSHD permanent nord ★★★★★ |
+| Weekly Poor Low | R24 : réparation attendue |
+| Single Prints | Air à combler — destination probable |
+
+**Hiérarchie WWSHD quotidienne :**
+```
+1. Identifier TOUS les WWSHD actifs (R17 + R27 + Poor H/L)
+2. Le Current Business du jour = le WWSHD le plus proche
+3. Seulement APRÈS le Current Business résolu → chercher nouveau setup
+```
+
+> "Le chameau connaît les oasis sur sa route avant de partir." 🐪
+
+---
+
+### SYNTHÈSE — WEBINAR #6 × BIBLE SALAH
+
+| # | Concept Dalton | Règle(s) Bible | Phrase Culte |
+| :--- | :--- | :--- | :--- |
+| 1 | Simple Rules | R9, R42, COCKPIT 0 | LET THE TRADE COME TO YOU |
+| 2 | Chunking | R6 (implicite), PVAL, profils TPO | TRADING VALUE NOT PRICE |
+| 3 | Ruling Reason | R27, R17, WWSHD, §9 | LET THE TRADE COME TO YOU |
+| 4 | Slow Trader | R7, R42, ZAR | LET THE TRADE COME TO YOU |
+| 5 | Place + Monitor | R42, R16, R19/20, R27 | TRADING IS ABOUT BALANCE AND EXCESS |
+| 6 | Write Rules | R10, La Bible entière | — |
+| 7 | Odds-Based | P3/P4 stats, Noon Curve 82% | TRADING VALUE NOT PRICE |
+| 8 | Value Development | PVAL Framework, R38 | TRADING VALUE NOT PRICE |
+| 9 | Balance & Excess | R13, R17, SD±2, 3 Phrases Cultes | TRADING IS ABOUT BALANCE AND EXCESS |
+| 10 | Two Emotions | R4, R6, R11/12, R19/20 | TRADING VALUE NOT PRICE |
+| 11 | Current Business | R27, WWSHD, R17 | LET THE TRADE COME TO YOU |
+
+---
+
+### EN UNE PHRASE — WEBINAR #6
+
+> Dalton a tout dit. Salah a tout appliqué. La Bible a tout documenté.
+> "TOUT EST LÀ." 🐪
