@@ -2728,3 +2728,183 @@ Capital protégé = victoire silencieuse.
 ⏳ RTH Open 09h30 décidera. Double Poor High attend. 🐪
 ```
 
+
+
+---
+
+## PARTIE 30 — LEÇON MÉTHODOLOGIE ARTIFACT + PLAN SEP 3 (03/09/2026)
+
+### CORRECTION MÉTHODOLOGIQUE FONDAMENTALE (Session 03/09/2026)
+
+#### La règle du "construit à la clôture RTH"
+
+L'artifact se construit à la **clôture RTH du jour précédent**, avec les données de CE JOUR fraîches.
+
+```
+Clôture Lundi RTH   → plan Mardi   (données Lundi sous la main)
+Clôture Mardi RTH   → plan Mercredi (données Mardi sous la main)
+Clôture Mercredi RTH → plan Jeudi   (données Mercredi sous la main)
+```
+
+**Ce qui change selon le jour :**
+- Dimanche soir → plan Lundi : on a la balance Jeudi+Vendredi comme contexte
+- Après Lundi RTH : on a Lundi RTH frais → on raisonne différemment car Lundi est maintenant la donnée primaire
+- Ce n'est pas "avant-hier" abstrait — c'est TOUJOURS le RTH le plus récent qui prime
+
+#### Exemple appliqué — Artifact Sep 2 (construit Mardi Sep 1 soir)
+
+Données fraîches disponibles : Sep 1 RTH (H:29317.75 / L:29002 / Settle:29132)
+Event clé Sep 1 : CASSURE du bas de la balance Aug 27-31 (29355) → GO WITH DOWN R27
+Info essentielle à retenir : **CASSURE + EXCESS BAS**
+→ On oublie la balance. On passe aux 3 scénarios pour Mercredi.
+
+**Ce qui manquait dans l'artifact Sep 2 :**
+- Pas de mention "OLD BALANCE LOW 29355 = RÉSISTANCE depuis dessus"
+- Organisé autour du pattern ALN (P4 counter/confirmed) → mauvais axe principal
+- Manquait le tableau HIGH/MID/LOW du bloc Sep 1 avec Accept/Reject
+
+---
+
+### LE CADRE 3 SCÉNARIOS — RÈGLE UNIVERSELLE
+
+Après une cassure confirmée, le cadre journalier est toujours :
+
+```
+① TEST HIGH du bloc    → ACCEPT (GO WITH UP) / REJECT (short back)
+② TEST LOW du bloc     → ACCEPT (GO WITH DOWN) / REJECT (long back = LBF)
+③ ROTATION INSIDE      → Fade HIGH / Buy LOW / thé menthe
+```
+
+**IB, ALN, GEX, Noon Curve = FILTRES** pour confirmer quel scénario s'active.
+Ce ne sont pas les scénarios eux-mêmes — ils orientent la lecture.
+
+---
+
+### LE SETTLE COMME PIVOT GRAVITATIONNEL
+
+Le settle est le **point de départ du voyage** vers les scénarios.
+
+**Principe — Direction de voyage = Continuation :**
+
+```
+Open SOUS settle → marché remonte VERS settle
+                → même élan continue VERS le HIGH du bloc
+                → Scénario ① activé
+
+Open AU-DESSUS settle → marché descend VERS settle
+                      → même élan continue VERS le LOW du bloc
+                      → Scénario ② activé
+
+Open NEAR settle → IB décide la direction
+                 → Scénario ③ possible
+```
+
+Le marché vient chercher le settle depuis l'open. Ce voyage révèle où il va après.
+
+---
+
+### FIL CONDUCTEUR : SETTLE + PROFILE J-1 → SCÉNARIOS
+
+Le settle seul ne suffit pas. Il faut le **profile complet du jour précédent** :
+
+| Élément | Information |
+| :--- | :--- |
+| POC J-1 | Settle ≈ POC = fair value / settle loin du POC = déséquilibre |
+| VAH J-1 | Résistance immédiate nord — première porte Scénario ① |
+| VAL J-1 | Support immédiat sud — première porte Scénario ② |
+| PM observation | Rising floor = acheteurs défendent / AVWAP plafond = short covering |
+| Ce que le marché a REFUSÉ de faire | WWSHD carried forward = aimant J+1 |
+| Delta MOC | Sens du dernier flux institutionnel |
+
+**Le profile dit :** dans quelle zone on démarre ET ce que le marché a refusé de faire.
+**Le settle dit :** le point de bascule.
+**L'open dit :** de quel côté le marché attaque.
+
+---
+
+### APPLICATION — PLAN JEUDI SEP 3 (construit Mercredi Sep 2 clôture RTH)
+
+#### Données fraîches Sep 2 RTH
+
+| Donnée | Valeur |
+| :--- | :--- |
+| HIGH | 29 213.00 (LAF — n'a pas atteint 29 317) |
+| LOW | 29 017.25 (inside Sep 1 range) |
+| Settle | 29 193.00 |
+| POC | ~29 170-29 193 (settle ≈ POC = fair value) |
+| VAH | ~29 197-29 213 |
+| VAL | ~29 128-29 159 |
+| PM | 4 rejets AVWAP 29 197 + 5 Higher Lows + MOC delta +1398 |
+| WWSHD | Double Poor High 29 197.25 |
+
+#### Bloc 2 jours Sep 1+2 (Mercredi n'a pas cassé les bords)
+
+```
+HIGH  :  29 317.75   ← Sep 1 Poor High (Mercredi n'a pas cassé)
+MID   :  29 159.87
+LOW   :  29 002.00   ← Sep 1 SD-3 LBF (Mercredi n'a pas cassé)
+```
+
+#### Settle 29 193 — Position dans le bloc
+
+```
+29 317.75  ← HIGH bloc    (+124 pts)
+29 213.00  ← VAH Sep 2 / High Sep 2 (+20 pts)
+29 197.25  ← Poor High WWSHD  (+4 pts — premier mur)
+►► 29 193  ← SETTLE = POC = POINT DE DÉPART
+29 192.25  ← Monthly VAL  (-0.75 pt)
+29 159.87  ← MID bloc / VAL Sep 2  (-33 pts)
+29 128.00  ← GEX Put wall  (-65 pts)
+29 002.00  ← LOW bloc    (-191 pts)
+```
+
+#### 3 Scénarios Jeudi Sep 3
+
+**① TEST HIGH 29 317.75**
+- Chemin : 29193 → franchir WWSHD 29197 (+4 pts) → espace libre → HIGH 29317 (+124 pts)
+- Open sous 29130 → remonte vers settle → continue vers HIGH
+- Accept above 29317 → C1 : 29355-29423 / C2 : 29537 (Monthly POC) / C3 : 29598 (Virgin VPOC)
+- Reject (LAF) → Lower High → SHORT → MID 29159 → LOW 29002
+
+**② TEST LOW 29 002**
+- Chemin : 29193 → perdre Monthly VAL 29192 → casser MID 29159 → Put wall 29128 → LOW 29002
+- Open au-dessus 29213 → descend vers settle → continue vers LOW
+- Accept below 29002 → C1 : 28947 (Weekly Poor Low) / C2 : 28922 (Box 6) / C3 : 28760
+- Reject (LBF) → Higher Low → LONG → MID 29159 → HIGH 29317
+
+**③ ROTATION INSIDE**
+- Open near settle (29193 zone) → IB neutre → reste entre VAH (29197) et VAL (29159)
+- Fade 29317 / Buy 29002
+
+#### Filtres à appliquer à l'IB
+
+| Signal | Scénario |
+| :--- | :--- |
+| IB Bull A + Close > MID 29159 + §9 ✅ | ① Test HIGH |
+| IB Bear A + Close < MID 29159 + §9 ✅ | ② Test LOW |
+| IB neutre, range étroit | ③ Rotation |
+| GEX calls 709-712 dominent | Biais ① (gamma buying dips) |
+| ALN pattern (à confirmer London) | Filtre directionnelle |
+
+#### Contexte macro actif Sep 3
+
+- OTF Lower depuis 17 août — tendance dominante
+- Monthly VAL 29192.25 = seuil de bascule mensuel (settle +0.75pt au-dessus)
+- Virgin VPOC 29598.75 = WWSHD permanent nord ★★★★★
+- Weekly Poor Low 28947 = WWSHD sud ★★★★
+- NFP vendredi 04/09 08h30 → ne pas surexposer jeudi soir
+- ISM Services 10h00 ET jeudi → potentiel IB Terminus
+
+---
+
+### RÈGLE PROCESSUS — L'ARTIFACT À 16H
+
+> L'artifact idéal se construit à 16h00 ET (clôture RTH), pas le lendemain matin.
+> À 16h : données fraîches, esprit encore dans le marché, on sait ce qu'ils ont FAIT et PAS VOULU faire.
+> Le matin suivant : on affine avec OVN + open probable — mais le squelette est déjà là.
+
+**Séquence idéale :**
+1. 16h00 ET → construire l'artifact avec RTH frais (3 scénarios / settle / profile)
+2. OVN (nuit) → observer ALN pattern, inventaire, SD migration
+3. 08h00-09h00 ET → affiner avec open probable + AVWAP migré
+4. 09h30 RTH → IB décide le scénario actif
