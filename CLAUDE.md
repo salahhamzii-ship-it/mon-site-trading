@@ -3064,6 +3064,27 @@ ENTRE SD+2 ET SD-2
 
 ---
 
+### §9 SUR LES SETUPS SD — LA RÈGLE DE CONVICTION MAXIMALE
+
+**Même chanson sur NQ et ES = §9 confirmé = entrée haute confiance.**
+
+| OVN Sep 2→3 | NQ | ES | §9 |
+| :--- | :--- | :--- | :--- |
+| Setup (1) SELL SD+2 | 29 248 | ~7 688 | ✅ Les deux rejettent SD+2 |
+| Setup (4) BUY SD-2 | 29 008 | ~7 661 | ✅ Les deux LBF SD-2 simultanément |
+
+**Règle §9 appliquée aux SD :**
+```
+NQ SD-2 LBF + ES SD-2 LBF simultanés → ENTRÉE LONG conviction maximale ★★★★★
+NQ SD+2 LAF + ES SD+2 LAF simultanés → ENTRÉE SHORT conviction maximale ★★★★★
+NQ SD-2 LBF + ES reste au-dessus SD-1 → CAUTION — §9 non confirmé
+NQ SD-2 LBF + ES SD-3 (cassure) → PAS DE LONG — GO WITH DOWN
+```
+
+**NQ seul sur SD sans ES = trade de moindre conviction (taille réduite ou skip).**
+
+---
+
 ### ⚠️ RÈGLE ABSOLUE — 1 POSITION À LA FOIS (PAS DE CUMUL)
 
 **Les 4 setups cette nuit = 4 trades SÉQUENTIELS, jamais simultanés.**
