@@ -3980,3 +3980,128 @@ Non atteint Sep 3. Reste l'aimant nord dominant. Ruling reason de la prochaine s
 > AVWAP ancré à 16H → cockpit à 18H → LBF SD-2 OVN → tenir en RTH → EXIT Monthly POC.
 > Le chameau entre la nuit et sort dans l'oasis. 🐪
 
+
+
+---
+
+## PARTIE 35 — PATTERN "3 SWINGS PAR SEMAINE" + RÈGLES FILTRE DELTA OVN SD SYSTEM
+
+### Observation Hebdomadaire (Backtest Juin-Septembre 2026)
+
+Sur les semaines en tendance (OTF Lower ou OTF Higher confirmé), le système OVN SD génère typiquement **3 swings valides par semaine**, avec des points d'entrée répartis sur 3 créneaux distincts.
+
+### Les 3 Créneaux d'Entrée
+
+| Créneau | Horaire ET | Caractère | Fréquence |
+| :--- | :--- | :--- | :--- |
+| **Créneau A** | ~20:30–21:30 ET | Early OVN — premier test SD après Globex open | ~1×/semaine |
+| **Créneau B** | ~05:00–07:00 ET | Londres — dernier test SD avant RTH | ~1×/semaine |
+| **Créneau C** | Post-IB — 10:30–11:00 ET | RTH confirmation — entrée après IB confirmé | ~1×/semaine |
+
+**Note :** Les 3 entrées ne sont pas toujours présentes dans la même semaine, et l'horaire exact varie. Ce qui est constant : **3 trades directionnels valides**, tenus en swing jusqu'à 16:00 ET.
+
+### Conditions d'une Semaine "3 Swings"
+
+```
+SEMAINE TENDANCE (OTF Lower ou Higher sur 3+ RTH consécutifs)
+  ↓
+OVN trending = SD+2 ou SD-2 jamais touché dans le sens de la tendance
+  ↓
+Seul le côté CONTRE la tendance génère des signals (LAF/LBF)
+  ↓
+3 tentatives du prix de casser dans la tendance → 3 LBF/LAF → 3 swings
+```
+
+**Semaine baissière exemple (24–29 juin 2026) :**
+- Mardi 24→25 juin : LAF 18:00 ET + LAF 04:00 ET = 2 signals
+- Mercredi 28→29 juin : LAF 09:30 RTH + LBF 10:00 RTH = 2 signals
+- Pattern global : marché monte → LAF → retombe → cycle répété
+
+### Règles Filtre — OVN SD System Complet
+
+#### Règle 1 — Signal de Base (SIMPLE SD Rule)
+```
+LBF : Low < SD-2 ET Close > SD-2 → BUY à Close
+LAF : High > SD+2 ET Close < SD+2 → SELL à Close
+Stop : 100 pts ($200/micro MNQ)
+```
+
+#### Règle 2 — Filtre Delta (OBLIGATOIRE)
+```
+LBF valide : Delta > 0 (acheteurs absorbent au Low) ✅
+LBF invalide : Delta < -500 (vendeurs dominent) → SKIP ❌
+
+LAF valide : Delta < 0 (acheteurs épuisés au High) ✅
+LAF invalide : Delta > +500 (acheteurs encore actifs) → caution
+
+Seuil critique : Delta < -500 au LBF = abandon systématique
+```
+
+**Exemple concret — 25 juin 2026 sans filtre vs avec filtre :**
+| | Sans filtre | Avec filtre |
+| :--- | :--- | :--- |
+| LBF 20:30 (Δ -980) | LONG → -$1 340 | SKIP |
+| LBF 22:00 (Δ -1 118) | LONG → -$1 382 | SKIP |
+| Total | -$1 464 ☠️ | +$1 258 ✅ |
+
+#### Règle 3 — OVN Trending (Système Mort)
+```
+Si SD+2 monte avec le prix (trending up) → SD+2 jamais touché → zéro signal → DEAD SESSION
+Si SD-2 descend avec le prix (trending down) → SD-2 jamais touché → zéro signal → DEAD SESSION
+Indicateur : aucun dépassement de bande en 6h OVN = nuit morte = ZAR
+```
+
+#### Règle 4 — Post-Crash RTH (Système Mort)
+```
+Si une barre RTH > 500 pts range → SD bands soufflées → RTH DEAD
+Délai de normalisation : plusieurs sessions
+Ne pas forcer de signal dans les bandes soufflées (>800 pts largeur)
+```
+
+#### Règle 5 — 2 Micros (Scalper + Swing)
+```
+Micro 1 (Scalper) : sortie au SD opposé dès touch → capte le mouvement initial
+Micro 2 (Swing)   : tenu jusqu'à 16:00 ET RTH → capte la tendance complète
+Risque total/signal : 2 × $200 = $400
+```
+
+### Backtest Résumé — Semaine 24–29 Juin 2026
+
+| Session | Signal | Scalper | Swing | Net |
+| :--- | :--- | :--- | :--- | :--- |
+| 24→25 juin (OVN) | LAF 18:00 ET | +$204 | -$200 | +$4 |
+| 24→25 juin (OVN) | LAF 04:00 ET | +$406 | +$848 | +$1 254 |
+| 28→29 juin (RTH) | LAF 09:30 ET | +$332 | -$200 | +$132 |
+| 28→29 juin (RTH) | LBF 10:00 ET | +$374 | +$1 000 | +$1 374 |
+| **SEMAINE TOTALE** | **4 signals** | **+$1 316** | **+$1 448** | **+$2 764** |
+
+**Signaux filtrés (delta) :** LBF 20:30 (Δ -980), LBF 22:00 (Δ -1118) → **$2 722 de pertes évitées**
+
+### Performance Système (Semaine Tendance Type)
+
+```
+4 signals × $400 risque = $1 600 risque total semaine
+Gain semaine : +$2 764
+ROI semaine : +173%
+Ratio Gain/Risque moyen : ~1.7:1
+```
+
+### Règle Processus — Checklist OVN Pre-Trade
+
+```
+□ 1. Identifier la tendance hebdo (OTF Higher/Lower ou Balance ?)
+□ 2. Ancrer AVWAP à 16:00 ET RTH précédent → noter SD±1/2/3 à 18:00
+□ 3. Tendance baissière → guetter LAF SD+2 seulement (LBF = filtre delta strict)
+□ 4. Tendance haussière → guetter LBF SD-2 seulement (LAF = filtre delta strict)
+□ 5. Signal candidat → VÉRIFIER DELTA avant entrée
+□ 6. LBF + Delta < -500 → SKIP (pas de débat)
+□ 7. Signal confirmé → 2 micros, stop 100 pts chacun
+□ 8. §9 NQ + ES même signal → conviction maximale → taille normale
+□ 9. §9 divergent → taille réduite (1 micro seulement) ou skip
+□ 10. Flat avant 16:15 ET (prop firm rule — inviolable)
+```
+
+### En Une Phrase
+
+> Tendance + LAF/LBF Delta-filtré + 2 micros + patience jusqu'à 16H = 3 swings par semaine = profit régulier.
+> Le chameau sait combien d'oasis il y a sur la route avant de partir. 🐪
