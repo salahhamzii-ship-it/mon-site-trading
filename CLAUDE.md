@@ -3767,3 +3767,216 @@ EXCESS + §9 → entrer avec conviction maximale
 > Ne pas lancer tant que P1 n'est pas au labo et la feuille SignalP finalisée.
 > La Bible + le calculateur sont les fondations. La formation vient après.
 > "Je t'explique comment faire en partant de rien." 🐪
+
+---
+
+## PARTIE 34 — SESSION RTH 03/09/2026 — TREND DAY HAUSSIER + MONTHLY POC HIT + RÈGLE AVWAP 16H
+
+### Contexte macro / OVN
+
+| Donnée | Valeur |
+| :--- | :--- |
+| Settle J-1 (Sep 2) | **29 193.00** |
+| ALN Pattern | P4 (Sep 1-2) — Counter Auction confirmé |
+| AVWAP ancre | **16:00 ET Sep 2** (16H anchor — bandes établies à 18H open) |
+| AVWAP 18H open | ~29 175 | SD+2 : ~29 193 | SD-2 : ~29 155 |
+| Gap Down non comblé J-1 | 29 112 → 29 355 (Sep 1) — WWSHD actif |
+| Monthly POC WWSHD | **29 537.50** — objectif nord permanent |
+| Virgin VPOC | **29 598.75** — WWSHD permanent nord ★★★★★ |
+
+---
+
+### ★★★★★ RÈGLE AVWAP 16H — SETUP SIERRA CHART RECOMMANDÉ
+
+**Constat validé par screenshots Sierra Chart Chart #27 :**
+
+| Ancre | Bandes à 18H open | Utilité |
+| :--- | :--- | :--- |
+| 18:00 ET | Convergent d'un seul point → s'élargissent progressivement | 1ères barres OVN inutilisables |
+| **16:00 ET** | **Déjà établies et spread** → cockpit complet dès 18H | **ACTIONNABLES IMMÉDIATEMENT** |
+
+**Valeurs SD à 18:00 ET avec ancre 16H (Sep 2→3) :**
+| Bande | Prix |
+| :--- | :--- |
+| SD+3 | ~29 203 |
+| SD+2 | ~29 193–29 197 |
+| SD+1 | ~29 183–29 185 |
+| AVWAP | ~29 173–29 177 |
+| SD-1 | ~29 163–29 165 |
+| SD-2 | ~29 152–29 158 |
+| SD-3 | ~29 142–29 148 |
+
+**Règle AVWAP 16H :**
+> Ancrer l'AVWAP à **16:00 ET** (clôture RTH) pour la session OVN suivante.
+> À 18:00 Globex open, le cockpit est complet — toutes les bandes SD sont actionnables.
+> Différence vs ancre 18H : **3-7 pts** uniquement. Signaux identiques.
+> "COMME CA QUAND CA OUVRE A 18H LES SONT LA" — Salah
+
+**Configuration Sierra Chart Chart #28 :**
+- AVWAP ancré à 16:00 ET (clôture RTH précédente)
+- Bandes SD : ±1 / ±2 / ±3 actives
+- Début de visualisation : 18:00 ET (ignorer les 2h 16H-18H)
+- Replay SIM : démarrer à 18:00 ET avec ancre 16:00
+
+---
+
+### OVN Sep 2→3 — CHAÎNE DE TRADES (Règle SIMPLE SD)
+
+**Règle SIMPLE SD (formalisée cette session) :**
+```
+CASSE + BAS + ACCEPT  → BUY  (prix ferme au-dessus SD-2 après l'avoir percé)
+CASSE + HAUT + ACCEPT → SELL (prix ferme en dessous SD+2 après l'avoir percé)
+CLOSE OUTSIDE SD      → GO WITH direction (ACCEPT = trend continuation)
+```
+
+#### Trade 1 — SELL LAF SD+2 (00:30 ET)
+| Paramètre | Valeur |
+| :--- | :--- |
+| Signal | CASSE HAUT + ACCEPT : Close 29 207.50 < SD+2 29 203.34 |
+| Entrée | ~29 207 (Close bar 00:30) |
+| Stop | Au-dessus High bar |
+| Cible | AVWAP 18H / SD-1 |
+| Résultat | ✅ Retour vers AVWAP |
+
+#### Trade 2 — BUY LBF SD-2 (01:00–01:30 ET)
+| Paramètre | Valeur |
+| :--- | :--- |
+| Signal | CASSE BAS + ACCEPT : Close 01:00 = 29 104 < SD-2 | Close 01:30 = 29 188.75 > SD-2 ✅ |
+| Entrée | ~29 189 (Close bar 01:30) |
+| Stop | Sous SD-2 (sous 29 132) |
+| Cible 1 | AVWAP → SD+1 (~+50 pts) |
+| Cible 2 | SD+2 (~+70 pts) |
+| Résultat | ✅ Rebond vers AVWAP |
+
+#### Trade 3 — SELL LAF SD+2 Londres (04:00–04:30 ET)
+| Paramètre | Valeur |
+| :--- | :--- |
+| Signal | CASSE HAUT + ACCEPT : High 04:00 = 29 256 > SD+2 | Close 04:30 = 29 216.25 < SD+2 ✅ |
+| Entrée | ~29 216 (Close bar 04:30) |
+| Stop | Au-dessus High 04:00 (29 256) |
+| Cible | AVWAP → SD-1 (~−50 pts) |
+| Résultat | ✅ Retour SD-1 zone |
+
+#### Trade 4 — BUY LBF SD-2 (07:00–07:45 ET) ★★★★★
+| Paramètre | Valeur |
+| :--- | :--- |
+| Signal | CASSE BAS + ACCEPT : Close 07:00 = 29 166.75 ≈ SD-2 zone | Higher Low confirmé |
+| Entrée | ~29 167–29 189 (zone SD-2) |
+| Stop | Sous SD-2 |
+| Cible 1 | AVWAP (atteint) |
+| Cible 2 | SD+2 |
+| **ISM 08:30 EXPLOSION** | **+138 pts en une barre** ★★★★★ |
+| Résultat | ✅ NQ 29 244.50 (+138 pts) |
+
+**"ON ENTRE EN OVN ET ON GERE EN RTH" — Règle formalisée :**
+> Entrée Trade 4 : ~29 189 (01:30 ET ou 07:00 ET)
+> Tenue pendant RTH
+> EXIT : Monthly POC WWSHD 29 537.50 atteint à **11:00 RTH**
+> **+348 pts** total sur un seul trade tenu de l'OVN jusqu'au Monthly POC ★★★★★
+
+---
+
+### RTH 03/09/2026 — Session complète
+
+#### Données principales
+| Donnée | NQ | ES |
+| :--- | :--- | :--- |
+| Open RTH | ~29 240 | TBD |
+| **High RTH** | **29 539.50** (11:00 ET) | TBD |
+| Low RTH | TBD | TBD |
+| Settle | TBD | TBD |
+| Type journée | **Trend Day Haussier** | — |
+
+#### Monthly POC WWSHD — HIT CONFIRMÉ ★★★★★
+| | Valeur |
+| :--- | :--- |
+| Monthly POC cible | **29 537.50** |
+| High bar 11:00 | **29 539.50** |
+| Écart | **+2 pts** — touché au tick |
+| Statut | ✅ WWSHD RÉALISÉ |
+
+→ Objectif nord majeur atteint. Current Business résolu.
+→ Virgin VPOC 29 598.75 = prochain WWSHD nord — non encore atteint.
+
+#### E+G Verdict (E+G Framework — PARTIE 12)
+| | Valeur |
+| :--- | :--- |
+| VAH matinée (A→E) | ~29 420 |
+| Close G (13:00 ET) | **29 528** |
+| G vs VAH | **G >> VAH → HAUSSIER PM CONFIRMÉ** ★★★★★ |
+| Décision | GO WITH UP → tenue long PM |
+
+---
+
+### SETUPS VALIDES — RÉSUMÉ
+
+| Setup | Timing ET | Zone | Signal | Direction | Points |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| SELL LAF SD+2 | 00:30 | ~29 207 | CASSE HAUT ACCEPT | SHORT | ~+40 pts |
+| BUY LBF SD-2 | 01:30 | ~29 189 | CASSE BAS ACCEPT | LONG | ~+50 pts |
+| SELL LAF SD+2 Londres | 04:30 | ~29 216 | CASSE HAUT ACCEPT | SHORT | ~+50 pts |
+| **BUY LBF SD-2** | **07:00** | **~29 167** | **CASSE BAS ACCEPT** | **LONG** | **+138 (ISM) → +348 (RTH)** |
+
+---
+
+### RÈGLE "ON ENTRE EN OVN ET ON GERE EN RTH" (formalisée)
+
+**Principe :**
+> L'entrée OVN au SD-2 (LBF) est l'entrée. Le RTH est la gestion.
+> L'objectif n'est pas la sortie OVN à +50 pts. C'est le WWSHD le plus proche (Monthly POC, Poor High, Gap).
+> La patience de l'OVN à 18:00 → 11:00 RTH = +348 pts sur un trade propre.
+
+**Séquence :**
+```
+OVN : LBF SD-2 → BUY → Stop sous SD-2
+ISM/News : la barre d'explosion confirme la direction
+RTH IB : Bull A → tenir long → ne pas sortir
+E+G 13H : G >> VAH → PM haussier → tenir encore
+WWSHD : Monthly POC / Poor High / Virgin VPOC → EXIT partiel
+Flat avant 16h15 ET (prop firm rule)
+```
+
+**Règles de sortie échelonnée :**
+| Cible | % position | Déclencheur |
+| :--- | :--- | :--- |
+| C1 | 33% | Monthly POC 29 537.50 |
+| C2 | 33% | Virgin VPOC 29 598.75 |
+| C3 | 34% | SD+3 ou structurel | ou stop trailing |
+
+---
+
+### Leçons clés session
+
+**1. AVWAP 16H = setup définitif pour OVN SD system**
+Screenshots Sierra Chart confirment : bandes établies à 18H open. Cockpit immédiatement actionnable. Différence vs 18H : 3-7 pts max. Signaux identiques. Setup recommandé : ancrer à 16:00 ET.
+
+**2. ISM 08:30 ET = IB Terminus OVN**
+News à 08:30 ET peut déclencher la barre d'explosion finale. Trade 4 tenu depuis 07:00 → +138 pts en une barre. Règle : ne pas sortir avant les news si stop non touché.
+
+**3. Monthly POC WWSHD = Current Business résolu**
+29 539.50 atteint à 11:00 ET. 2 pts de précision sur 29 537.50. R17 : le marché va chercher les niveaux non visités. Patience = +348 pts.
+
+**4. E+G confirme le PM**
+G close 29 528 >> VAH matinée → HAUSSIER PM. Framework E+G = filtre puissant pour tenir le trade après 13:00 ET.
+
+**5. Règle SIMPLE SD — 3 mots**
+CASSE / BAS ou HAUT / ACCEPT = toute la décision. 3 mots. Pas de débat.
+
+**6. Virgin VPOC 29 598.75 = prochain WWSHD**
+Non atteint Sep 3. Reste l'aimant nord dominant. Ruling reason de la prochaine session haussière.
+
+---
+
+### Configuration Sierra Chart recommandée — OVN SD System
+
+| Chart | Contenu | Ancre |
+| :--- | :--- | :--- |
+| #28 | AVWAP + SD±1/2/3 | **16:00 ET RTH close** |
+| Replay SIM | Démarrer à 18:00 ET | Ancre 16:00 ET |
+| Visualisation | Ignorer 16h-18h | Commencer l'analyse à 18:00 |
+| Colonnes | BidVol, AskVol, Delta | Signal de confirmation |
+
+**En une phrase :**
+> AVWAP ancré à 16H → cockpit à 18H → LBF SD-2 OVN → tenir en RTH → EXIT Monthly POC.
+> Le chameau entre la nuit et sort dans l'oasis. 🐪
+
