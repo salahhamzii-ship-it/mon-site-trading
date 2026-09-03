@@ -2908,3 +2908,162 @@ LOW   :  29 002.00   ← Sep 1 SD-3 LBF (Mercredi n'a pas cassé)
 2. OVN (nuit) → observer ALN pattern, inventaire, SD migration
 3. 08h00-09h00 ET → affiner avec open probable + AVWAP migré
 4. 09h30 RTH → IB décide le scénario actif
+
+---
+
+## PARTIE 31 — SETUP SD OVN — LES 4 SETUPS DU CHAMEAU (02/09→03/09/2026)
+
+### Philosophie fondamentale
+> **"Buy low fade high en ronflant."**
+> SD+2 = plafond → SELL (LAF / Poor High)
+> SD-2 = plancher → BUY (LBF / absorption)
+> Entre les deux → ZAR → thé menthe → attendre les bornes
+
+Source : OVN Sep 2→3 (02:07 ET) — 4 setups identifiés par Salah sur chart 30min Sierra Chart #28.
+
+---
+
+### LES 4 SETUPS — ANATOMIE COMPLÈTE
+
+#### Setup (1) — SELL PoH SD+2 (early OVN ~19:30-20:00 ET)
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Zone | SD+2 (~29 248) |
+| Signal | **Poor High** — prix atteint SD+2, bougie suivante Lower High |
+| Règle | R13 (Excess) + R34 (Questionable High trop vite) |
+| Entrée | Close bougie de rejet (Lower High confirmé) |
+| Stop | Au-dessus du High SD+2 |
+| Cible | Retour AVWAP 18H (~29 185) |
+| Caractère | LAF — Look Above and Fail |
+
+**Lecture chart :** Grande bougie haussière montant à SD+2 early OVN. Pas de suivi. Lower High barre suivante = Poor High = excès = entrée Short.
+
+---
+
+#### Setup (2) — BUY e2H SD-1 (mid OVN ~22:00-23:00 ET)
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Zone | SD-1 (~29 133) |
+| Signal | **Equal 2 Highs** (e2H) / double bottom zone SD-1 |
+| Règle | R24 (Double Low sans excès → LBF probable) |
+| Entrée | Higher Low confirmé sur SD-1 |
+| Stop | Sous le Low SD-1 |
+| Cible | Retour AVWAP 18H + SD+1 |
+| Caractère | LBF partiel — support intermédiaire |
+
+**Lecture chart :** Deux touches SD-1 sans excès = accumulation. Higher Low = entrée Long. Prix remonte vers AVWAP. Deux creux égaux = R24 actif.
+
+---
+
+#### Setup (3) — SELL SD+2 (~00:30-01:00 ET)
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Zone | SD+2 (~29 248-29 260) |
+| Signal | **Deuxième test SD+2** — second LAF = signal encore plus fiable |
+| Règle | R34 + R24 appliqué à la résistance (double test = suspended auction) |
+| Entrée | Close bougie de rejet au SD+2 |
+| Stop | Au-dessus du High |
+| Cible | AVWAP 18H → SD-1 → SD-2 |
+| Caractère | Deuxième LAF — R24 côté haut = conviction double |
+
+**Lecture chart :** Prix remonte à SD+2 (~00:30 ET) = deuxième test. Encore un rejet. Double Poor High sur SD+2 = "7050" zone (29 250 ≈ SD+2). Short propre avec cible SD-2.
+
+---
+
+#### Setup (4) — BUY SD-2 01H30 ET (le flush final)
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Zone | SD-2 (**29 007.75**) = Bloc LOW Sep 1+2 (29 002) ± 6 pts |
+| Signal | **LBF — Look Below and Fail** + absorption massive |
+| Règle | R36 (LBF SD-2 + Higher Low = LONG) + R35 (Questionable Low) |
+| Timing | ~01:30 ET — grande bougie rouge → SD-2 → absorption |
+| Entrée | Close bougie d'absorption / Higher Low confirmé |
+| Stop | Sous SD-2 (sous 29 002) |
+| Cible 1 | AVWAP 18H (~29 185) = **+177 pts** ✅ ATTEINT |
+| Cible 2 | SD+1 (~29 210) |
+| Caractère | **LBF confluent** — SD-2 = Bloc LOW Sep 1 |
+
+**Lecture chart :** La grande bougie cyan/rouge qui descend à SD-2 exact (29 008) = flush institutionnel. Delta positif au Low = acheteurs absorbent. "Les points peuvent pleuvoir" — 177 pts de rebond en 30 min.
+
+---
+
+### SYNTHÈSE — LES 4 SETUPS EN UNE TABLE
+
+| # | Timing ET | Zone | Type | Signal | Direction | Résultat |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | ~19h30 | SD+2 | LAF | Poor High | SHORT | ✅ Retour AVWAP |
+| 2 | ~22h00 | SD-1 | LBF partiel | e2H / Double Low | LONG | ✅ Retour AVWAP |
+| 3 | ~00h30 | SD+2 | 2e LAF | Double Poor High | SHORT | ✅ Cascade SD-2 |
+| 4 | ~01h30 | SD-2 | LBF | Absorption + HL | LONG | ✅ +177 pts |
+
+---
+
+### RÈGLES DU SETUP SD (VERSION CONDENSÉE)
+
+```
+SD+2 ATTEINT
+├─ Barre suivante = Lower High → SELL (R13 Excess)
+├─ Si atteint trop vite → R34 Questionable High → SELL
+└─ Deuxième test → conviction double (R24 appliqué résistance)
+
+SD-2 ATTEINT
+├─ Barre suivante = Higher Low → BUY (R36)
+├─ Delta positif au Low → absorption confirmée → BUY
+└─ Si = Bloc LOW / niveaux structurels → confluence ★★★★★
+
+ENTRE SD+2 ET SD-2
+└─ ZAR — thé menthe — "en ronflant" — attendre les bords
+```
+
+---
+
+### CHECKLISTE WEEKEND SIM — SIERRA CHART
+
+À coder / tester sur SIM Sierra Chart ce weekend :
+
+**Étape 1 — Setup visuel**
+- [ ] Chart #28 : AVWAP 18H + SD±1/2/3 actifs
+- [ ] Colonnes : BidVol, AskVol, Delta par barre
+- [ ] Chart 30min uniquement (R3)
+
+**Étape 2 — Les 4 setups en SIM**
+- [ ] Setup 1 : Prix → SD+2 + Lower High → SELL | Stop above High | Target AVWAP
+- [ ] Setup 2 : Prix → SD-1 + Higher Low (e2H) → BUY | Stop below Low | Target AVWAP
+- [ ] Setup 3 : 2e test SD+2 + rejet → SELL | Stop above | Target SD-2
+- [ ] Setup 4 : Prix → SD-2 + delta positif + Higher Low → BUY | Stop below | Target AVWAP
+
+**Étape 3 — Conditions d'invalidation**
+- [ ] SD+2 Accept (prix ferme AU-DESSUS SD+2 sur 2 barres) → ne pas seller → GO WITH UP
+- [ ] SD-2 Accept (prix ferme EN DESSOUS SD-2 sur 2 barres) → ne pas acheter → GO WITH DOWN
+- [ ] §9 : NQ et ES doivent être dans la même configuration (les deux SD+2 ou les deux SD-2)
+
+**Étape 4 — Gestion**
+- [ ] Stop défini AVANT l'entrée (R16)
+- [ ] MLL figé à +2000$
+- [ ] Flat avant 16h15 ET (prop firm rule)
+
+---
+
+### RÉFÉRENCE OVN SEP 2→3 — DONNÉES BRUTES
+
+| Heure ET | Niveau | SD | Action |
+| :--- | :--- | :--- | :--- |
+| 18:00 | 29 191 | AVWAP | Globex open = settle Sep 2 |
+| ~19:30 | ~29 248 | SD+2 | Setup (1) SELL PoH |
+| ~22:00 | ~29 133 | SD-1 | Setup (2) BUY e2H |
+| ~00:30 | ~29 248 | SD+2 | Setup (3) SELL 2e LAF |
+| ~01:30 | **29 008** | **SD-2** | **Setup (4) BUY LBF** |
+| 02:07 | 29 185 | AVWAP | Prix de retour AVWAP (+177 pts) |
+
+**Range total OVN 18h → 02h : ~252 pts** (SD+2 → SD-2)
+**Bounce LBF setup (4) : +177 pts en ~30 min**
+
+---
+
+### EN UNE PHRASE
+
+> SD+2 = fade. SD-2 = buy. Attendre les bords. Laisser venir. Le camel dort et les points pleuvent. 🐪
