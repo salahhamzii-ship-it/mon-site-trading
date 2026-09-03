@@ -3117,6 +3117,75 @@ Un seul setup à la fois = discipline = survie = profit.
 
 ---
 
+### NEW RTH VALUE vs PREVIOUS RTH VALUE — LE CADRE PRINCIPAL
+
+> **"Trading Value Not Price"** — R38
+> Ce n'est pas le prix qui décide la direction. C'est où la **nouvelle VALUE RTH** se développe par rapport à la **VALUE RTH précédente**.
+
+#### Principe de Value Migration
+
+```
+PREVIOUS RTH VALUE (J-1)
+  VAH : niveau haut de la Value Area
+  POC : Point of Control
+  VAL : niveau bas de la Value Area  ← LA PORTE CLEF
+
+NEW RTH (aujourd'hui) — 3 cas :
+
+① New Value AU-DESSUS VAH J-1
+  → Value migre HAUT
+  → Institutions acceptent des prix plus élevés
+  → GO WITH UP — laisser courir
+
+② New Value EN DESSOUS VAL J-1
+  → Value migre BAS
+  → Institutions acceptent des prix plus bas
+  → GO WITH DOWN — laisser courir
+
+③ New Value ENTRE VAL et VAH J-1
+  → Même Value = BALANCE = ROTATION
+  → Fade VAH / Buy VAL — thé menthe
+```
+
+#### Règle de décision — VAL comme porte principale
+
+```
+Prix sniffe VAL J-1 (descend vers VAL)
+├─ REJECT (LBF — Higher Low) → institutions refusent d'aller plus bas
+│   → Value reste dans l'ancienne zone → LONG → target VAH J-1
+└─ ACCEPT (2 barres closes sous VAL) → value migre sous J-1
+    → institutions acceptent prix plus bas → GO WITH DOWN
+
+Prix sniffe VAH J-1 (monte vers VAH)
+├─ REJECT (LAF — Lower High) → institutions refusent d'aller plus haut
+│   → Value reste dans l'ancienne zone → SHORT → target VAL J-1
+└─ ACCEPT (2 barres closes au-dessus VAH) → value migre au-dessus J-1
+    → institutions acceptent prix plus hauts → GO WITH UP
+```
+
+#### Cas d'école — Sep 3 2026 (New RTH vs Sep 2 RTH)
+
+| Référence | Valeur Sep 2 | Rôle Sep 3 |
+| :--- | :--- | :--- |
+| VAH Sep 2 | ~29 197-29 213 | Première porte nord |
+| POC Sep 2 | ~29 170-29 193 | Pivot équilibre |
+| VAL Sep 2 | ~29 128-29 136 | **Porte de décision clé** |
+
+```
+Si Sep 3 VALUE > 29 213 → GO WITH UP → Monthly POC 29 537
+Si Sep 3 VALUE < 29 128 → GO WITH DOWN → 29 002 / 28 947
+Si Sep 3 VALUE entre 29 128-29 213 → ROTATION → Fade bords
+```
+
+#### IMPORTANT — Balance déjà cassée
+
+La mega-balance (27 213 → 30 307) EST CASSÉE depuis Sep 1.
+**Ne plus l'utiliser comme référence active.**
+Le cadre actif = NEW RTH VALUE vs PREVIOUS RTH VALUE.
+La balance était le contexte → maintenant le contexte = Value Migration.
+
+---
+
 ### VAL/VAH VISIBLE — LA COUCHE INTERMÉDIAIRE (ajout Sep 3 2026)
 
 Salah a ajouté les **Value Area Lines (VAL/VAH)** visibles sur chart #28.
