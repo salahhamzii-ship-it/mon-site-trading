@@ -3393,6 +3393,52 @@ PVAL LOW (Old VAL)   ───────────────────�
 - → New VAH (29 213) < Old VAH (29 317) ET New VAL (29 120) ≈ Old VAL (29 124)
 - → **VAL INSIDE** (③) — Value stagne dans Old VA → rotation confirmée ⚖️
 
+---
+
+### ★★★★★ PHILOSOPHIE ULTIME — LES 3 PHRASES CULTES
+
+> **TRADING VALUE NOT PRICE**
+> **TRADING IS BETWEEN BALANCE AND EXCESS**
+> **LET THE TRADE COME TO YOU**
+
+---
+
+**TRADING VALUE NOT PRICE**
+→ Ce n'est pas le prix qui décide. C'est où la VALUE se construit.
+→ New Value vs PVAL = la seule question qui compte.
+→ Le chiffre n'est qu'une adresse. La VALUE est la décision.
+
+**TRADING IS BETWEEN BALANCE AND EXCESS**
+→ BALANCE = Value Area (VAL/VAH) — zone d'accord — fade les bords
+→ EXCESS = SD±2/±3, Poor High/Low, LAF/LBF — zone de rejet — reversal
+→ Le trade vit ENTRE ces deux pôles. Toujours. Partout.
+→ Inside Balance → rotation → Fade High / Buy Low
+→ At Excess → reversal → R13 (Excess), R34/35 (Questionable), R36/37 (LBF/LAF)
+
+**LET THE TRADE COME TO YOU**
+→ R7 : l'anxiété de l'ouverture tue → s'éloigner de l'écran
+→ R9 : 60% d'information suffit → ne pas attendre 100%
+→ R42 : Break + Retest + Rejet → jamais en poursuite
+→ ZAR → thé menthe → attendre que le marché vienne à toi
+→ Le chameau ne court pas après le train. Le train vient à la gare. 🐪
+
+```
+EXCESS (SD+2/SD+3 / Poor High)
+        ↓ REVERSAL
+    BALANCE (VAH)
+        ↓
+    BALANCE (POC)   ← ZAR ici — thé menthe
+        ↓
+    BALANCE (VAL)
+        ↓ REVERSAL
+EXCESS (SD-2/SD-3 / Poor Low)
+```
+
+> En 3 phrases, toute la méthode Dalton-Salah est résumée.
+> Tout le reste est application.
+
+---
+
 ### EN UNE PHRASE
 
 > SD+2 = fade. SD-2 = buy. VAL/VAH = les portes entre les deux. 1 trade à la fois. ZAR au milieu. Le camel dort et les points pleuvent. 🐪
