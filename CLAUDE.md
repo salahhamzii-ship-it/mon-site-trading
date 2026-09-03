@@ -3733,3 +3733,37 @@ EXCESS + §9 → entrer avec conviction maximale
 
 > Dalton a tout dit. Salah a tout appliqué. La Bible a tout documenté.
 > "TOUT EST LÀ." 🐪
+
+---
+
+## PARTIE 33 — PROJET FORMATION DALTON-SALAH (À FAIRE AU BON MOMENT)
+
+> Noté le 03/09/2026 — à lancer quand le timing est bon.
+
+### Les 3 Piliers
+
+| Pilier | Contenu | Statut |
+| :--- | :--- | :--- |
+| **1. Le Contenu** | Bible Traders (CLAUDE.md) — 32 parties, cas d'école réels, probabilités documentées, règles numérotées | ✅ PRÊT |
+| **2. L'Outil** | Calculateur + Artifact quotidien à 16h ET — Morning Plan vivant, chaque session = démonstration temps réel | ✅ PRÊT |
+| **3. La Structure** | Webinar #6 Dalton (PARTIE 32) — 11 modules : Simple Rules → Chunking → Ruling Reason → Slow Trader → etc. | ✅ PRÊT |
+
+### Ce qui manque (à compléter avant lancement)
+
+- [ ] **P1 au labo** — 46% des sessions, pattern le plus fréquent, non encore backtesté → priorité haute
+- [ ] **Feuille SignalP formalisée** — score /9, checklist 9 critères, Risk explicite
+- [ ] **Vidéos cas d'école** — Sep 1 (Short SD+3 + LBF SD-3) + Aug 28 (E bar Excess) = parfaites pour démo
+- [ ] **Plan de cours structuré** — 11 modules Webinar #6 → séquence pédagogique
+
+### Format envisagé
+
+- Formatrice : fille de Salah (bilingue, maîtrise Zoom)
+- Langue : bilingue FR/EN
+- Support : Bible PDF + calculateur live + artifact sessions
+- Audience : traders NQ/ES méthode Market Profile
+
+### Règle de lancement
+
+> Ne pas lancer tant que P1 n'est pas au labo et la feuille SignalP finalisée.
+> La Bible + le calculateur sont les fondations. La formation vient après.
+> "Je t'explique comment faire en partant de rien." 🐪
