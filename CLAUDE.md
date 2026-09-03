@@ -2261,6 +2261,33 @@ Condition : OVN Globex mardi soir haussier + IB Haussier mercredi.
 
 ## PARTIE 27 — GLOSSAIRE DALTON ÉTENDU
 
+### Excess — Définition canonique (Dalton verbatim)
+
+> *"Excess marks the end of one auction and the beginning of a new auction. It is visible within the two-way auction process via buying and selling tails. Excess occurs in all timeframes; it completes an auction. There are always multiple two-way auctions at work; one could be completed while another is still active. Balance and excess are the two most important concepts because they signify change or the potential for change to take place."*
+> — James Dalton
+
+**Points clés :**
+- Excess = **fin d'une auction + début d'une nouvelle** → signal de changement
+- Visible via **Buying Tail** (excess bas) et **Selling Tail** (excess haut)
+- Valable sur **tous les timeframes** (Asie, Londres, RTH, 30min, 78min)
+- Plusieurs auctions à l'œuvre simultanément — l'une se complète pendant qu'une autre reste active
+- **Balance + Excess = les 2 concepts les plus importants** de toute la méthode
+
+→ Connexion Salah : R13 (Excess signal maître), R17 (universalité timeframes), R36/R37 (LBF/LAF)
+→ Philosophie ultime : "TRADING IS ABOUT BALANCE AND EXCESS" ← directement issu de Dalton
+
+### Exogenous Event — Définition Dalton
+
+> *"An unexpected event that wasn't considered within anyone's model of expected market moving events; these events occur more than most mathematicians anticipate. They contribute to market uncertainty."*
+
+→ Connexion Salah : **R8** (incertitude extrême → cash, zéro trade / straddles)
+
+### Exponential Effect — Définition Dalton
+
+> *"As we accumulate either negative or positive information we can't simply assume that each new piece of information can be incorporated by simple mathematical addition. Each new piece of negative information may have the effect of rapidly multiplying the possible outcome of risk. Like the last grain of sand that collapses the castle."*
+
+→ Connexion Salah : R23 (ce qui ne se produit PAS), R24 (Double Low sans excès → probabilité multipliée), structure fragile = un grain de sable suffit
+
 ### Buying Tail
 Single TPOs (une seule lettre) en **bas** du profil. Indicateur de la réaction agressive des acheteurs face à un prix bas annoncé. Plus le nombre de single TPOs est élevé → plus la réaction acheteuse est agressive.
 → Connexion : R13 (Excess bas), R24 (Double Low sans excès)
