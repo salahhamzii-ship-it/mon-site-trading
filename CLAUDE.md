@@ -3398,7 +3398,7 @@ PVAL LOW (Old VAL)   ───────────────────�
 ### ★★★★★ PHILOSOPHIE ULTIME — LES 3 PHRASES CULTES
 
 > **TRADING VALUE NOT PRICE**
-> **TRADING IS BETWEEN BALANCE AND EXCESS**
+> **TRADING IS ABOUT BALANCE AND EXCESS**
 > **LET THE TRADE COME TO YOU**
 
 ---
@@ -3408,7 +3408,7 @@ PVAL LOW (Old VAL)   ───────────────────�
 → New Value vs PVAL = la seule question qui compte.
 → Le chiffre n'est qu'une adresse. La VALUE est la décision.
 
-**TRADING IS BETWEEN BALANCE AND EXCESS**
+**TRADING IS ABOUT BALANCE AND EXCESS**
 → BALANCE = Value Area (VAL/VAH) — zone d'accord — fade les bords
 → EXCESS = SD±2/±3, Poor High/Low, LAF/LBF — zone de rejet — reversal
 → Le trade vit ENTRE ces deux pôles. Toujours. Partout.
