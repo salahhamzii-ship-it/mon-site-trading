@@ -1904,7 +1904,7 @@ Distribution 1 : 28 880-28 965 | Distribution 2 : 28 730-28 851
 
 | Pattern | Définition | Fréquence | IB Confirmation |
 | :--- | :--- | :--- | :--- |
-| P1 | Londres H > Asie H ET L < Asie L | 46% | Neutre |
+| P1 | Londres H > Asie H ET L < Asie L | 22% | Neutre |
 | P2 | Londres inside Asie | 1% | — |
 | P3 | Londres H > Asie H ET L > Asie L | 29% | **100% Haussier** |
 | P4 | Londres H < Asie H ET L < Asie L | 21% | 56% Baissier |
@@ -1944,7 +1944,7 @@ Distribution 1 : 28 880-28 965 | Distribution 2 : 28 730-28 851
 
 ### Chantiers Pending (au 4 août 2026)
 
-- P1 au labo (46% des dates) — **priorité haute**
+- P1 au labo (22% des dates) — **priorité haute**
 - P2 au labo (1%) — à documenter
 - Amélioration feuille de route après P1/P2
 - Liaison Claude ↔ Sierra Chart (données temps réel) — futur
@@ -3750,7 +3750,7 @@ EXCESS + §9 → entrer avec conviction maximale
 
 ### Ce qui manque (à compléter avant lancement)
 
-- [ ] **P1 au labo** — 46% des sessions, pattern le plus fréquent, non encore backtesté → priorité haute
+- [ ] **P1 au labo** — 22% des sessions, non encore backtesté → priorité haute
 - [ ] **Feuille SignalP formalisée** — score /9, checklist 9 critères, Risk explicite
 - [ ] **Vidéos cas d'école** — Sep 1 (Short SD+3 + LBF SD-3) + Aug 28 (E bar Excess) = parfaites pour démo
 - [ ] **Plan de cours structuré** — 11 modules Webinar #6 → séquence pédagogique
@@ -4115,7 +4115,7 @@ Ratio Gain/Risque moyen : ~1.7:1
 ```
 P1 = Londres H > Asie H  ET  Londres L < Asie L
 → Londres englobe les deux côtés d'Asie = Outside Bar
-→ Fréquence : 46% des sessions
+→ Fréquence : 22% des sessions
 → Signal : SYMÉTRIQUE — pas de biais directionnel a priori
 ```
 
@@ -4134,10 +4134,10 @@ P1 = Londres H > Asie H  ET  Londres L < Asie L
 
 | Mesure | Formule | Signification |
 | :--- | :--- | :--- |
-| Asie High | Max(High) entre 18:00 et ~01:00 ET | Borne haute asiatique |
-| Asie Low | Min(Low) entre 18:00 et ~01:00 ET | Borne basse asiatique |
-| London High | Max(High) entre ~03:00 et 09:30 ET | Borne haute londonienne |
-| London Low | Min(Low) entre ~03:00 et 09:30 ET | Borne basse londonienne |
+| Asie High | Max(High) entre **18:00 et 02:00 ET** | Borne haute asiatique |
+| Asie Low | Min(Low) entre **18:00 et 02:00 ET** | Borne basse asiatique |
+| London High | Max(High) entre **02:00 et 08:00 ET** | Borne haute londonienne |
+| London Low | Min(Low) entre **02:00 et 08:00 ET** | Borne basse londonienne |
 | **P1 valide** | London H > Asia H **ET** London L < Asia L | Pattern confirmé |
 
 #### Étape 2 — Inventaire OVN
@@ -4171,15 +4171,37 @@ P1 = Londres H > Asie H  ET  Londres L < Asie L
 
 ---
 
-### Tableau de Collecte P1 (à remplir avec données)
+### Tableau de Collecte — TOUTES SESSIONS (classification ALN)
 
-| # | Date | Asia H | Asia L | London H | London L | P1 ✅ | IB | Break H | Break L | Both | Settle | Type |
+Semaine 1 : 15→26 juillet 2026 | Semaine 2 : 27 juillet→3 août 2026
+
+| # | Date | Asia H | Asia L | London H | London L | Pattern | IB | Break H | Break L | Both | Settle | Type |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | | | | | | | | | | | | |
-| 2 | | | | | | | | | | | | |
-| 3 | | | | | | | | | | | | |
-| 4 | | | | | | | | | | | | |
-| 5 | | | | | | | | | | | | |
+| 1 | 2026-07-15 | 29 825.75 | 29 614.25 | 29 777.25 | 29 559.00 | P4 | — | — | — | — | — | — |
+| 2 | 2026-07-16 | 29 698.75 | 29 482.50 | 29 626.25 | 29 302.50 | P4 | — | — | — | — | — | — |
+| 3 | 2026-07-19 | 29 088.25 | 28 856.75 | 29 092.50 | 28 865.00 | P3 | — | — | — | — | — | — |
+| 4 | 2026-07-20 | 28 963.00 | 28 709.00 | 29 109.00 | 28 766.00 | P3 | — | — | — | — | — | — |
+| 5 | 2026-07-21 | 29 186.50 | 28 919.75 | 29 117.50 | 28 857.50 | P4 | — | — | — | — | — | — |
+| 6 | 2026-07-22 | 29 337.00 | 29 140.00 | 29 173.00 | 29 017.00 | P4 | — | — | — | — | — | — |
+| 7 | 2026-07-23 | 29 282.00 | 29 021.00 | 29 137.00 | 28 779.00 | P4 | — | — | — | — | — | — |
+| 8 | 2026-07-26 | 28 765.00 | 28 447.75 | 28 938.50 | 28 580.50 | P3 | — | — | — | — | — | — |
+| 9 | 2026-07-27 | 28 195.00 | 27 871.25 | 28 052.75 | 27 839.25 | P4 | — | — | — | — | — | — |
+| 10 | 2026-07-28 | 28 177.25 | 27 640.50 | 28 060.00 | 27 736.75 | P2 | — | — | — | — | — | — |
+| **11** | **2026-07-29** | **27 697.00** | **27 420.50** | **27 745.00** | **27 337.00** | **P1 ★** | — | — | — | — | — | — |
+| 12 | 2026-07-30 | 28 592.00 | 28 389.75 | 28 642.00 | 28 450.25 | P3 | — | — | — | — | — | — |
+| 13 | 2026-08-02 | 28 698.25 | 28 536.50 | 28 661.25 | 28 403.50 | P4 | — | — | — | — | — | — |
+| 14 | 2026-08-03 | 29 074.75 | 28 831.50 | 29 246.00 | 29 007.50 | P3 | — | — | — | — | — | — |
+
+**Comptage (14 sessions) :**
+| Pattern | Count | % observé |
+| :--- | :--- | :--- |
+| P4 | 7 | 50% |
+| P3 | 4 | 29% |
+| P2 | 1 | 7% |
+| **P1** | **1** | **7%** |
+
+**P1 détecté — 29/07/2026 :** London H 27 745 > Asia H 27 697 (+48 pts) / London L 27 337 < Asia L 27 420.50 (−83.50 pts)
+→ IB / Break H / Break L à compléter avec données RTH Sierra Chart.
 
 ---
 
