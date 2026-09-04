@@ -4589,3 +4589,440 @@ NFP JOUR
 > Le NFP n'est pas le trade — c'est le catalyseur du trade préparé la veille.
 > Le chameau entre la nuit et laisse la tempête du désert faire le travail. 🐪
 
+
+---
+
+## PARTIE 38 — TRIPLE LAYER NFP ANALYSIS — JUL 2, 2026 (CONTRA CASE — MÊME MISS, SENS OPPOSÉ)
+
+> "MÊME NFP MISS, DIRECTION OPPOSÉE" — Le framework COUCHE 1 prime sur tout.
+> Jul 2 NFP : Actual 57K / Expected 114K / Previous 129K → Miss −57K → DOVISH
+> Aug 7 NFP : Actual −23K / Expected +85K → Miss −108K → DOVISH
+> RÉSULTAT : Jul 2 = −992 pts (sell-off massif) | Aug 7 = +336 pts (rally)
+> LEÇON : Ce n'est PAS le print NFP qui décide. C'est COUCHE 1 qui décide.
+
+---
+
+### ARCHITECTURE TRIPLE LAYER — JUL 2, 2026
+
+```
+COUCHE 1 — RTH Jul 1       : Qui a créé l'inventaire ? Delta, IB, structure.
+COUCHE 2 — OVN Jul 1→Jul 2 : ALN pattern. Signal directionnel nocturne.
+COUCHE 3 — RTH NFP Jul 2   : Spike = piège. RTH sell-off −992 pts.
+```
+
+**NFP Data :**
+| Donnée | Valeur |
+| :--- | :--- |
+| Actual | **57 000** |
+| Expected | **114 000** |
+| Previous | **129 000** |
+| Miss | **−57 000** |
+| Interprétation | Dovish → devrait être risk-on |
+| Résultat réel | **SELL-OFF −992 pts** ← contre-intuitif |
+
+---
+
+### COUCHE 1 — RTH VEILLE NFP (01/07/2026)
+
+#### Données Sierra Chart — Barres 30min RTH (colonnes : Date, Time, Open, High, Low, Close, Vol, Trades, BidVol, AskVol)
+
+**IB (09:30–10:30 ET) :**
+
+| Heure | High | Low | Close | BidVol | AskVol | Delta |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 09:30 | **30 223.75** | 30 077.50 | 30 094.25 | 36 497 | 32 958 | **−3 539** |
+| 10:00 | 30 263.50 | 30 038.50 | 30 222.50 | 27 040 | 26 908 | **−132** |
+| 10:30 | **30 356.50** | 30 175.75 | 30 248.75 | 22 038 | 22 671 | **+633** |
+
+**IB Analysis :**
+| Mesure | Valeur | Note |
+| :--- | :--- | :--- |
+| IB High | **30 356.50** (10:30 ET) | **High First** |
+| IB Low | **30 038.50** (10:00 ET) | — |
+| IB Midpoint | (30 356.50 + 30 038.50) / 2 = **30 197.50** | — |
+| IB Close | **30 248.75** | > Midpoint = Bull B (faible) |
+| IB Delta cumulé | −3 539 + (−132) + 633 = **−3 038** | **NÉGATIF — vendeurs agressifs à l'IB** |
+| IB Type | **HIGH FIRST + Delta négatif massif** | Signal baissier caché ★★★ |
+
+**Signal clé IB :** Prix monte à 30 356.50 MAIS Delta cumulé = −3 038 (vendeurs dominent à 9h30). Acheteurs de surface, vendeurs agressifs dessous. **Divergence majeure.**
+
+**Session complète RTH Jul 1 :**
+
+| Heure | High | Low | Close | BidVol | AskVol | Delta | Note |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 09:30 | 30 223.75 | 30 077.50 | 30 094.25 | 36 497 | 32 958 | **−3 539** | Flush IB bas |
+| 10:00 | 30 263.50 | 30 038.50 | 30 222.50 | 27 040 | 26 908 | **−132** | Faible |
+| 10:30 | **30 356.50** | 30 175.75 | 30 248.75 | 22 038 | 22 671 | **+633** | **HIGH RTH — Poor High** |
+| 11:00 | 30 297.75 | 30 206.25 | 30 247.75 | 15 681 | 15 474 | **−207** | Début fade |
+| 11:30 | 30 277.25 | 30 207.75 | 30 233.50 | 12 199 | 11 893 | **−306** | Fade continu |
+| 12:00 | 30 258.25 | 30 178.75 | 30 182.50 | 10 895 | 10 677 | **−218** | Lunch fade |
+| 12:30 | 30 209.50 | 30 121.25 | 30 134.25 | 10 152 | 9 870 | **−282** | Continuation |
+| 13:00 | 30 177.50 | 30 065.50 | 30 118.25 | 10 498 | 10 071 | **−427** | Accélération baissière |
+| 13:30 | 30 155.25 | 30 097.50 | 30 147.00 | 7 617 | 7 498 | **−119** | Pause |
+| 14:00 | 30 181.00 | 30 104.50 | 30 170.50 | 8 075 | 8 178 | **+103** | Tentative rebond |
+| 14:30 | 30 191.00 | 30 102.50 | 30 108.50 | 8 290 | 8 074 | **−216** | Rebond échoue |
+| 15:00 | 30 138.50 | 30 052.75 | 30 085.25 | 8 791 | 8 451 | **−340** | Poursuite baisse |
+| 15:30 | 30 129.00 | 30 055.25 | 30 075.75 | 7 543 | 7 319 | **−224** | — |
+| 15:50 (MOC) | 30 103.00 | **30 008.50** | **30 042.75** | **11 826** | **11 575** | **−251** | **MOC sell** |
+
+**Delta cumulé RTH Jul 1 :** −3 539 −132 +633 −207 −306 −218 −282 −427 −119 +103 −216 −340 −224 −251 = **−5 525**
+
+#### Analyse R18 — DIVERGENCE INVERSE vs Aug 6
+
+```
+Jul 1 RTH :
+Delta cumulé = −5 525 (vendeurs dominants)
+Settle 30 042.75 sous High IB 30 356.50 (−313 pts fade)
+MOC bar : BidVol 11826 > AskVol 11575 → MOC sell-off confirmé
+
+R18 Diagnostic (inverse Aug 6) :
+Prix fade de 10:30 (High 30 356) → 16:00 (Low 30 008) = −348 pts
+Delta négatif tout le PM → VENDEURS AGRESSIFS
+Close sous AVWAP probable → inventaire LONG des acheteurs → SQUEEZE DOWN FUEL
+"Prix très au-dessus du POC = trop long → risque de liquidation baissière" — R18
+```
+
+#### Structure IB — High First Pattern
+
+**Au lieu de :** Low First → absorption → Bull A (comme Aug 6)
+**On a :** **High First → distribution → fade PM → Bear signal**
+
+```
+10:30 High 30 356.50 = RTH HIGH (jamais repassé)
+       ↓
+Fade PM = −313 pts jusqu'au settle 30 042.75
+       ↓
+MOC Delta −251 = institutions vendent en clôture
+```
+
+#### Niveaux clés RTH Jul 1
+
+| Niveau | Prix | Note |
+| :--- | :--- | :--- |
+| RTH High | **30 356.50** (10:30 ET) | Poor High — R34 |
+| RTH Low | **30 008.50** (15:50 ET) | Low final (non excess) |
+| **Settle** | **30 042.75** | = Low zone = biais baissier clair |
+| TPO POC (estimé) | ~30 180–30 220 | Settle 140–177 pts sous POC |
+| Halfback | (30 356.50 + 30 008.50) / 2 = **30 182.50** | Settle 140 pts sous halfback |
+
+**R18 ALARME :** Settle 140 pts sous POC estimé = "prix très au-dessus du POC" IN REVERSE → prix SOUS le POC = trop LONG → risque de LIQUIDATION baissière si surprise news.
+
+#### Single Prints — Zone d'air Nord
+
+```
+High RTH     : 30 356.50
+TPO VAH (est): ~30 285–30 320
+─────────────────────────────
+ZONE AIR :    ~30 285 → 30 356 = ~71 pts
+→ WWSHD nord (mais direction baissière prime)
+→ NFP spike VERS cette zone = piège potentiel R34
+```
+
+#### Résumé COUCHE 1 — Signal Force Score
+
+| Condition | Score Jul 1 | vs Aug 6 |
+| :--- | :--- | :--- |
+| Delta J-1 > ±3 000 | **★** (−5 525 = BAISSIER) | ★ (HAUSSIER) |
+| R18 Divergence | **★** (close sous POC + delta négatif = longs piégés) | ★ (delta+ / close sous AVWAP = shorts piégés) |
+| Single Prints > 100 pts | ✗ (71 pts seulement) | ★ (182 pts) |
+| ALN P3/P4 + IB | **★ (P4 baissier)** — voir COUCHE 2 | ★ (P3 haussier) |
+| §9 NQ + ES | À confirmer | ★ |
+| **TOTAL** | **3★ baissiers** | **5★ haussiers** |
+
+**DÉCISION 08:00 NFP :** 3★ baissiers → HOLD SHORT ou EXIT CONSERVATEUR (pas de long).
+Biais directionnel = **BAISSIER** — NFP spike haussier = PIÈGE (R34 Questionable High).
+
+---
+
+### COUCHE 2 — OVN VEILLE NFP (01/07 18:00 → 02/07 09:30 ET)
+
+#### ALN Pattern — P4 ✅
+
+**Limites temporelles :**
+- Asia : 18:00 → 02:00 ET (Jul 1 18h → Jul 2 02h)
+- London : 02:00 → 08:00 ET (Jul 2)
+
+**Données Sierra Chart OVN :**
+
+| Période | High | Low | Heure High | Heure Low |
+| :--- | :--- | :--- | :--- | :--- |
+| **Asia** | **30 229.00** | **30 037.25** | ~22:40 ET Jul 1 | ~01:40 ET Jul 2 |
+| **London** | **30 021.50** | **29 826.25** | ~07:00 ET Jul 2 | ~03:10 ET Jul 2 |
+
+```
+P4 VÉRIFIÉ :
+London H (30 021.50) < Asia H (30 229.00) ✅ (−207.50 pts)
+London L (29 826.25) < Asia L (30 037.25) ✅ (−211.00 pts)
+→ P4 CONFIRMÉ — signal BAISSIER
+→ Probabilité IB Baissier : 56%
+→ Cassure London Low : 75%
+→ Cassure London High : 68.6%
+```
+
+#### Comportement OVN — Structure P4 Classic
+
+```
+18:00 ET (Jul 1) : Open OVN = 30 042.75 (Settle Jul 1)
+Asie : Remontée vers 30 229 (22:40 ET) → LAF potentiel
+Londres : Breakdown sous 30 037 (Asia Low) → 29 826
+→ Londres perce l'Asia Low de 211 pts
+→ Inventaire OVN = SHORT (prix 240 pts sous High Asie)
+```
+
+**Inventaire OVN à 09:30 ET :**
+| Mesure | Valeur |
+| :--- | :--- |
+| Settle Jul 1 | 30 042.75 |
+| Close OVN ~09:20 ET | ~29 950–30 020 (London zone) |
+| Inventaire approx. | **Short −50 à −100 pts** |
+| ALN biais | **P4 baissier** — London breakdown |
+
+**Règle P4 — Plan standard :**
+```
+① Casse < London Low (29 826) + §9 → SHORT → structure précédente
+② LBF au-dessus London High (30 021) → LONG → High Asie
+③ Entre Low et High Londres → Pas de trade
+```
+
+#### ★★★★★ PRE-NFP SPIKE 08:30 ET — LE PIÈGE ABSOLU
+
+**Données Sierra Chart 08:00–09:30 ET :**
+
+| Heure | High | Low | Close | Delta | Note |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 08:00 | 30 097.25 | 30 017.25 | 30 086.25 | TBD | Pré-NFP calme |
+| **08:30** | **30 320.00** | 29 960.00 | 30 008.50 | négatif | **NFP SPIKE — TRAP** |
+| 09:00 | 30 068.25 | 29 897.50 | 29 924.50 | négatif | Cascade post-spike |
+| 09:20 | 29 959.25 | 29 867.25 | 29 898.50 | négatif | Continuation |
+
+**NFP Spike 08:30 ET :**
+- High bar = **30 320.00** → dépasse High Asie (30 229) de +91 pts → **LAF MASSIF**
+- Close bar = **30 008.50** → efface TOUT le spike → **PIÈGE RETAIL PARFAIT**
+- Delta = négatif → vendeurs dominants PENDANT le spike haussier
+- R34 activé : atteint trop vite (1 barre) = **Questionable High ★★★★★**
+
+```
+NFP TRAP RULE VALIDÉE :
+07:30→08:29 = zone interdite → personne n'achète au-dessus
+08:30 spike 30 320 = piège retail → ferme à 30 008 = même ouverture
+Tout retard à la NFP TRAP Rule = −312 pts en 1 barre
+```
+
+#### Résumé COUCHE 2
+
+```
+✅ P4 : London H < Asia H ET London L < Asia L → baissier 56%
+✅ London breakdown : 29 826 (−211 pts sous Asia Low) = momentum baissier nocturne
+✅ Inventaire Short : close OVN sous settle Jul 1
+✅ Pre-NFP spike 30 320 = LAF = Questionable High R34 → SHORT confirmé
+✅ NFP Trap Rule : spike fermé = piège → ne pas acheter
+```
+
+---
+
+### COUCHE 3 — RTH NFP (02/07/2026)
+
+#### Données Sierra Chart RTH 10-min — Session complète
+
+| Heure | High | Low | Close | BidVol | AskVol | Delta | Note |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 09:30 | 30 081.00 | 29 849.75 | 29 885.50 | 22 244 | 19 685 | **−2 559** | IB Low First |
+| 09:40 | 29 946.75 | 29 787.25 | 29 810.50 | 22 047 | 19 019 | **−3 028** | Cascade |
+| 09:50 | 29 856.50 | 29 762.75 | 29 850.75 | 17 196 | 16 237 | **−959** | — |
+| 10:00 | **30 293.50** | 29 848.25 | 30 179.50 | 31 553 | 35 271 | **+3 718** | Counter push |
+| 10:10 | 30 253.50 | 30 112.75 | 30 153.50 | 17 741 | 17 281 | **−460** | Début fade |
+| 10:20 | 30 194.50 | 30 038.75 | 30 052.50 | 17 024 | 16 344 | **−680** | Fade |
+| 10:30 | 30 105.25 | 29 974.75 | 29 981.25 | 14 695 | 13 855 | **−840** | Acceleration |
+| 10:40 | 30 006.50 | 29 868.50 | 29 900.00 | 17 386 | 15 948 | **−1 438** | **Distribution forte** |
+| 10:50 | 29 941.75 | 29 839.75 | 29 860.00 | 13 039 | 12 011 | **−1 028** | — |
+| 11:00 | 29 900.50 | 29 770.50 | 29 828.50 | 13 688 | 12 576 | **−1 112** | Sous London Low |
+| 11:10 | 29 886.75 | 29 773.25 | 29 786.75 | 9 958 | 9 191 | **−767** | — |
+| 11:20 | 29 848.00 | 29 696.75 | 29 718.75 | 11 685 | 10 443 | **−1 242** | Accélération |
+| 11:30 | 29 742.25 | 29 640.00 | 29 667.50 | 10 631 | 9 545 | **−1 086** | — |
+| 11:40 | 29 726.00 | 29 620.75 | 29 647.25 | 8 943 | 8 165 | **−778** | — |
+| 11:50 | 29 688.75 | 29 558.75 | 29 567.75 | 10 001 | 8 896 | **−1 105** | — |
+| 12:00 | 29 606.00 | 29 517.00 | 29 566.50 | 7 918 | 7 264 | **−654** | Lunch flush |
+| 12:10 | 29 609.50 | 29 519.75 | 29 561.75 | 6 509 | 6 105 | **−404** | — |
+| 12:20 | 29 601.75 | 29 482.50 | 29 502.75 | 7 455 | 6 897 | **−558** | — |
+| 12:30 | 29 545.00 | 29 431.25 | 29 460.50 | 7 215 | 6 644 | **−571** | — |
+| 12:40 | 29 510.25 | 29 391.25 | 29 436.25 | 6 498 | 6 014 | **−484** | — |
+| 12:50 | 29 493.50 | 29 346.00 | 29 372.25 | 6 849 | 6 186 | **−663** | — |
+| 13:00 | 29 416.75 | 29 289.25 | 29 368.25 | 6 789 | 6 383 | **−406** | — |
+| 13:10 | 29 424.50 | 29 282.00 | 29 380.00 | 6 290 | 5 891 | **−399** | — |
+| 13:20 | 29 430.25 | 29 285.50 | 29 344.25 | 5 905 | 5 501 | **−404** | — |
+| 13:30 | 29 432.50 | 29 305.00 | 29 327.00 | 5 483 | 5 201 | **−282** | — |
+| 13:40 | 29 394.00 | 29 296.75 | 29 316.50 | 4 912 | 4 668 | **−244** | — |
+| **13:50** | 29 382.25 | **29 328.50** | 29 366.75 | 4 729 | 4 535 | **−194** | **RTH LOW** |
+| 14:00 | 29 438.75 | 29 316.00 | 29 407.75 | 4 980 | 5 101 | **+121** | LBF début |
+| 14:10 | 29 479.25 | 29 376.25 | 29 458.25 | 4 508 | 4 819 | **+311** | Rebond |
+| 14:20 | 29 538.25 | 29 434.00 | 29 524.75 | 4 356 | 4 742 | **+386** | — |
+| 14:30 | 29 567.75 | 29 481.75 | 29 500.25 | 4 215 | 4 427 | **+212** | — |
+| 14:40 | 29 541.75 | 29 476.50 | 29 516.50 | 3 867 | 3 997 | **+130** | — |
+| 14:50 | 29 562.75 | 29 481.25 | 29 541.25 | 3 779 | 3 989 | **+210** | — |
+| 15:00 | 29 573.00 | 29 504.00 | 29 542.75 | 3 695 | 3 883 | **+188** | — |
+| 15:10 | 29 579.25 | 29 519.75 | 29 526.50 | 3 247 | 3 354 | **+107** | — |
+| 15:20 | 29 551.25 | 29 497.75 | 29 533.25 | 2 999 | 3 101 | **+102** | — |
+| 15:30 | 29 576.50 | 29 506.50 | 29 546.75 | 3 312 | 3 433 | **+121** | — |
+| **15:50 (Settle)** | 29 571.50 | 29 513.25 | **29 538.00** | 5 123 | 5 287 | **+164** | **SETTLE** |
+
+#### Métriques clés RTH Jul 2
+
+| Donnée | Valeur | Note |
+| :--- | :--- | :--- |
+| Open RTH 09:30 | **29 885.50** | Under Asia High |
+| **High RTH** | **30 293.50** (10:00 ET) | Counter push — échoue |
+| **Low RTH** | **29 328.50** (13:50 ET) | Cascade −965 pts depuis High RTH |
+| **Settle** | **29 538.00** | P-shape recovery PM |
+| Settle vs NFP Spike | 29 538 vs 30 320 spike | **−782 pts sous le piège** |
+
+#### ★★★★★ CHRONOLOGIE NFP JUL 2 — LE SCENARIO PARFAIT
+
+```
+PRE-NFP
+07:30 ET → zone interdite (NFP Trap Rule)
+08:30 ET → Spike 30 320 → ferme 30 008 = PIÈGE
+              ↓
+09:00-09:40 → Cascade immédiate (Delta −2 559, −3 028)
+              ↓
+10:00 ET → Counter push 30 293.50 → DEUXIÈME PIÈGE
+           Delta +3 718 = acheteurs se font piéger
+              ↓
+10:10→13:50 → Sell-off continu −964 pts (30 293 → 29 328)
+              ↓ (21 barres négatives consécutives)
+13:50 ET → LOW 29 328.50
+              ↓
+14:00→15:50 → P-shape recovery (R19/20 — short covering)
+              ↓
+Settle → 29 538 (PM rebond = couverture de shorts, pas new money)
+```
+
+**Delta cumulé RTH Jul 2 :** (AM) −2 559 −3 028 −959 +3 718 −460 ... (PM flush) ... −194 / (PM recovery) +121 +311 +386 ... **Net estimé = fortement négatif AM, légèrement positif PM = session vendeuse nette**
+
+#### Performance — SHORT depuis OVN
+
+| | Valeur |
+| :--- | :--- |
+| Entrée SHORT optimale | OVN après P4 London breakdown ~30 021 (London High) |
+| RTH High (deuxième piège) | 30 293.50 |
+| RTH Low | 29 328.50 |
+| **Gain swing optimal** | **+692 pts** (30 021 → 29 328.50) |
+| Gain si entré RTH post-spike close | ~30 008.50 → 29 328.50 = **+680 pts** |
+
+**Gain réel si NFP Trap Rule respectée :**
+- Pas de LONG au spike 30 320 (piège évité = +782 pts capital préservé)
+- SHORT maintenu depuis OVN ou pris après spike fermé = **+680 pts**
+
+---
+
+### SYNTHÈSE COMPARATIVE — AUG 7 vs JUL 2
+
+| Élément | Aug 7, 2026 (LONG) | Jul 2, 2026 (SHORT) |
+| :--- | :--- | :--- |
+| **NFP Print** | −108K (miss dovish) | −57K (miss dovish) |
+| **Direction attendue** | Risk-on (logique) | Risk-on (logique) |
+| **Direction réelle** | RALLY +336 pts | SELL-OFF −992 pts |
+| **COUCHE 1 Delta** | +7 234 (haussier) | −5 525 (baissier) |
+| **COUCHE 1 R18** | Shorts piégés | Longs piégés |
+| **COUCHE 1 IB** | Bull A / Low First | High First / fade |
+| **COUCHE 2 ALN** | P3 (haussier 80.8%) | P4 (baissier 56%) |
+| **COUCHE 2 OVN** | LBF SD-2 / Long | P4 breakdown / Short |
+| **COUCHE 3 Spike** | Rally confirmé | Spike = PIÈGE absolu |
+| **Signal Force Score** | 5★ → HOLD LONG | 3★ baissiers → SHORT ou cash |
+
+---
+
+### ★★★★★ RÈGLE MAÎTRESSE — NFP MULTI-LAYERED
+
+**En 3 mots : STRUCTURE > PRINT.**
+
+```
+NFP Print dovish + STRUCTURE haussière (COUCHE 1) → RALLY
+NFP Print dovish + STRUCTURE baissière (COUCHE 1) → SELL-OFF
+
+Le print NFP indique la FORCE du mouvement.
+La STRUCTURE détermine la DIRECTION.
+Sans lire COUCHE 1, le print NFP est une pièce sans face.
+```
+
+**Règle de décision 08:00 ET :**
+
+```
+Si Signal Force Score ≥ 4★ HAUSSIERS + NFP dovish → HOLD LONG → +300 à +500 pts
+Si Signal Force Score ≥ 3★ BAISSIERS + NFP dovish → SHORT/EXIT → protège capital
+Si Score mixte (2H + 2B) → EXIT CONSERVATEUR avant 08:30 → cash = profit
+```
+
+**La NFP Trap Rule protège dans les DEUX cas :**
+- Aug 7 : pas de short au pré-marché piège (évite −253 pts)
+- Jul 2 : pas de long au spike 30 320 (évite −782 pts)
+
+---
+
+### FRAMEWORK NFP — MISE À JOUR APRÈS 2 CAS
+
+| Indicateur | Poids | Lecture HAUSSIÈRE | Lecture BAISSIÈRE |
+| :--- | :--- | :--- | :--- |
+| Delta J-1 | ★ | > +3 000 | < −3 000 |
+| IB Type J-1 | ★ | Low First + Bull A | High First + Bear |
+| R18 Divergence | ★ | Shorts piégés (delta+ / close sous AVWAP) | Longs piégés (delta− / close sous POC) |
+| ALN Pattern OVN | ★ | P3 (80.8% break H) | P4 (75% break L) |
+| §9 NQ + ES | ★ | Simultané haussier | Simultané baissier |
+| **Score** | **/5** | **≥4★ → LONG** | **≥3★ baissiers → SHORT/cash** |
+
+**Statistique initiale (2 cas) :**
+| Score | Décision | Résultat |
+| :--- | :--- | :--- |
+| 5★ haussiers (Aug 7) | HOLD LONG | +336 pts ✅ |
+| 3★ baissiers (Jul 2) | SHORT ou cash | +680 pts ✅ (ou capital protégé) |
+
+---
+
+### LEÇONS SESSION JUL 2
+
+**1. P4 = contexte, pas certitude**
+P4 donne 56% de probabilité baissière RTH. MAIS combiné avec delta J-1 −5 525 et High First, le signal devient 3★ baissier = conviction suffisante.
+
+**2. Double piège NFP Jul 2**
+Premier piège : spike 30 320 (08:30) → ferme 30 008 = −312 pts pour les acheteurs.
+Deuxième piège : counter push 30 293 (10:00, delta +3 718) → renversement immédiat.
+Deux pièges acheteurs consécutifs = distribution institutionnelle classique.
+
+**3. P-shape PM = short covering pur (R19/20)**
+Rebond 13:50 → 15:50 : +209 pts MAIS AVWAP descendant, delta faible → couverture de shorts, pas new money. Ne jamais retourner long sur ce signal.
+
+**4. Settle 29 538 = montée PM = piège haussier pour le lendemain**
+La journée se clôture sur P-shape = R20. Le lendemain doit afficher OTF Lower à moins de données contraires.
+
+**5. "LA STRUCTURE EST LE JUGE — PAS LE PRINT"**
+Le print NFP est un catalyseur. La structure J-1 est le juge. Les deux doivent être lus ENSEMBLE. Un seul suffit à se tromper de 1 000 pts.
+
+---
+
+### X POST — SETTLE (English only)
+
+> "Jul 2 NFP: -57K miss (dovish). NQ sold -992pts from spike high.
+> Why? COUCHE 1 was BEARISH: delta -5,525 / High First IB / P4 overnight.
+> Same miss as Aug 7. Opposite structure. Opposite outcome.
+> Structure > Print. Always. 🐪"
+
+---
+
+### RÉSUMÉ TRIPLE LAYER — JUL 2 NFP
+
+| Couche | Signal clé | Décision |
+| :--- | :--- | :--- |
+| RTH J-1 | Delta −5 525 / R18 longs piégés / High First IB | Squeeze DOWN fuel → biais short ★★★ |
+| OVN | P4 London breakdown (29 826) / inventaire short | P4 signal baissier → court OVN |
+| RTH NFP | Spike 30 320 = PIÈGE (ferme 30 008) / sell-off −992 pts | SHORT / cash — NFP Trap Rule protège |
+
+**Cascade causale :**
+```
+Delta J-1 −5 525 (acheteurs piégés haut = longs = fuel sell-off)
+    → P4 OVN + London breakdown = momentum baissier nocturne
+        → NFP spike = piège final = liquidation forcée des longs
+            → −992 pts cascade confirmée
+```
+
+> R22 inversé : "Prix très au-dessus du POC = trop long → risque de liquidation baissière."
+> Les acheteurs de Jul 1 (High First à 30 356) ont liquidé sur le spike Jul 2.
+> Le chameau voit les pièges des deux côtés du désert. 🐪
