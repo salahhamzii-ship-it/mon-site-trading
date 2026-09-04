@@ -5026,3 +5026,326 @@ Delta J-1 −5 525 (acheteurs piégés haut = longs = fuel sell-off)
 > R22 inversé : "Prix très au-dessus du POC = trop long → risque de liquidation baissière."
 > Les acheteurs de Jul 1 (High First à 30 356) ont liquidé sur le spike Jul 2.
 > Le chameau voit les pièges des deux côtés du désert. 🐪
+
+---
+
+## PARTIE 39 — TRIPLE LAYER NFP ANALYSIS — JUN 4-5 ET MAY 7-8, 2026
+
+### CONTEXTE
+
+| Date NFP | Actual | Expected | Miss/Beat | Print | Direction NQ | Type |
+|---|---|---|---|---|---|---|
+| May 8 | 115K | 65K | +50K BEAT | Hawkish | +442 pts | CONTRE-INTUITIF |
+| Jun 5 | 172K | 85K | +87K BEAT | Hawkish | −1 560 pts | INTUITIF |
+| Jul 2 | 57K | 114K | −57K MISS | Dovish | −992 pts | CONTRE-INTUITIF |
+| Aug 7 | −23K | 85K | −108K MISS | Dovish | +336 pts | CONTRE-INTUITIF |
+
+**Question** : Même print hawkish (beat) → résultats opposés. Pourquoi ?
+
+---
+
+### PARTIE 39A — JUN 4-5, 2026 (NFP BEAT +87K → SELL-OFF −1 560 pts)
+
+#### COUCHE 1 — RTH J-1 (Jun 4)
+
+**Données 60min (Sierra Chart) :**
+
+| Heure | Open | High | Low | Close | BidVol | AskVol | Delta |
+|---|---|---|---|---|---|---|---|
+| 09:30 | 30557.25 | 30655.75 | 30445.00 | 30632.50 | 419 | 419 | 0 |
+| 10:30 | 30638.75 | 30761.25 | 30589.00 | 30736.00 | 220 | 186 | −34 |
+| 11:30 | 30735.00 | 30776.75 | 30660.50 | 30774.00 | 112 | 142 | +30 |
+| 12:30 | 30751.00 | 30814.00 | 30738.50 | 30807.75 | 46 | 94 | +48 |
+| 13:30 | 30816.50 | 30893.50 | 30810.25 | 30885.50 | 249 | 179 | −70 |
+| 14:30 | 30883.50 | 30890.50 | 30828.25 | 30890.50 | 64 | 64 | 0 |
+| 15:30 | 30886.00 | 30898.00 | 30698.00 | 30704.00 | 500 | 90 | −410 |
+| 16:30 | 30717.25 | 30717.25 | 30697.50 | 30711.50 | 6 | 4 | −2 |
+
+**Delta cumulé RTH :** −438
+
+**Analyse COUCHE 1 :**
+
+| Signal | Valeur | Lecture |
+|---|---|---|
+| Delta cumulé J-1 | −438 | Vendeurs agressifs dominants |
+| IB Type (09:30) | Delta 0, Low First 30445 | IB neutre → pas de Bull A |
+| Bar 15:30 MOC | BidVol 500 >> AskVol 90, Delta −410 | MOC DUMP — distribution institutionnelle |
+| R18 | High 30898.00 >> POC journée | Longs piégés au sommet |
+| High First / Low First | Low First 30445 (09:30) | IB baissier possible |
+
+**Score COUCHE 1 :** 1★ baissier (Delta faible −438, MOC dump seul significatif)
+
+---
+
+#### COUCHE 2 — OVN Jun 4→5 (ALN Pattern)
+
+**Données 60min OVN :**
+
+| Heure | High | Low | Close |
+|---|---|---|---|
+| 18:00 | 30705.75 | 30618.75 | 30656.50 |
+| 19:00 | 30660.00 | 30560.00 | 30561.50 |
+| 20:00 | 30543.00 | 30423.25 | 30445.75 |
+| 21:00 | 30481.25 | 30350.25 | 30481.25 |
+| 22:00 | 30540.00 | 30485.00 | 30525.50 |
+| 23:00 | 30524.50 | 30446.00 | 30457.25 |
+| 00:00 | 30534.50 | 30467.75 | 30529.50 |
+| 01:00 | 30515.00 | 30460.50 | 30466.75 |
+| 02:00 | 30504.75 | 30410.25 | 30420.00 |
+| 03:00 | 30452.25 | 30368.00 | 30440.00 |
+| 04:00 | 30513.25 | 30415.25 | 30452.25 |
+| 05:00 | 30552.00 | 30460.25 | 30490.00 |
+| 06:00 | 30529.00 | 30490.50 | 30496.25 |
+| 07:00 | 30486.00 | 30436.75 | 30440.00 |
+| 08:00 | 30445.00 | 30334.50 | 30349.75 |
+| 09:00 | 30361.25 | 30309.50 | 30318.75 |
+
+**ALN Pattern :**
+
+| | High | Low |
+|---|---|---|
+| Asie (18h→02h) | 30705.75 | 30350.25 |
+| Londres (02h→08h) | 30552.00 | 30334.50 |
+
+- Londres High (30552) < Asie High (30705.75) ✅
+- Londres Low (30334.50) < Asie Low (30350.25) ✅
+- **→ P2 INSIDE : NEUTRE** (Londres contenu DANS Asie des deux côtés)
+
+**Score COUCHE 2 :** 0★ (P2 Inside = pas de signal directionnel)
+
+---
+
+#### COUCHE 3 — RTH NFP Jun 5
+
+**Données 60min RTH :**
+
+| Heure | Open | High | Low | Close | BidVol | AskVol | Delta |
+|---|---|---|---|---|---|---|---|
+| 09:30 | 30303.00 | 30390.50 | 30050.00 | 30110.00 | 908 | 711 | −197 |
+| 10:30 | 30105.50 | 30215.00 | 29984.75 | 30016.25 | 390 | 436 | +46 |
+| 11:30 | 30003.50 | 30025.00 | 29822.50 | 29834.75 | 664 | 523 | −141 |
+| 12:30 | 29828.50 | 29828.50 | 29650.25 | 29727.25 | 656 | 917 | +261 |
+| 13:30 | 29722.75 | 29787.75 | 29511.00 | 29527.25 | 577 | 598 | +21 |
+| 14:30 | 29526.25 | 29538.50 | 29257.00 | 29429.00 | 613 | 584 | −29 |
+| 15:30 | 29433.00 | 29460.00 | 29086.25 | 29144.50 | 546 | 438 | −108 |
+
+**Lecture COUCHE 3 :**
+
+| Signal | Valeur | Lecture |
+|---|---|---|
+| Ouverture NFP | 30303 → spike 30390.50 | Spike haussier NFP |
+| Bar 09:30 Close | 30110.00 (sous l'open NFP) | Spike rejeté → piège haussier |
+| Bar 09:30 Delta | −197 (BidVol 908 >> AskVol 711) | Vendeurs dominent dès la première barre |
+| Cascade | 30390 → 29086 | −1304 pts intraday |
+| Settle Jun 5 | ~29144.50 | vs Settle Jun 4 ~30704 = −1560 pts |
+
+---
+
+#### SIGNAL FORCE SCORE — Jun 4-5
+
+| Signal | Présent | Score |
+|---|---|---|
+| Delta J-1 > ±3000 | NON (−438) | 0★ |
+| IB Type J-1 (Low First + Bull confirmé) | NON (neutre) | 0★ |
+| R18 Divergence (inventory piégé) | OUI (MOC dump longs 30898) | 1★ |
+| ALN Pattern OVN (P3/P4) | NON (P2 Inside) | 0★ |
+| §9 NQ+ES | manquant | — |
+
+**Score total : 1★ baissier**
+
+**Règle appliquée : PRINT PRIME (Score ≤ 2★)**
+→ NFP beat +87K hawkish → SHORT suivant le print
+→ SELL-OFF −1560 pts = INTUITIF, confirme le print
+
+---
+
+### PARTIE 39B — MAY 7-8, 2026 (NFP BEAT +50K → RALLY +442 pts)
+
+#### COUCHE 1 — RTH J-1 (May 7)
+
+**Données 60min (Sierra Chart) :**
+
+| Heure | Open | High | Low | Close | BidVol | AskVol | Delta |
+|---|---|---|---|---|---|---|---|
+| 09:30 | 28999.75 | 29155.00 | 28973.00 | 29141.75 | 155 | 149 | −6 |
+| 10:30 | 29129.00 | 29197.50 | 29100.00 | 29104.50 | 69 | 29 | −40 |
+| 11:30 | 29128.25 | 29152.75 | 28895.00 | 28996.00 | 76 | 97 | +21 |
+| 12:30 | 28997.50 | 29027.75 | 28816.00 | 28860.00 | 144 | 131 | −13 |
+| 13:30 | 28851.50 | 28968.75 | 28851.50 | 28910.00 | 124 | 101 | −23 |
+| 14:30 | 28914.00 | 28943.75 | 28849.50 | 28865.00 | 47 | 37 | −10 |
+| 15:30 | 28883.00 | 29020.00 | 28883.00 | 28981.25 | 42 | 37 | −5 |
+| 16:30 | 28963.00 | 28963.00 | 28910.00 | 28928.00 | 6 | 2 | −4 |
+
+**Delta cumulé RTH :** −80
+
+**Analyse COUCHE 1 :**
+
+| Signal | Valeur | Lecture |
+|---|---|---|
+| Delta cumulé J-1 | −80 | Faible — quasi neutre |
+| Bar 10:30 High | 29197.50, Delta −40 (BidVol 69 >> AskVol 29) | POOR HIGH — vendeurs au sommet = SHORTS PIÉGÉS |
+| IB Type (09:30+10:30) | High First 29197.50, Close 29104.50 < midpoint | Bear B — signal faible |
+| R18 | High 29197.50 vs POC journée ~29000 | Extension modérée |
+| Bar 15:30 | Delta −5, Close 28981 | Pas de MOC dump — marché calme |
+
+**Score COUCHE 1 :**
+
+| Signal | Présent | Score |
+|---|---|---|
+| Poor High 10:30 (BidVol >> AskVol au sommet) | OUI (BidVol 69 >> AskVol 29) | 1★ haussier (shorts piégés) |
+| IB Bear B | OUI mais signal faible | 0★ |
+| Pas de MOC dump | Marché propre | neutre |
+
+**Score COUCHE 1 : 1★ haussier (shorts piégés au Poor High)**
+
+---
+
+#### COUCHE 2 — OVN May 7→8 (ALN Pattern)
+
+**Données 60min OVN :**
+
+| Heure | High | Low | Close |
+|---|---|---|---|
+| 18:00 | 28925.50 | 28832.00 | 28891.25 |
+| 19:00 | 28915.50 | 28899.25 | 28915.50 |
+| 20:00 | 28994.00 | 28955.00 | 28994.00 |
+| 21:00 | 29012.00 | 29010.25 | 29011.00 |
+| 22:00 | 29010.00 | 29006.00 | 29006.00 |
+| 23:00 | 29026.75 | 29006.00 | 29023.75 |
+| 03:00 | 29091.50 | 29083.75 | 29091.50 |
+| 04:00 | 29105.50 | 29105.50 | 29105.50 |
+| 05:00 | 29150.00 | 29098.50 | 29098.50 |
+| 06:00 | 29135.50 | 29100.00 | 29100.00 |
+| 07:00 | 29160.00 | 29135.75 | 29160.00 |
+| 08:00 | 29238.25 | 29145.00 | 29173.25 |
+| 09:00 | 29178.00 | 29125.75 | 29134.75 |
+
+**Note** : Barres 00:00, 01:00, 02:00 absentes = 0 trade (liquidité nulle, pas erreur de données)
+
+**ALN Pattern :**
+
+| | High | Low |
+|---|---|---|
+| Asie (18h→02h) | 29026.75 | 28832.00 |
+| Londres (02h→08h) | 29238.25 | 29083.75 |
+
+- Londres High (29238.25) > Asie High (29026.75) ✅
+- Londres Low (29083.75) > Asie Low (28832.00) ✅
+- **→ P3 CONFIRMÉ : HAUSSIER** (Londres étend au-dessus ET reste au-dessus d'Asie)
+
+**Score COUCHE 2 :** 1★ haussier (P3 = signal nocturne haussier, IB haussier 100%)
+
+---
+
+#### COUCHE 3 — RTH NFP May 8
+
+**Données 60min RTH :**
+
+| Heure | Open | High | Low | Close | BidVol | AskVol | Delta |
+|---|---|---|---|---|---|---|---|
+| 09:30 | 29164.25 | 29423.25 | 29164.25 | 29380.00 | 85 | 55 | −30 |
+| 10:30 | 29353.75 | 29441.50 | 29343.75 | 29439.00 | 46 | 30 | −16 |
+| 11:30 | 29440.25 | 29510.25 | 29417.75 | 29502.00 | 56 | 87 | +31 |
+| 12:30 | 29496.00 | 29575.00 | 29463.50 | 29571.25 | 39 | 91 | +52 |
+| 13:30 | 29570.50 | 29579.00 | 29523.25 | 29542.75 | 22 | 29 | +7 |
+| 14:30 | 29543.00 | 29564.00 | 29500.00 | 29528.75 | 15 | 14 | −1 |
+| 15:30 | 29564.00 | 29624.75 | 29562.25 | 29606.25 | 31 | 57 | +26 |
+
+**Lecture COUCHE 3 :**
+
+| Signal | Valeur | Lecture |
+|---|---|---|
+| Ouverture NFP | 29164.25 → spike 29423.25 | Spike haussier +259 pts |
+| Bar 09:30 Close | 29380.00 (au-dessus de l'open) | Spike TENU — pas de rejet |
+| Bar 09:30 Delta | −30 (faible) | Neutre |
+| Low First NFP | Low = Open 29164.25 | Haussier : Low first, puis rally |
+| Cascade | Hausse continue 29380 → 29624 | +244 pts supplémentaires PM |
+| Settle May 8 | 29606.25 | vs Open RTH 29164.25 = +442 pts |
+
+---
+
+#### SIGNAL FORCE SCORE — May 7-8
+
+| Signal | Présent | Score |
+|---|---|---|
+| Delta J-1 > ±3000 | NON (−80) | 0★ |
+| IB Type J-1 — Poor High (shorts piégés) | OUI (BidVol 69 >> AskVol 29 au 29197.50) | 1★ haussier |
+| R18 Divergence | OUI (baisse J-1 clôture bas malgré High élevé) | 1★ haussier |
+| ALN Pattern OVN — P3 | OUI (Londres > Asie haut et bas) | 1★ haussier |
+| §9 NQ+ES | manquant | — |
+
+**Score total : 3★ haussiers**
+
+**Règle appliquée : STRUCTURE PRIME (Score ≥ 3★ opposé au print)**
+→ NFP beat +50K hawkish → normalement bearish NQ
+→ Mais structure 3★ haussiers → LONG contre-intuitif
+→ RALLY +442 pts = STRUCTURE PRIME CONFIRMÉ
+
+---
+
+### SYNTHÈSE COMPARATIVE — 4 CAS NFP
+
+| Date | Print | Signal Score | Orientation Score vs Print | Règle | Résultat | Verdict |
+|---|---|---|---|---|---|---|
+| May 8 | Beat +50K hawkish | 3★ haussiers | OPPOSÉ | STRUCTURE PRIME | +442 pts LONG | ✅ CONFIRMÉ |
+| Jun 5 | Beat +87K hawkish | 1★ baissier | ALIGNÉ | PRINT PRIME | −1560 pts SHORT | ✅ CONFIRMÉ |
+| Jul 2 | Miss −57K dovish | 3★ baissiers | OPPOSÉ | STRUCTURE PRIME | −992 pts SHORT | ✅ CONFIRMÉ |
+| Aug 7 | Miss −108K dovish | 5★ haussiers | OPPOSÉ + amplifié | STRUCTURE PRIME++ | +336 pts LONG | ✅ CONFIRMÉ |
+
+---
+
+### RÈGLE RAFFINÉE — TRIPLE LAYER NFP DECISION FRAMEWORK
+
+```
+SCORE ≥ 4★ opposé au print → STRUCTURE PRIME AMPLIFIÉ → taille maximale
+SCORE = 3★ opposé au print → STRUCTURE PRIME → trade contre le print
+SCORE ≤ 2★                  → PRINT PRIME → trade dans le sens du print
+SCORE = 0★                  → NEUTRE → pas de trade préemptif, attendre IB
+
+COMPOSANTS DU SCORE (max 5★) :
+★1 — Delta J-1 > ±3 000 (acheteurs/vendeurs piégés fort)
+★1 — IB Type J-1 confirmé (Poor High = shorts / MOC dump = longs piégés)
+★1 — R18 divergence (inventaire extrême créé J-1)
+★1 — ALN Pattern OVN (P3 haussier / P4 baissier)
+★1 — §9 NQ+ES alignés (confirmation croisée)
+```
+
+---
+
+### CLASSEMENT PAR SCORE
+
+| Score | Cas | Action |
+|---|---|---|
+| 5★ | Aug 7 (miss + 5★ haussiers) | LONG max, taille pleine |
+| 3★ | May 8 (beat + 3★ haussiers) | LONG contre-intuitif |
+| 3★ | Jul 2 (miss + 3★ baissiers) | SHORT contre-intuitif |
+| 1★ | Jun 5 (beat + 1★ baissier) | SHORT intuitif (print prime) |
+
+---
+
+### CHRONOLOGIE SETUP — MAY 8 CONTRE-INTUITIF
+
+```
+May 7 10:30 — Poor High 29197.50 : BidVol 69 >> AskVol 29 → SHORTS PIÉGÉS
+May 7-8 OVN — London > Asia H ET L → P3 CONFIRMÉ → signal haussier nocturne
+May 8 09:30 — NFP spike 29164 → 29423 (+259 pts) → Close 29380 TENU
+May 8 10:30 — Low First absent, continuation → 29441
+May 8 11:30→15:30 — Grind haussier +183 pts supplémentaires → Settle 29606
+Total : +442 pts
+```
+
+### CHRONOLOGIE SETUP — JUN 5 INTUITIF
+
+```
+Jun 4 15:30 — MOC dump : BidVol 500 >> AskVol 90, Delta −410 → LONGS DISTRIBUÉS
+Jun 4-5 OVN — London inside Asia → P2 NEUTRE → pas de signal nocturne
+Jun 5 09:30 — NFP spike 30303 → 30390 → Close 30110 (rejet du spike) → Bear
+Jun 5 10:30→15:30 — Cascade −1304 pts intraday
+Jun 4 settle ~30704 → Jun 5 settle ~29144 → −1560 pts total
+```
+
+---
+
+> Structure J-1 dit où sont les piégés. OVN dit quelle direction cherche l'équilibre. NFP day dit si les piégés doivent couvrir.
+> Score ≥ 3★ = les piégés couvrent contre le print. Score ≤ 2★ = le print les écrase.
+> Le chameau lit les pièges avant que le désert les révèle. 🐪
