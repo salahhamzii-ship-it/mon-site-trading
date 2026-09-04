@@ -4242,3 +4242,350 @@ Session complète : 18:00 ET → 16:00 ET RTH suivant (44 barres 30min)
 
 **→ Fournir 5 à 10 sessions P1 récentes pour démarrer le labo.**
 
+
+---
+
+## PARTIE 37 — TRIPLE LAYER NFP ANALYSIS — AUG 7, 2026 (FRAMEWORK RÉUTILISABLE)
+
+> "ON VA ETUDIER PLUS D UN NFP" — Salah
+> Ce framework s'applique à CHAQUE NFP. Trois couches. Une décision.
+
+---
+
+### ARCHITECTURE TRIPLE LAYER
+
+```
+COUCHE 1 — RTH J-1       : Qui a créé l'inventaire ? Delta, single prints, R18.
+COUCHE 2 — OVN J-1→NFP  : ALN pattern. LBF/LAF SD. Entrée swing.
+COUCHE 3 — RTH NFP 08h30 : IB Terminus. Swing exit. NFP Trap Rule.
+```
+
+---
+
+### COUCHE 1 — RTH VEILLE NFP (06/08/2026)
+
+#### Données Sierra Chart — 13 barres complètes (09:30 → 15:30 ET)
+
+| Bar | Heure ET | High | Low | Close | BidVol | AskVol | Delta |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | 09:30 | 29 551.00 | **29 241.25** | 29 528.25 | 38 957 | 41 030 | **+2 073** |
+| 2 | 10:00 | 29 667.00 | 29 488.00 | 29 587.00 | 24 852 | 25 519 | **+667** |
+| 3 | 10:30 | 29 659.25 | 29 533.75 | 29 656.75 | 20 230 | 20 764 | **+534** |
+| 4 | 11:00 | **29 686.25** | 29 564.25 | 29 608.50 | 17 182 | 17 500 | **+318** |
+| 5 | 11:30 | 29 628.00 | 29 506.00 | 29 516.25 | 17 683 | 17 143 | **-540** |
+| 6 | 12:00 | 29 542.75 | 29 448.50 | 29 471.50 | 14 907 | 15 342 | **+435** |
+| 7 | 12:30 | 29 558.50 | 29 462.25 | 29 556.50 | 10 166 | 10 972 | **+806** |
+| 8 | 13:00 | 29 574.25 | 29 512.25 | 29 527.75 | 8 293 | 8 614 | **+321** |
+| 9 | 13:30 | 29 543.00 | 29 493.75 | 29 529.00 | 6 615 | 7 122 | **+507** |
+| 10 | 14:00 | 29 575.50 | 29 498.50 | 29 556.50 | 8 235 | 8 631 | **+396** |
+| 11 | 14:30 | 29 561.00 | 29 500.50 | 29 515.50 | 6 347 | 6 576 | **+229** |
+| 12 | 15:00 | 29 570.25 | 29 496.50 | 29 509.00 | 8 086 | 8 622 | **+536** |
+| 13 | 15:30 | 29 545.50 | 29 475.00 | **29 496.75** | 14 985 | 15 937 | **+952** |
+
+#### Niveaux clés RTH J-1
+
+| Niveau | Prix | Note |
+| :--- | :--- | :--- |
+| RTH High | **29 686.25** (11:00 ET) | Poor High potentiel — R34 |
+| RTH Low | **29 241.25** (09:30 ET) | Stop-hunt IB — LBF absorption |
+| **Settle** | **29 496.75** | = SD-1 zone — marché ferme sous AVWAP |
+| **AVWAP 16H close** | **29 522.34** | Settle 25 pts EN DESSOUS ← clé |
+| **TPO POC** | **29 570** | Settle 73 pts sous POC = déséquilibre |
+| **TPO VAH** | **29 504** | Settle légèrement sous VAH |
+| Halfback PRTH | **29 464** | (High+Low)/2 |
+
+#### Analyse R18 — DIVERGENCE MASSIVE
+
+**Delta cumulé RTH : +7 234** (12/13 barres positives)
+**Close : 29 496.75 — SOUS l'AVWAP (29 522.34)**
+
+```
+R18 Diagnostic :
+Prix descend de 11:00 → 15:30 (-189 pts)
+Delta cumulé = +7 234 → acheteurs absorbaient TOUTE la descente
+Close sous AVWAP = impression baissière de surface
+RÉALITÉ : inventaire excessivement SHORT des vendeurs → SQUEEZE FUEL ★★★★★
+```
+
+**Dalton R18 :** "Prix très en dessous du POC = trop short → risque de short squeeze."
+→ POC 29 570 / Settle 29 496 = **74 pts sous le POC**
+→ Delta positif + fermeture sous AVWAP = R18 activé au maximum
+
+#### Single Prints — WWSHD zone
+
+```
+RTH High : 29 686.25  ↑
+TPO VAH  : 29 504     ↑
+─────────────────────────
+ZONE AIR  : 29 504 → 29 686 = 182 pts de single prints
+→ WWSHD permanent (R27 étendu — air non visité)
+→ Aimant N+1 actif jusqu'au contact
+```
+
+#### IB Analysis J-1 (Bull A)
+
+| Mesure | Valeur |
+| :--- | :--- |
+| IB Low First | 09:30 Low = 29 241.25 (stop-hunt) |
+| IB High First | 10:00 High = 29 667 |
+| IB Close | 29 656.75 (barre 10:30) |
+| IB Midpoint | (29 667 + 29 241) / 2 = 29 454 |
+| **Close vs Mid** | **29 657 >> 29 454 = Bull A ★★★** |
+| Delta IB cumulé | +2 073 + 667 + 534 = **+3 274** |
+
+→ **Bull A confirmé** : Low First → absorption → Close bien au-dessus du midpoint
+→ Acheteurs agressifs depuis le stop-hunt initial
+
+#### Résumé COUCHE 1
+
+```
+✅ Delta RTH : +7 234 (12/13 barres) = acheteurs dominants toute la journée
+✅ R18 : Close sous AVWAP + delta positif = squeeze fuel maximum
+✅ Single Prints : 182 pts d'air (29 504→29 686) = WWSHD ★★★★★
+✅ IB Bull A : absorption stop-hunt + Close >> midpoint
+✅ POC non revisité (29 570) = WWSHD supplémentaire
+✅ Settle sous AVWAP = surface baissière trompeuse = PIÈGE VENDEURS
+```
+
+---
+
+### COUCHE 2 — OVN VEILLE NFP (06/08 18:00 → 07/08 09:30 ET)
+
+#### ALN Pattern — P3 ✅
+
+| | Asia | London | Delta |
+| :--- | :--- | :--- | :--- |
+| **High** | 29 618.75 | **29 673.25** | London +54.50 ↑ |
+| **Low** | 29 453.50 | **29 520.00** | London +66.50 ↑ |
+
+```
+London H (29 673.25) > Asia H (29 618.75) ✅
+London L (29 520.00) > Asia L (29 453.50) ✅
+→ P3 CONFIRMÉ — signal haussier AM 80.8% / IB 100% haussier
+```
+
+#### LBF SD-2 — Signal d'entrée swing (21:00 ET)
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Heure | **21:00 ET** (barres 30-min OVN) |
+| Low bar | **29 482.50** |
+| SD-2 à ce moment | **29 497.60** |
+| Action | CASSE BAS (29 482.50 < 29 497.60) + ACCEPT : Close > SD-2 |
+| Close bar | **29 531.00** |
+| **Delta bar** | **+90** (acheteurs absorbent) ✅ filtre delta OK |
+| **Entrée swing** | **29 531** |
+| **Stop** | **29 431** (100 pts sous Low) |
+| §9 | ES LBF SD-2 simultané ✅ |
+
+#### Inventaire OVN
+
+| Mesure | Valeur |
+| :--- | :--- |
+| Settle J-1 | 29 496.75 |
+| Close OVN 09:30 | ~29 630 (London zone) |
+| Inventaire | **Long +133 pts** (acheteurs nocturnes) |
+| Position vs AVWAP | AU-DESSUS → biais haussier confirmé |
+
+#### Résumé COUCHE 2
+
+```
+✅ P3 : London H > Asia H ET L > Asia L → 80.8% break London High / IB 100% haussier
+✅ LBF SD-2 21:00 ET : 29 482.50 < SD-2 29 497.60, Close 29 531 → ENTRÉE 29 531
+✅ Delta +90 : acheteurs absorbent au Low → filtre delta validé
+✅ §9 : NQ + ES LBF simultanés → conviction maximale
+✅ Inventaire Long +133 pts vs settle → OVN aligné avec signal
+✅ Triple confluence : J-1 delta +7 234 + P3 + LBF SD-2
+```
+
+---
+
+### COUCHE 3 — RTH NFP (07/08/2026)
+
+#### NFP Data — 08:30 ET
+
+| Donnée | Attendu | Réel | Surprise |
+| :--- | :--- | :--- | :--- |
+| NFP | +85 000 | **-23 000** | **-108 000** ← MISS MASSIF |
+| Interprétation Fed | — | Dovish → cuts attendus | Risk-on extrême |
+
+#### IB Terminus 08:30 ET — Barre d'explosion ★★★★★
+
+| Paramètre | Valeur |
+| :--- | :--- |
+| Bar 08:30 High | **29 867.75** |
+| SD+2 ce moment | **~29 839** |
+| Extension au-dessus SD+2 | **+28 pts** → Questionable High R34 |
+| Volume barre 08:30 | **×4 barres précédentes** |
+| Delta | Positif (news haussière) |
+| Signal | IB Terminus — momentum extrême |
+
+#### Swing Performance
+
+| | Valeur |
+| :--- | :--- |
+| Entrée | 29 531 (OVN 21:00 ET) |
+| High RTH NFP | 29 867.75 |
+| **Gain swing brut** | **+336 pts** ★★★★★ |
+| Stop utilisé | 29 431 (−100 pts) — jamais touché |
+| Ratio | **1:3.36** |
+
+#### ★★★★★ NFP TRAP RULE — RÈGLE ABSOLUE INVIOLABLE
+
+**Événement :** Bar 07:30 ET (60 min avant NFP)
+
+```
+07:30 ET : Prix grimpe → LAF SD+2 visuel → signal SHORT apparent
+→ PIÈGE ABSOLU — −253 pts en 1 heure
+→ NFP 08:30 explose +336 pts dans l'autre sens
+```
+
+**RÈGLE NFP TRAP (inviolable) :**
+```
+JAMAIS de nouveau trade dans les 60 minutes précédant NFP/FOMC
+Fenêtre interdite : 07:30 ET → 08:29 ET (NFP jours)
+                    13:30 ET → 14:29 ET (FOMC jours)
+
+LAF visible à 07:30 = PIÈGE RETAIL — ne pas shorter
+L'OVN swing tenu = seule position autorisée
+Capital en danger = flat ou rien — JAMAIS nouveau trade
+```
+
+**Pourquoi :**
+- 60 min avant NFP = volatilité aléatoire, stops chassés
+- Le vrai mouvement vient AVEC la news (08:30) pas avant
+- -253 pts de piège pour les impatients vs +336 pts pour le swing patient
+
+#### Gestion Position NFP — Décision 08:00 ET
+
+| Option | Condition | Action |
+| :--- | :--- | :--- |
+| **EXIT CONSERVATEUR** | Incertitude directionnelle / position petite | Clôturer avant 08:30 — sécuriser gains |
+| **HOLD (IB Terminus)** | Signal fort (P3 + delta J-1 + §9) / stop défini | Tenir → laisser NFP amplifier → cible WWSHD |
+
+**Règle de décision 08:00 ET :**
+```
+Si triple confluence validée (P3 + LBF delta + §9) → HOLD
+Si signal faible (P4 ou §9 divergent) → EXIT CONSERVATEUR avant 08:30
+Stop DOIT être défini et non modifié avant NFP (R16 inviolable)
+```
+
+#### Résumé COUCHE 3
+
+```
+✅ NFP miss -108 000 vs +85 000 = dovish = risk-on = NQ explose
+✅ IB Terminus 08:30 : High 29 867.75 (SD+2 +28 pts) = Questionable High → sortie partielle
+✅ Swing +336 pts (29 531 → 29 867) = 1:3.36 ratio
+✅ NFP Trap 07:30 évité : −253 pts de piège = capital intact
+✅ HOLD décision validée : P3 + delta J-1 +7234 + §9 = conviction maximale
+```
+
+---
+
+### SYNTHÈSE TRIPLE LAYER — AUG 7 NFP
+
+| Couche | Signal clé | Décision |
+| :--- | :--- | :--- |
+| RTH J-1 | Delta +7 234 / R18 / Single Prints 182 pts | Squeeze fuel — biais long ★★★★★ |
+| OVN | P3 + LBF SD-2 21:00 ET (Δ +90) / §9 | ENTRÉE 29 531 / Stop 29 431 |
+| RTH NFP | Miss -108K / IB Terminus +336 pts | HOLD → EXIT SD+2 zone |
+
+**Cascade causale :**
+```
+Delta J-1 +7 234 (vendeurs trop short)
+    → OVN P3 + LBF SD-2 = confirmation direction
+        → NFP miss = catalyseur = squeeze des vendeurs
+            → +336 pts en une session
+```
+
+> R22 appliqué parfaitement : "Short in the hole → forte probabilité de short covering rally."
+> Les vendeurs de J-1 (delta +7 234 = acheteurs face à vendeurs impatients) ont squeezé à la news.
+
+---
+
+### FRAMEWORK NFP — CHECKLIST RÉUTILISABLE
+
+**À appliquer CHAQUE premier vendredi du mois (NFP) :**
+
+#### J-1 RTH (jeudi soir)
+
+```
+□ Delta cumulé RTH > +3 000 → squeeze fuel → biais long NFP
+□ Delta cumulé RTH < -3 000 → distribution → biais short NFP
+□ Close vs AVWAP : en dessous + delta positif = R18 = piège baissier
+□ Single Prints (RTH High − TPO VAH) → WWSHD cible
+□ Settle vs POC : > 50 pts d'écart = déséquilibre = direction du rééquilibrage
+□ IB J-1 Bull A ou Bear A → confirme le biais
+```
+
+#### OVN J-1→NFP
+
+```
+□ ALN Pattern (P1/P2/P3/P4) → probabilité directionnelle
+□ LBF SD-2 ou LAF SD+2 → signal d'entrée
+□ Delta bar du signal > -500 → filtre validé (obligatoire)
+□ §9 NQ + ES simultanés → conviction maximale
+□ Inventaire vs settle → Long ou Short nocturne
+□ Entrée / Stop défini AVANT de dormir (R16)
+```
+
+#### RTH NFP 08:30 ET
+
+```
+□ 07:30-08:29 = ZONE INTERDITE (NFP Trap Rule — inviolable)
+□ 08:00 ET : décision EXIT CONSERVATEUR vs HOLD
+   → Triple confluence (P3 + delta + §9) → HOLD
+   → Signal faible → EXIT avant 08:30
+□ 08:30 ET : observer IB Terminus (volume ×3-5 / SD+2 dépassé)
+□ Questionable High (SD+2 + 20 pts) → alléger 33%
+□ Virgin VPOC ou PRTH VAH → EXIT 33%
+□ Flat avant 16h15 ET (prop firm rule)
+```
+
+#### Signal Force Score (sur 5 étoiles)
+
+| Condition | Points |
+| :--- | :--- |
+| Delta J-1 > +3 000 (long) ou < -3 000 (short) | ★ |
+| R18 Divergence (delta vs close AVWAP) | ★ |
+| Single Prints > 100 pts (WWSHD) | ★ |
+| ALN P3 (100% IB) ou P4 + IB confirmé | ★ |
+| §9 NQ + ES LBF/LAF simultanés | ★ |
+| **5★ = HOLD avec taille normale** | |
+| **3-4★ = HOLD avec taille réduite** | |
+| **1-2★ = EXIT CONSERVATEUR 08:00 ET** | |
+
+**Aug 7 NFP score : 5/5 ★★★★★** → HOLD validé → +336 pts
+
+---
+
+### RÈGLES NFP SYSTÈME — VERSION CONDENSÉE
+
+```
+VEILLE NFP 16H ET
+├─ Calculer delta cumulé RTH J-1
+├─ Identifier single prints (WWSHD)
+├─ Diagnostiquer R18 si applicable
+└─ Préparer le scénario (biais long ou short)
+
+OVN 18H-09H30 ET
+├─ Identifier ALN pattern
+├─ LBF SD-2 ou LAF SD+2 → signal candidat
+├─ Vérifier delta bar → filtrer si < -500 (LBF) ou > +500 (LAF)
+├─ §9 → conviction maximale
+└─ Entrée + Stop → "ON ENTRE EN OVN ET ON GERE EN RTH"
+
+NFP JOUR
+├─ 07:30-08:29 → ZONE INTERDITE → zéro trade → NFP Trap Rule
+├─ 08:00 → scorer le signal (étoiles) → décision HOLD/EXIT
+├─ 08:30 → laisser la barre d'explosion → ajuster stop si IB Terminus
+└─ Targets : PRTH POC → PRTH VAH → Single Prints → Virgin VPOC
+```
+
+---
+
+### EN UNE PHRASE
+
+> Le NFP n'est pas le trade — c'est le catalyseur du trade préparé la veille.
+> Le chameau entre la nuit et laisse la tempête du désert faire le travail. 🐪
+
