@@ -566,7 +566,7 @@ export default function Calculateur() {
 
   useEffect(() => {
     // Force-overwrite si la date de session a changé depuis le dernier chargement
-    const SESSION_DATE = '2026-09-05'
+    const SESSION_DATE = '2026-09-05-v2'
     const LS_SESSION_DATE_KEY = 'cmc-session-date'
     const storedDate = (() => { try { return localStorage.getItem(LS_SESSION_DATE_KEY) } catch { return null } })()
     const isNewSession = storedDate !== SESSION_DATE
