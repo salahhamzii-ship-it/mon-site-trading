@@ -27,7 +27,7 @@ const NQ_PATHS = {
 
 let FILES = {
   NQ: NQ_PATHS.auto,
-  ES: IS_WIN ? String.raw`C:\SierraChart_CME\Data\ESU26_FUT_CME[M]  30 Min  #17_GraphData.txt` : `${UPLOAD_DIR}/ES.csv`,
+  ES: IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv.txt` : `${UPLOAD_DIR}/ES.csv`,
   GC: IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv.txt` : `${UPLOAD_DIR}/GC.csv`,
   CL: IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv.txt` : `${UPLOAD_DIR}/CL.csv`,
 }
