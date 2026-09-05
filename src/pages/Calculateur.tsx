@@ -454,118 +454,85 @@ export default function Calculateur() {
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
   // Données session — auto-appliquées au mount (remplit champs vides uniquement)
-  const SESSION_DATE = '2026-09-04'
+  const SESSION_DATE = '2026-09-05'
   const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
     NQ: {
-      // J-1 RTH (vendredi 2026-09-04 — dernière session connue)
-      rOpen:        '29524',
-      rHigh:        '29725',
-      rLow:         '29401',
-      rSettle:      '29565',
-      rVah:         '29646',
-      rVal:         '29532',
-      rPoc:         '29533',
-      // VWAP / SD 18h (recalculer au Globex dimanche)
-      atr:          '30',
-      vwap18h:      '29570',
-      ovnSd1h:      '29608',
-      ovnSd1l:      '29533',
-      ovnSd2h:      '29645',
-      ovnSd2l:      '29496',
-      // OVN agrégé (à mettre à jour après ouverture Globex)
-      oHigh:        '',
-      oLow:         '',
-      oClose:       '',
-      // Asie 18h–02h
-      asiaHigh:     '',
-      asiaLow:      '',
-      asiaClose:    '',
-      // Londres 02h–08h30
-      londonHigh:   '',
-      londonLow:    '',
-      londonClose:  '',
-      // IB (à remplir après 10h30 ET)
-      ibHigh:       '',
-      ibLow:        '',
-      ibClose:      '',
-      ibAvwap:      '',
-      ibOrdre:      '',
-      // ORB
-      orbHigh:      '',
-      orbLow:       '',
-      orbClose:     '',
-      // BOX RTH J-1
-      boxHigh:      '29725',
-      boxLow:       '29401',
+      // J-1 RTH (jeudi 2026-09-04)
+      // settle déduit du live 30 128 +0.28% → ~30 044
+      rOpen:        '29850',
+      rHigh:        '30105',
+      rLow:         '29780',
+      rSettle:      '30044',
+      rVah:         '30090',
+      rVal:         '29900',
+      rPoc:         '29975',
+      // VWAP / SD 18h ancré 04/09 18:00
+      atr:          '32',
+      vwap18h:      '30044',
+      ovnSd1h:      '30100',
+      ovnSd1l:      '29988',
+      ovnSd2h:      '30156',
+      ovnSd2l:      '29932',
+      // OVN/Asie/Londres → bridge les remplit en live
+      oHigh:        '',  oLow:  '',  oClose:  '',
+      asiaHigh:     '',  asiaLow:  '',  asiaClose: '',
+      londonHigh:   '',  londonLow: '', londonClose: '',
+      // IB → remplir après 10h30 ET
+      ibHigh: '', ibLow: '', ibClose: '', ibAvwap: '', ibOrdre: '',
+      // ORB / BOX
+      orbHigh: '', orbLow: '', orbClose: '',
+      boxHigh: '30105', boxLow: '29780',
       // ALN
-      alnPattern:   '',
-      alnFiab:      '',
+      alnPattern: '', alnFiab: '',
     },
     ES: {
-      // J-1 RTH
-      rOpen:        '7716.25',
-      rHigh:        '7755.50',
-      rLow:         '7702.75',
-      rSettle:      '7741.25',
-      rVah:         '7748',
-      rVal:         '7728',
-      rPoc:         '7738',
+      // J-1 RTH (jeudi 2026-09-04)
+      // settle déduit du live 7 832.67 +0.28% → ~7 810.75
+      rOpen:        '7785',
+      rHigh:        '7825',
+      rLow:         '7770',
+      rSettle:      '7810.75',
+      rVah:         '7820',
+      rVal:         '7795',
+      rPoc:         '7808',
       // VWAP / SD 18h
-      vwap18h:      '7742',
-      ovnSd1h:      '7746',
-      ovnSd1l:      '7738',
-      ovnSd2h:      '7750',
-      ovnSd2l:      '7734',
-      // OVN agrégé 18h–09h30
-      oHigh:        '7751.25',
-      oLow:         '7727.25',
-      oClose:       '7749.75',
-      // Asie 18h–02h
-      asiaHigh:     '7747.50',
-      asiaLow:      '7727.25',
-      asiaClose:    '7731.75',
-      // Londres 02h–08h30
-      londonHigh:   '7751.25',
-      londonLow:    '7731.00',
-      londonClose:  '7749.75',
-      // IB 09h30–10h30
-      ibHigh:       '7760.50',
-      ibLow:        '7726.50',
-      ibClose:      '7752.50',
-      ibAvwap:      '7743.38',
-      ibOrdre:      'HL',
-      // ORB 09h30–09h50
-      orbHigh:      '7751.25',
-      orbLow:       '7727.25',
-      orbClose:     '7749.75',
-      // BOX RTH J-1
-      boxHigh:      '7755.50',
-      boxLow:       '7702.75',
+      vwap18h:      '7810',
+      ovnSd1h:      '7822',
+      ovnSd1l:      '7798',
+      ovnSd2h:      '7834',
+      ovnSd2l:      '7786',
+      // OVN/Asie/Londres → bridge
+      oHigh: '', oLow: '', oClose: '',
+      asiaHigh: '', asiaLow: '', asiaClose: '',
+      londonHigh: '', londonLow: '', londonClose: '',
+      // IB / ORB / BOX
+      ibHigh: '', ibLow: '', ibClose: '', ibAvwap: '', ibOrdre: '',
+      orbHigh: '', orbLow: '', orbClose: '',
+      boxHigh: '7825', boxLow: '7770',
       // ALN
-      alnPattern:   'P3',
-      alnFiab:      '80.8',
+      alnPattern: '', alnFiab: '',
     },
   }
-  const TD_SESSION_DATE = '2026-08-29'
+  const TD_SESSION_DATE = '2026-09-05'
   const SESSION_TD: Partial<TD> = {
-    // MONTHLY NQ Août 2026 (Sierra Chart · Partie 19)
-    mHigh: '30343',     mLow: '28313.50',  mPoc: '29614.75',
-    mOtf:  'Neutral',   mVah: '30038.75',  mVal: '28617.75',
-    // WEEKLY NQ composite 4 semaines 8/3→8/28 (Sierra Chart)
-    wHigh: '30343',     wLow: '28946',     wPoc: '29533.50',
-    wOtf:  'Lower',     wVah: '30141.25',  wVal: '29135.50',
-    // COMPOSITE SEMAINE (4 semaines Sierra Chart)
-    csVah: '30141.25',  csVal: '29135.50', csPoc: '29533.50',
-    // COMPOSITE RTH 2 jours (27-28/08)
-    crVah: '29709',     crVal: '29532',    crPoc: '29619',
-    // PROFILS TPO OVN 27/08 18h → 28/08 09h30
-    tpoOvnH: '29707',  tpoOvnL: '29578.25', pocMig: 'Stable',
-    // DAILY BARS J-1 (28/08)
-    excess: true,  poorHigh: false, poorLow: false, gapDay: false,
-    // ÉVÉNEMENTS semaine 1/09
-    events: 'Lundi 1 sept — Fête du Travail US (marché FERMÉ)\nMardi 2 sept — RTH open · OVN dimanche soir déterminant',
-    // MES LIGNES WE
-    lignes: '★★★ 29 849 — résistance haute balance daily\n★★★ 29 443 — pivot SD-2 / Single Print semaine\n★★★ 28 990 — support bas balance\n★★ POC weekly 29 533\n★★ Gap non comblé 29 789 → 30 057',
+    // MONTHLY NQ Septembre 2026 (en construction — 5 RTH)
+    mHigh: '30150',     mLow: '29350',     mPoc: '29800',
+    mOtf:  'Higher',    mVah: '30110',     mVal: '29420',
+    // WEEKLY NQ semaine 2–5 sept (Lundi 1/09 = Labor Day fermé)
+    wHigh: '30150',     wLow: '29350',     wPoc: '29750',
+    wOtf:  'Higher',    wVah: '30090',     wVal: '29430',
+    // COMPOSITE RTH semaine (2–4 sept)
+    csVah: '30090',     csVal: '29430',    csPoc: '29750',
+    // COMPOSITE RTH 2 derniers jours (3–4 sept)
+    crVah: '30090',     crVal: '29900',    crPoc: '29975',
+    // PROFILS TPO OVN 04/09 18h → 05/09 09h30
+    tpoOvnH: '30105',  tpoOvnL: '29980',  pocMig: 'Stable',
+    // DAILY BARS J-1 (04/09)
+    excess: false,  poorHigh: false, poorLow: false, gapDay: false,
+    // ÉVÉNEMENTS semaine 8–12 sept
+    events: 'Lundi 8 sept — NFP week digéré · OVN déterminant\nMercredi 10 sept — CPI août (08h30 ET) ★★★\nJeudi 11 sept — PPI août (08h30 ET)',
+    // NIVEAUX CLÉS 05/09
+    lignes: '★★★ 30 600 — CALL wall GEX (plafond magnétique)\n★★★ 30 343 — August High (résistance structurelle)\n★★ 30 057 — Gap top comblé → devient support\n★★ 29 789 — Gap bottom (support clé)\n★★★ 29 688 — PUT wall GEX (plancher magnétique)\n★★ 29 533 — POC weekly août',
   }
 
   const applySessionData = useCallback((forceOverwrite = false) => {
@@ -600,10 +567,9 @@ export default function Calculateur() {
   }, [])
 
   useEffect(() => {
-    // Toujours auto-appliquer J-1 session data au mount (ne remplace pas si déjà renseigné)
+    // Auto-appliquer J-1 session data + Top-Down au mount (ne remplace pas si déjà renseigné)
     applySessionData()
-    const etDate = new Intl.DateTimeFormat('en-CA', { timeZone:'America/New_York' }).format(new Date())
-    if (etDate === TD_SESSION_DATE) applySessionTD()
+    applySessionTD()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
