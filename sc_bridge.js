@@ -512,8 +512,8 @@ function buildMessage() {
   {
     const instr = 'NQ'
     const diagAuto = !DIAG_DONE.has(instr)
-    if (diagAuto) console.log(`\n  [DIAG] ── NQ auto ─── ${NQ_PATHS.auto}`)
-    const rowsAuto = parseCsv(NQ_PATHS.auto, diagAuto)
+    if (diagAuto) console.log(`\n  [DIAG] ── NQ main ─── ${FILES.NQ}`)
+    const rowsAuto = parseCsv(FILES.NQ, diagAuto)
     if (diagAuto) DIAG_DONE.add(instr)
 
     const extraSources = {}
