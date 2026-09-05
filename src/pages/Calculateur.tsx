@@ -3380,10 +3380,17 @@ export default function Calculateur() {
           </>
         )}
         {bridgeJ1Fresh === null && (
-          <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(136,153,187,0.06)', outline:'1px solid rgba(136,153,187,0.22)' }}>
-            <span style={{ fontSize:8, color:C.muted }}>●</span>
-            <span style={orb(7, 700, { color:C.muted, letterSpacing:'0.10em' })}>SC OFFLINE</span>
-          </div>
+          <>
+            <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(136,153,187,0.06)', outline:'1px solid rgba(136,153,187,0.22)' }}>
+              <span style={{ fontSize:8, color:C.muted }}>●</span>
+              <span style={orb(7, 700, { color:C.muted, letterSpacing:'0.10em' })}>SC OFFLINE</span>
+            </div>
+            <button
+              onClick={()=>setManualJ1Open(o=>!o)}
+              title="Saisir manuellement les données J-1 RTH"
+              style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(136,153,187,0.12)', outline:'1px solid rgba(136,153,187,0.40)', color:C.muted, transition:'all 0.14s' }}
+            >✎ SAISIE J-1</button>
+          </>
         )}
         {!isSimple && <button
           onClick={()=>applySessionData(true)}
@@ -3412,7 +3419,7 @@ export default function Calculateur() {
       </div>
 
       {/* Panel saisie manuelle J-1 (visible quand badge orange SC PÉRIMÉ) */}
-      {manualJ1Open && bridgeJ1Fresh === false && (
+      {manualJ1Open && bridgeJ1Fresh !== true && (
         <div style={{ padding:'10px 14px', border:`1px solid rgba(201,140,76,0.50)`, borderRadius:3, background:'rgba(201,140,76,0.06)', display:'flex', flexDirection:'column', gap:8 }}>
           <span style={orb(8, 700, { color:'#c98c4c', letterSpacing:'0.16em' })}>✎ SAISIE MANUELLE J-1 RTH — {tab}</span>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:6 }}>
