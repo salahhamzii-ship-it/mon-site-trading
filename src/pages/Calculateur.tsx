@@ -534,13 +534,18 @@ export default function Calculateur() {
                   if (force || !cur[f]) (u as Record<string,string>)[f] = s
                 }
                 sv('lastPx',  d.last,       true) // live price always
-                sv('rHigh',   d.j1_high,   true) // J-1 bridge → toujours prioritaire
-                sv('rLow',    d.j1_low,    true)
-                sv('rOpen',   d.j1_open,   true)
-                sv('rSettle', d.j1_settle, true)
-                sv('rPoc',    d.poc,       true)
-                sv('rVah',    d.vah,       true)
-                sv('rVal',    d.val,       true)
+                // J-1 bridge data — only apply if date is fresh (matches expected J-1 date)
+                // Prevents stale CSV data from overwriting user-entered or correct values
+                const j1Fresh = d.j1_date && d.j1_expected && d.j1_date === d.j1_expected
+                if (j1Fresh) {
+                  sv('rHigh',   d.j1_high,   true)
+                  sv('rLow',    d.j1_low,    true)
+                  sv('rOpen',   d.j1_open,   true)
+                  sv('rSettle', d.j1_settle, true)
+                  sv('rPoc',    d.poc,       true)
+                  sv('rVah',    d.vah,       true)
+                  sv('rVal',    d.val,       true)
+                }
 
                 // Day-reset detection (scoped to whole instrument block)
                 const todayISO = new Date().toISOString().slice(0, 10)
@@ -597,8 +602,8 @@ export default function Calculateur() {
                 // ATR auto calculé par le bridge (moyenne ranges RTH 10 sessions)
                 if (d.atr_auto) sv('atr', String(d.atr_auto), false) // ne pas écraser saisie manuelle
 
-                // J-1 open/high/low/settle from bars_j1
-                if (Array.isArray(d.bars_j1) && d.bars_j1.length) {
+                // J-1 open/high/low/settle from bars_j1 — only if data is fresh
+                if (j1Fresh && Array.isArray(d.bars_j1) && d.bars_j1.length) {
                   const bj: ScBar[] = d.bars_j1
                   const firstJ1 = bj[0], lastJ1 = bj[bj.length-1]
                   sv('rOpen',   firstJ1.open,  true)

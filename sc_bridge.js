@@ -386,6 +386,9 @@ function buildPayload(instr, allRows, extraSources = {}) {
   const lastJ1  = j1Rows.length ? j1Rows[j1Rows.length - 1] : {}
   const firstJ1 = j1Rows.length ? j1Rows[0]                 : {}
 
+  // j1_date = date réelle des données J-1 ; null si CSV périmé ou sans dates
+  const j1DateActual = (hasDates && j1Rows.length > 0) ? j1 : null
+
   let lastVal = ''
   if (todayRows.length)     lastVal = todayRows[todayRows.length - 1].close
   else if (todayAll.length) lastVal = todayAll[todayAll.length - 1].close
@@ -468,7 +471,9 @@ function buildPayload(instr, allRows, extraSources = {}) {
   }
 
   return {
-    last:      lastVal,
+    last:        lastVal,
+    j1_date:     j1DateActual,   // date réelle J-1 dans le CSV (null = CSV périmé)
+    j1_expected: j1,             // date J-1 attendue aujourd'hui
     j1_high:   aggHigh(j1Rows),
     j1_low:    aggLow(j1Rows),
     j1_open:   firstJ1.open   || '',
