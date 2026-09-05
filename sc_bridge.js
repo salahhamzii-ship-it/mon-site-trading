@@ -17,7 +17,7 @@ const IS_WIN   = process.platform === 'win32'
 const UPLOAD_DIR = '/tmp/sc-bridge'
 
 let FILES = {
-  NQ: IS_WIN ? String.raw`C:\SierraChart_CME\Data\nq 30 mn.txt`         : `${UPLOAD_DIR}/NQ.csv`,
+  NQ: IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ.csv.txt`            : `${UPLOAD_DIR}/NQ.csv`,
   ES: IS_WIN ? String.raw`C:\SierraChart_CME\Data\ESU26_FUT_CME[M]  30 Min  #17_GraphData.txt` : `${UPLOAD_DIR}/ES.csv`,
   GC: IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv.txt`           : `${UPLOAD_DIR}/GC.csv`,
   CL: IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv.txt`           : `${UPLOAD_DIR}/CL.csv`,
