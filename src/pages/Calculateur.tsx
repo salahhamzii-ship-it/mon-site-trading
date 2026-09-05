@@ -434,6 +434,9 @@ export default function Calculateur() {
   const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
   // null=offline, false=connected but J-1 stale, true=connected and J-1 fresh
   const [bridgeJ1Fresh, setBridgeJ1Fresh] = useState<boolean|null>(null)
+  // Manual J-1 override (bypasses date guard)
+  const [manualJ1Open, setManualJ1Open] = useState(false)
+  const [manualJ1, setManualJ1] = useState({ high:'', low:'', settle:'', vah:'', val:'', poc:'' })
   const [calc, setCalc] = useState({ avwap:'', sigma:'', rrEntry:'', rrStop:'', rrTarget:'', rrContracts:'1', ibH:'', ibL:'', ibAvwap:'', scClose:'', scAvwap:'', scIbh:'', scIbl:'', scSeq:'' })
   const upCalc = (k: keyof typeof calc, v: string) => setCalc(p=>({...p,[k]:v}))
   const sdTouchRef = useRef<Record<Tab,{sp2:boolean;sm2:boolean}>>({NQ:{sp2:false,sm2:false},ES:{sp2:false,sm2:false},GC:{sp2:false,sm2:false},CL:{sp2:false,sm2:false}})
@@ -698,6 +701,24 @@ export default function Calculateur() {
             fillRth(setRthRowsJ1,  'bars_j1')
   }
 
+
+  const applyManualJ1 = useCallback(() => {
+    const { high, low, settle, vah, val, poc } = manualJ1
+    setII(prev => {
+      const cur = prev[tab]
+      const u: Partial<Instr> = {}
+      if (high)   u.rHigh   = high
+      if (low)    u.rLow    = low
+      if (settle) u.rSettle = settle
+      if (vah)    u.rVah    = vah
+      if (val)    u.rVal    = val
+      if (poc)    u.rPoc    = poc
+      if (!Object.keys(u).length) return prev
+      return { ...prev, [tab]: { ...cur, ...u } }
+    })
+    setManualJ1Open(false)
+    setBridgeJ1Fresh(true)
+  }, [manualJ1, tab])
 
   // Bridge HTTP polling — toutes les 10s
   useEffect(() => {
@@ -3347,9 +3368,15 @@ export default function Calculateur() {
           </div>
         )}
         {bridgeJ1Fresh === false && (
-          <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(201,140,76,0.10)', outline:'1px solid rgba(201,140,76,0.40)' }}>
-            <span style={{ fontSize:8, color:'#c98c4c' }}>●</span>
-            <span style={orb(7, 700, { color:'#c98c4c', letterSpacing:'0.10em' })}>SC PÉRIMÉ</span>
+          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(201,140,76,0.10)', outline:'1px solid rgba(201,140,76,0.40)' }}>
+              <span style={{ fontSize:8, color:'#c98c4c' }}>●</span>
+              <span style={orb(7, 700, { color:'#c98c4c', letterSpacing:'0.10em' })}>SC PÉRIMÉ</span>
+            </div>
+            <button
+              onClick={() => setManualJ1Open(o => !o)}
+              style={{ padding:'3px 8px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:7, fontWeight:700, letterSpacing:'0.10em', background: manualJ1Open ? 'rgba(201,140,76,0.30)' : 'rgba(201,140,76,0.12)', outline:'1px solid rgba(201,140,76,0.50)', color:'#c98c4c' }}
+            >✎ SAISIE J-1</button>
           </div>
         )}
         {bridgeJ1Fresh === null && (
@@ -3383,6 +3410,41 @@ export default function Calculateur() {
           ↺ RESET
         </button>
       </div>
+
+      {/* Manual J-1 override panel — visible quand SC PÉRIMÉ + bouton ouvert */}
+      {manualJ1Open && (
+        <div style={{ padding:'10px 14px', border:'1px solid rgba(201,140,76,0.40)', borderRadius:3, background:'rgba(201,140,76,0.05)', display:'flex', flexDirection:'column', gap:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <span style={orb(8, 700, { color:'#c98c4c', letterSpacing:'0.14em' })}>SAISIE MANUELLE J-1 · {tab}</span>
+            <span style={jb(8, 400, { color:C.muted })}>Écrase localStorage sans passer par le bridge</span>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:6 }}>
+            {(['high','low','settle','vah','val','poc'] as const).map(f => (
+              <div key={f} style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                <label style={{ fontFamily:'Orbitron,monospace', fontSize:7, color:C.muted, letterSpacing:'0.10em', textTransform:'uppercase' }}>{f === 'high' ? 'High J-1' : f === 'low' ? 'Low J-1' : f === 'settle' ? 'Settle' : f.toUpperCase()}</label>
+                <input
+                  type="number"
+                  step="0.25"
+                  value={manualJ1[f]}
+                  placeholder="—"
+                  onChange={e => setManualJ1(p => ({ ...p, [f]: e.target.value }))}
+                  style={{ fontFamily:'"JetBrains Mono",monospace', fontSize:12, fontWeight:600, background:'rgba(0,0,0,0.30)', border:'1px solid rgba(201,140,76,0.30)', color:'#f0d070', padding:'4px 7px', borderRadius:2, outline:'none', width:'100%' }}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ display:'flex', gap:6 }}>
+            <button
+              onClick={applyManualJ1}
+              style={{ padding:'5px 14px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.10em', background:'rgba(201,140,76,0.80)', color:'#0b1120' }}
+            >⚡ FORCER MISE À JOUR</button>
+            <button
+              onClick={() => setManualJ1Open(false)}
+              style={{ padding:'5px 10px', border:'1px solid rgba(136,153,187,0.25)', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.10em', background:'transparent', color:C.muted }}
+            >ANNULER</button>
+          </div>
+        </div>
+      )}
 
       {/* Score bar — NQ/ES only */}
       {!isSimple && <div style={{ padding:'8px 14px', border:`1px solid ${C.brd}`, borderRadius:3, background:C.sur, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
