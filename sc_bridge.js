@@ -352,7 +352,7 @@ function lastNonempty(bars, key) {
   return ''
 }
 
-// Extrait tpo_poc/vah/val valide (> 100) depuis un jeu de rows
+// Extrait tpo_poc/vah/val valide (> 100) depuis un jeu de rows (colonnes Sierra Chart)
 function extractTpo(rows) {
   const poc = lastNonempty(rows, 'tpo_poc')
   const vah = lastNonempty(rows, 'tpo_vah')
@@ -360,46 +360,48 @@ function extractTpo(rows) {
   return { poc, vah, val }
 }
 
-// Calcule POC/VAH/VAL depuis barres RTH (méthode TPO — distribution temporelle, value area 70%)
-function computeTpoFromBars(bars) {
-  if (!bars || !bars.length) return { poc: '', vah: '', val: '' }
-  const TICK = 0.25
-  const histo = new Map()
-  for (const bar of bars) {
-    const h = parseFloat(bar.high), l = parseFloat(bar.low)
+// Calcule POC/VAH/VAL depuis les barres OHLC — méthode Dalton TPO standard
+// Tick NQ = 0.25, Value Area = 70% des TPO totaux
+function calcTpoFromBars(bars, tick = 0.25) {
+  if (!bars || bars.length < 2) return { poc: '', vah: '', val: '' }
+
+  const hist = new Map()
+  for (const r of bars) {
+    const h = parseFloat(r.high), l = parseFloat(r.low)
     if (isNaN(h) || isNaN(l) || h <= 0 || l <= 0 || h < l) continue
-    let p = Math.round(l / TICK) * TICK
-    const hR = Math.round(h / TICK) * TICK
-    while (p <= hR + TICK / 4) {
-      const key = Math.round(p * 100) / 100
-      histo.set(key, (histo.get(key) || 0) + 1)
-      p = Math.round((p + TICK) * 100) / 100
+    const lo = Math.round(l / tick) * tick
+    const hi = Math.round(h / tick) * tick
+    for (let p = lo; p <= hi + tick * 0.01; p = Math.round((p + tick) * 1e6) / 1e6) {
+      const key = Math.round(p / tick)
+      hist.set(key, (hist.get(key) || 0) + 1)
     }
   }
-  if (!histo.size) return { poc: '', vah: '', val: '' }
-  let pocPrice = 0, pocCount = 0
-  for (const [price, count] of histo) {
-    if (count > pocCount) { pocCount = count; pocPrice = price }
+
+  if (!hist.size) return { poc: '', vah: '', val: '' }
+
+  let pocKey = 0, pocCount = 0
+  for (const [k, c] of hist) {
+    if (c > pocCount || (c === pocCount && k > pocKey)) { pocKey = k; pocCount = c }
   }
-  const sorted = [...histo.entries()].sort((a, b) => a[0] - b[0])
-  const totalTpo = sorted.reduce((s, [, c]) => s + c, 0)
-  const target = totalTpo * 0.70
-  const pocIdx = sorted.findIndex(([p]) => Math.abs(p - pocPrice) < TICK / 2)
-  let lo = pocIdx, hi = pocIdx, accumulated = pocCount
-  while (accumulated < target) {
-    const upVol = hi + 1 < sorted.length  ? sorted[hi + 1][1] : 0
-    const dnVol = lo - 1 >= 0             ? sorted[lo - 1][1] : 0
-    if (lo === 0 && hi === sorted.length - 1) break
-    if (upVol >= dnVol && hi + 1 < sorted.length) { hi++; accumulated += upVol }
-    else if (lo - 1 >= 0)                          { lo--; accumulated += dnVol }
-    else if (hi + 1 < sorted.length)               { hi++; accumulated += upVol }
-    else break
+
+  const total = [...hist.values()].reduce((a, b) => a + b, 0)
+  const target = total * 0.70
+
+  const sorted = [...hist.keys()].sort((a, b) => a - b)
+  let lo = pocKey, hi = pocKey
+  let area = pocCount
+  while (area < target) {
+    const nextLo = lo > sorted[0]                    ? (lo - 1) : null
+    const nextHi = hi < sorted[sorted.length - 1]   ? (hi + 1) : null
+    const countLo = nextLo !== null ? (hist.get(nextLo) || 0) : 0
+    const countHi = nextHi !== null ? (hist.get(nextHi) || 0) : 0
+    if (countLo === 0 && countHi === 0) break
+    if (countHi >= countLo) { hi = nextHi; area += countHi }
+    else                     { lo = nextLo; area += countLo }
   }
-  return {
-    poc: pocPrice.toFixed(2),
-    vah: sorted[hi][0].toFixed(2),
-    val: sorted[lo][0].toFixed(2),
-  }
+
+  const fmt = k => (k * tick).toFixed(2)
+  return { poc: fmt(pocKey), vah: fmt(hi), val: fmt(lo) }
 }
 
 function buildPayload(instr, allRows, extraSources = {}) {
@@ -472,12 +474,17 @@ function buildPayload(instr, allRows, extraSources = {}) {
     if (!val && rl) val = rl
   }
 
-  // Fallback : calculer POC/VAH/VAL depuis les barres RTH J-1 (méthode TPO Dalton)
-  if ((!poc || !vah || !val) && j1Rows.length >= 2) {
-    const computed = computeTpoFromBars(j1Rows)
-    if (!poc && computed.poc) poc = computed.poc
-    if (!vah && computed.vah) vah = computed.vah
-    if (!val && computed.val) val = computed.val
+  // Fallback calcul TPO depuis barres OHLC J-1 — si Sierra Chart ne fournit pas les colonnes
+  if (!poc || !vah || !val) {
+    const barsForTpo = (extraSources.m30 && extraSources.m30.length && hasDates)
+      ? filterRth(extraSources.m30.filter(r => r.date === j1), instr)
+      : j1Rows
+    if (barsForTpo.length >= 2) {
+      const calc = calcTpoFromBars(barsForTpo)
+      if (!poc && calc.poc) { poc = calc.poc; console.log(`  [TPO-CALC] POC calculé depuis ${barsForTpo.length} barres J-1: ${poc}`) }
+      if (!vah && calc.vah) { vah = calc.vah; console.log(`  [TPO-CALC] VAH calculé: ${vah}`) }
+      if (!val && calc.val) { val = calc.val; console.log(`  [TPO-CALC] VAL calculé: ${val}`) }
+    }
   }
 
   // ── OVN AVWAP/SD : préférer source OVN dédiée si disponible ────────────────
