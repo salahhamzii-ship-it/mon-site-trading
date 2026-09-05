@@ -5,8 +5,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 // URL active du tunnel (mise a jour a chaque nouvelle session cloudflared)
 const TUNNEL_URLS = [
-  'https://pulled-auburn-ended-expressed.trycloudflare.com/data',
-  'https://sc-bridge.loca.lt/data',
+  'https://arms-happy-dress-basename.trycloudflare.com/data',
 ]
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
