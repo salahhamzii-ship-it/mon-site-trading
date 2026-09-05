@@ -453,65 +453,9 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
-  // Données session — auto-appliquées au mount (remplit champs vides uniquement)
-  const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
-    NQ: {
-      // J-1 RTH (jeudi 2026-09-04)
-      // settle déduit du live 30 128 +0.28% → ~30 044
-      rOpen:        '29850',
-      rHigh:        '30105',
-      rLow:         '29780',
-      rSettle:      '30044',
-      rVah:         '30090',
-      rVal:         '29900',
-      rPoc:         '29975',
-      // VWAP / SD 18h ancré 04/09 18:00
-      atr:          '32',
-      vwap18h:      '30044',
-      ovnSd1h:      '30100',
-      ovnSd1l:      '29988',
-      ovnSd2h:      '30156',
-      ovnSd2l:      '29932',
-      // OVN/Asie/Londres → bridge les remplit en live
-      oHigh:        '',  oLow:  '',  oClose:  '',
-      asiaHigh:     '',  asiaLow:  '',  asiaClose: '',
-      londonHigh:   '',  londonLow: '', londonClose: '',
-      // IB → remplir après 10h30 ET
-      ibHigh: '', ibLow: '', ibClose: '', ibAvwap: '', ibOrdre: '',
-      // ORB / BOX
-      orbHigh: '', orbLow: '', orbClose: '',
-      boxHigh: '30105', boxLow: '29780',
-      // ALN
-      alnPattern: '', alnFiab: '',
-    },
-    ES: {
-      // J-1 RTH (jeudi 2026-09-04)
-      // settle déduit du live 7 832.67 +0.28% → ~7 810.75
-      rOpen:        '7785',
-      rHigh:        '7825',
-      rLow:         '7770',
-      rSettle:      '7810.75',
-      rVah:         '7820',
-      rVal:         '7795',
-      rPoc:         '7808',
-      // VWAP / SD 18h
-      vwap18h:      '7810',
-      ovnSd1h:      '7822',
-      ovnSd1l:      '7798',
-      ovnSd2h:      '7834',
-      ovnSd2l:      '7786',
-      // OVN/Asie/Londres → bridge
-      oHigh: '', oLow: '', oClose: '',
-      asiaHigh: '', asiaLow: '', asiaClose: '',
-      londonHigh: '', londonLow: '', londonClose: '',
-      // IB / ORB / BOX
-      ibHigh: '', ibLow: '', ibClose: '', ibAvwap: '', ibOrdre: '',
-      orbHigh: '', orbLow: '', orbClose: '',
-      boxHigh: '7825', boxLow: '7770',
-      // ALN
-      alnPattern: '', alnFiab: '',
-    },
-  }
+  // SESSION_DATA vide — champs J-1 saisis manuellement par l'utilisateur (persistés en localStorage)
+  // Le bridge SC remplit OVN/IB/ORB/live en temps réel
+  const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {}
   const SESSION_TD: Partial<TD> = {
     // MONTHLY NQ Septembre 2026 (en construction — 5 RTH)
     mHigh: '30150',     mLow: '29350',     mPoc: '29800',
@@ -565,14 +509,9 @@ export default function Calculateur() {
   }, [])
 
   useEffect(() => {
-    // Force-overwrite si la date de session a changé depuis le dernier chargement
-    const SESSION_DATE = '2026-09-05-v2'
-    const LS_SESSION_DATE_KEY = 'cmc-session-date'
-    const storedDate = (() => { try { return localStorage.getItem(LS_SESSION_DATE_KEY) } catch { return null } })()
-    const isNewSession = storedDate !== SESSION_DATE
-    applySessionData(isNewSession)
-    applySessionTD(isNewSession)
-    if (isNewSession) { try { localStorage.setItem(LS_SESSION_DATE_KEY, SESSION_DATE) } catch {} }
+    // Remplit uniquement les champs vides (ne touche jamais aux données saisies par l'utilisateur)
+    applySessionData(false)
+    applySessionTD(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
