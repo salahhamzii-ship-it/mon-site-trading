@@ -432,6 +432,8 @@ export default function Calculateur() {
   const [posDir,   setPosDir]   = useState<'LONG'|'SHORT'>('LONG')
 
   const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
+  // null=offline, false=connected but J-1 stale, true=connected and J-1 fresh
+  const [bridgeJ1Fresh, setBridgeJ1Fresh] = useState<boolean|null>(null)
   const [calc, setCalc] = useState({ avwap:'', sigma:'', rrEntry:'', rrStop:'', rrTarget:'', rrContracts:'1', ibH:'', ibL:'', ibAvwap:'', scClose:'', scAvwap:'', scIbh:'', scIbl:'', scSeq:'' })
   const upCalc = (k: keyof typeof calc, v: string) => setCalc(p=>({...p,[k]:v}))
   const sdTouchRef = useRef<Record<Tab,{sp2:boolean;sm2:boolean}>>({NQ:{sp2:false,sm2:false},ES:{sp2:false,sm2:false},GC:{sp2:false,sm2:false},CL:{sp2:false,sm2:false}})
@@ -537,6 +539,7 @@ export default function Calculateur() {
                 // J-1 bridge data — only apply if date is fresh (matches expected J-1 date)
                 // Prevents stale CSV data from overwriting user-entered or correct values
                 const j1Fresh = d.j1_date && d.j1_expected && d.j1_date === d.j1_expected
+                setBridgeJ1Fresh(j1Fresh ? true : false)
                 if (j1Fresh) {
                   sv('rHigh',   d.j1_high,   true)
                   sv('rLow',    d.j1_low,    true)
@@ -702,8 +705,9 @@ export default function Calculateur() {
     const poll = async () => {
       try {
         const r = await fetch('/api/bridge-data')
-        if (r.ok) { const d = await r.json(); if (active && !d.error) processScData(d) }
-      } catch {}
+        if (r.ok) { const d = await r.json(); if (active && !d.error) processScData(d); else if (active) setBridgeJ1Fresh(null) }
+        else if (active) setBridgeJ1Fresh(null)
+      } catch { if (active) setBridgeJ1Fresh(null) }
       if (active) setTimeout(poll, 10000)
     }
     poll()
@@ -3333,6 +3337,25 @@ export default function Calculateur() {
           <div style={{ display:'flex', alignItems:'center', gap:5, padding:'3px 9px', borderRadius:2, background:'rgba(201,168,76,0.06)', outline:'1px solid rgba(201,168,76,0.22)' }}>
             <span style={orb(7, 400, { color:C.muted, letterSpacing:'0.10em' })}>NY</span>
             <span style={orb(10, 900, { color:C.gold, letterSpacing:'0.14em', fontVariantNumeric:'tabular-nums' })}>{nyTime}</span>
+          </div>
+        )}
+        {/* Bridge SC status badge */}
+        {bridgeJ1Fresh === true && (
+          <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(76,201,107,0.10)', outline:'1px solid rgba(76,201,107,0.40)' }}>
+            <span style={{ fontSize:8, color:'#4cc96b' }}>●</span>
+            <span style={orb(7, 700, { color:'#4cc96b', letterSpacing:'0.10em' })}>SC J-1 OK</span>
+          </div>
+        )}
+        {bridgeJ1Fresh === false && (
+          <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(201,140,76,0.10)', outline:'1px solid rgba(201,140,76,0.40)' }}>
+            <span style={{ fontSize:8, color:'#c98c4c' }}>●</span>
+            <span style={orb(7, 700, { color:'#c98c4c', letterSpacing:'0.10em' })}>SC PÉRIMÉ</span>
+          </div>
+        )}
+        {bridgeJ1Fresh === null && (
+          <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(136,153,187,0.06)', outline:'1px solid rgba(136,153,187,0.22)' }}>
+            <span style={{ fontSize:8, color:C.muted }}>●</span>
+            <span style={orb(7, 700, { color:C.muted, letterSpacing:'0.10em' })}>SC OFFLINE</span>
           </div>
         )}
         {!isSimple && <button
