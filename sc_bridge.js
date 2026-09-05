@@ -1,5 +1,5 @@
 /**
- * SC Bridge — Node.js port de sc_bridge.py
+ * SC Bridge — Node.js
  * WebSocket ws://0.0.0.0:8765  +  HTTP http://0.0.0.0:8766
  * GET /data → payload JSON pour Vercel
  * GET /health → "ok"
@@ -8,19 +8,28 @@
 
 import { createServer } from 'http'
 import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync } from 'fs'
-import { join, dirname } from 'path'
+import { join } from 'path'
 import { WebSocketServer } from 'ws'
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
-const IS_WIN   = process.platform === 'win32'
+const IS_WIN     = process.platform === 'win32'
 const UPLOAD_DIR = '/tmp/sc-bridge'
 
+// NQ multi-sources (5 fichiers Sierra Chart)
+const NQ_PATHS = {
+  auto: IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_auto.csv.txt`  : `${UPLOAD_DIR}/NQ.csv`,
+  m30:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_30min.csv.txt` : `${UPLOAD_DIR}/NQ_30min.csv`,
+  rth:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_RTH.csv.txt`   : `${UPLOAD_DIR}/NQ_RTH.csv`,
+  ovn:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_OVN.csv.txt`   : `${UPLOAD_DIR}/NQ_OVN.csv`,
+  tpo:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_TPO.csv.txt`   : `${UPLOAD_DIR}/NQ_TPO.csv`,
+}
+
 let FILES = {
-  NQ: IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_auto.csv.txt`            : `${UPLOAD_DIR}/NQ.csv`,
+  NQ: NQ_PATHS.auto,
   ES: IS_WIN ? String.raw`C:\SierraChart_CME\Data\ESU26_FUT_CME[M]  30 Min  #17_GraphData.txt` : `${UPLOAD_DIR}/ES.csv`,
-  GC: IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv.txt`           : `${UPLOAD_DIR}/GC.csv`,
-  CL: IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv.txt`           : `${UPLOAD_DIR}/CL.csv`,
+  GC: IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv.txt` : `${UPLOAD_DIR}/GC.csv`,
+  CL: IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv.txt` : `${UPLOAD_DIR}/CL.csv`,
 }
 
 const RTH_START = { NQ: '09:30', ES: '09:30', GC: '08:20', CL: '09:00' }
@@ -37,7 +46,7 @@ if (!IS_WIN) {
 // ─── ÉTAT GLOBAL ──────────────────────────────────────────────────────────────
 
 let LAST_MSG = '{}'
-const CLIENTS = new Set()
+const CLIENTS  = new Set()
 const DIAG_DONE = new Set()
 
 // ─── UTILITAIRES TEMPS ───────────────────────────────────────────────────────
@@ -68,9 +77,9 @@ function parseScDate(s) {
   try {
     const parts = s.trim().split('-')
     if (parts.length < 3) return null
-    const y = parseInt(parts[0], 10)
+    const y  = parseInt(parts[0], 10)
     const mo = parseInt(parts[1], 10)
-    const d = parseInt(parts[2], 10)
+    const d  = parseInt(parts[2], 10)
     if (isNaN(y) || isNaN(mo) || isNaN(d)) return null
     return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   } catch {
@@ -85,8 +94,8 @@ function todayStr() {
 
 function j1Str() {
   const now = new Date()
-  const dow = now.getDay() // 0=Sun,1=Mon,...,6=Sat
-  const delta = dow === 1 ? 3 : 1  // lundi → vendredi
+  const dow = now.getDay()
+  const delta = dow === 1 ? 3 : 1
   const j1 = new Date(now)
   j1.setDate(j1.getDate() - delta)
   return `${j1.getFullYear()}-${String(j1.getMonth()+1).padStart(2,'0')}-${String(j1.getDate()).padStart(2,'0')}`
@@ -99,7 +108,7 @@ function parseCsv(filepath, diag = false) {
   try {
     content = readFileSync(filepath, 'utf-8').replace(/^\uFEFF/, '')
   } catch {
-    return []  // fichier absent → silencieux
+    return []
   }
 
   content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
@@ -122,11 +131,9 @@ function parseCsv(filepath, diag = false) {
   function find(...names) {
     for (const n of names) {
       const nc = n.replace(/ /g, '').toLowerCase()
-      // exact match
       for (let i = 0; i < hdrs.length; i++) {
         if (hdrs[i] === n.toLowerCase() || hdrs[i].replace(/ /g, '') === nc) return i
       }
-      // partial match
       for (let i = 0; i < hdrs.length; i++) {
         if (hdrs[i].replace(/ /g, '').includes(nc)) return i
       }
@@ -140,15 +147,19 @@ function parseCsv(filepath, diag = false) {
   let idx_high = find('high', 'haut', 'plus haut')
   let idx_low  = find('low', 'bas', 'plus bas')
   let idx_last = find('last', 'close', 'clôture', 'cloture', 'dernier')
-  let idx_vol  = find('volume', 'vol', 'totalvolume', 'total volume')
+  let idx_vol  = find('volume', 'totalvolume', 'total volume')
   let idx_vwap = find('vwap', 'vwap(daily)', 'dailyvwap', 'vwap daily')
   let idx_sp1  = find('sd+1', 'sd +1', 'vwap sd+1', '+1sd', 'upper1', 'upper band 1', 'upperband1', 'bande+1', 'bande +1')
   let idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd', 'lower1', 'lower band 1', 'lowerband1', 'bande-1', 'bande -1')
   let idx_sp2  = find('sd+2', 'sd +2', 'vwap sd+2', '+2sd', 'upper2', 'upper band 2', 'upperband2', 'bande+2', 'bande +2')
   let idx_sm2  = find('sd-2', 'sd -2', 'vwap sd-2', '-2sd', 'lower2', 'lower band 2', 'lowerband2', 'bande-2', 'bande -2')
-  let idx_poc  = find('tpo poc', 'poc', 'pointofcontrol', 'point of control')
-  let idx_vah  = find('tpo vah', 'vah', 'valuearehigh', 'value area high')
-  let idx_val  = find('tpo val', 'val', 'valuearealow', 'value area low')
+  // Fix: termes précis uniquement — pas de 'val', 'vah', 'poc' seuls (risque collision)
+  let idx_poc  = find('tpo poc', 'tpopoc', 'point of control', 'pointofcontrol')
+  let idx_vah  = find('tpo vah', 'tpovah', 'value area high', 'valuearehigh', 'valuearahigh')
+  let idx_val  = find('tpo val', 'tpoval', 'value area low', 'valuearealow', 'valueараlow')
+  // BidVol / AskVol (Règle 13 Excess — Delta)
+  let idx_bid  = find('bidvolume', 'bid volume', 'bidvol', 'bid vol')
+  let idx_ask  = find('askvolume', 'ask volume', 'askvol', 'ask vol')
 
   // Fallback positionnel Sierra Chart standard : Date,Time,Open,High,Low,Last,...
   const scStd = idx_date === 0 && idx_time === 1
@@ -159,10 +170,14 @@ function parseCsv(filepath, diag = false) {
     if (diag) console.log('  [DIAG] OHLC fallback positionnel SC (col 2-5)')
   }
 
-  // Volume fallback
+  // Volume fallback (col 6)
   if (idx_vol < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 7) idx_vol = 6
 
-  // VWAP/SD positional fallback (Sierra Chart multi-études)
+  // BidVol/AskVol fallback positionnel (SC standard : col 8=BidVol, col 9=AskVol)
+  if (idx_bid < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 9)  idx_bid = 8
+  if (idx_ask < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 10) idx_ask = 9
+
+  // VWAP/SD positional fallback
   if (idx_vwap < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 15) idx_vwap = 14
   if (idx_sp1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 16) idx_sp1  = 15
   if (idx_sm1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 17) idx_sm1  = 16
@@ -171,6 +186,7 @@ function parseCsv(filepath, diag = false) {
 
   if (diag) {
     console.log(`  [DIAG] date=${idx_date} time=${idx_time} O=${idx_open} H=${idx_high} L=${idx_low} C=${idx_last}`)
+    console.log(`  [DIAG] vol=${idx_vol} bid=${idx_bid} ask=${idx_ask}`)
     console.log(`  [DIAG] vwap=${idx_vwap} sp1=${idx_sp1} sm1=${idx_sm1} sp2=${idx_sp2} sm2=${idx_sm2}`)
     console.log(`  [DIAG] poc=${idx_poc} vah=${idx_vah} val=${idx_val}`)
     if (lines[1]) console.log(`  [DIAG] 1ère ligne: ${lines[1]}`)
@@ -187,7 +203,7 @@ function parseCsv(filepath, diag = false) {
   const rows = []
   for (const line of lines.slice(1)) {
     const cols = splitLine(line)
-    const raw = get(cols, time_col)
+    const raw  = get(cols, time_col)
     if (!raw) continue
 
     let date_obj = null, time_s = ''
@@ -213,6 +229,8 @@ function parseCsv(filepath, diag = false) {
       low:     get(cols, idx_low),
       close:   get(cols, idx_last),
       vol:     get(cols, idx_vol),
+      bid:     get(cols, idx_bid),
+      ask:     get(cols, idx_ask),
       vwap:    get(cols, idx_vwap),
       sd1h:    get(cols, idx_sp1),
       sd1l:    get(cols, idx_sm1),
@@ -227,6 +245,7 @@ function parseCsv(filepath, diag = false) {
   if (diag && rows.length) {
     const r = rows[0]
     console.log(`  [DIAG] 1ère barre: date=${r.date} time=${r.time} O=${r.open} H=${r.high} L=${r.low} C=${r.close}`)
+    console.log(`  [DIAG] bid=${r.bid} ask=${r.ask} vol=${r.vol}`)
     console.log(`  [DIAG] Total lignes parsées: ${rows.length}`)
   }
 
@@ -251,12 +270,20 @@ function aggLow(rows) {
 }
 
 function barDict(r) {
+  const bid  = parseFloat(r.bid)
+  const ask  = parseFloat(r.ask)
+  const vol  = parseFloat(r.vol)
+  const delta = (!isNaN(bid) && !isNaN(ask)) ? Math.round(ask - bid) : null
   return {
     time:  r.time,
     open:  r.open,
     high:  r.high,
     low:   r.low,
     close: r.close,
+    vol:   isNaN(vol) ? '' : vol,
+    bid:   isNaN(bid) ? '' : bid,
+    ask:   isNaN(ask) ? '' : ask,
+    delta: delta,
     vwap:  r.vwap  || '',
     sd1h:  r.sd1h  || '',
     sd1l:  r.sd1l  || '',
@@ -319,12 +346,20 @@ function lastNonempty(bars, key) {
   for (let i = bars.length - 1; i >= 0; i--) {
     const v = (bars[i][key] || '').trim()
     const f = parseFloat(v)
-    if (!isNaN(f) && f > 0) return f.toFixed(2)
+    if (!isNaN(f) && f > 100) return f.toFixed(2)  // sanity: prix NQ > 100
   }
   return ''
 }
 
-function buildPayload(instr, allRows) {
+// Extrait tpo_poc/vah/val valide (> 100) depuis un jeu de rows
+function extractTpo(rows) {
+  const poc = lastNonempty(rows, 'tpo_poc')
+  const vah = lastNonempty(rows, 'tpo_vah')
+  const val = lastNonempty(rows, 'tpo_val')
+  return { poc, vah, val }
+}
+
+function buildPayload(instr, allRows, extraSources = {}) {
   const today = todayStr()
   const j1    = j1Str()
 
@@ -347,8 +382,8 @@ function buildPayload(instr, allRows) {
     barsAsia = barsLondon = barsPre = []
   }
 
-  const lastJ1  = j1Rows.length  ? j1Rows[j1Rows.length - 1]  : {}
-  const firstJ1 = j1Rows.length  ? j1Rows[0]                  : {}
+  const lastJ1  = j1Rows.length ? j1Rows[j1Rows.length - 1] : {}
+  const firstJ1 = j1Rows.length ? j1Rows[0]                 : {}
 
   let lastVal = ''
   if (todayRows.length)     lastVal = todayRows[todayRows.length - 1].close
@@ -356,26 +391,91 @@ function buildPayload(instr, allRows) {
   else if (j1Rows.length)   lastVal = j1Rows[j1Rows.length - 1].close
   else if (allRows.length)  lastVal = allRows[allRows.length - 1].close
 
-  const allOvn = [...barsAsia, ...barsLondon, ...barsPre]
+  const allOvn  = [...barsAsia, ...barsLondon, ...barsPre]
   const ovnVwap = allOvn.length ? computeVwap(allOvn) : computeVwap(todayAll)
 
   const hs = v => v.map(r => parseFloat(r.high)).filter(x => !isNaN(x))
   const ls = v => v.map(r => parseFloat(r.low)).filter(x => !isNaN(x) && x > 0)
 
   const asiaHs = hs(barsAsia), asiaLs = ls(barsAsia)
-  const lonHs  = hs(barsLondon), lonLs = ls(barsLondon)
-  const ovnHs  = hs(allOvn), ovnLs = ls(allOvn)
+  const lonHs  = hs(barsLondon), lonLs  = ls(barsLondon)
+  const ovnHs  = hs(allOvn), ovnLs  = ls(allOvn)
+
+  // ── TPO VAH/VAL/POC : préférer source TPO dédiée si disponible ──────────────
+  let { poc, vah, val } = extractTpo(j1Rows)
+
+  // Source TPO dédiée (NQ_TPO.csv.txt) — override si valeurs valides
+  if (extraSources.tpo && extraSources.tpo.length) {
+    const tpoJ1 = hasDates
+      ? extraSources.tpo.filter(r => r.date === j1)
+      : extraSources.tpo
+    const { poc: tp, vah: tv, val: tl } = extractTpo(tpoJ1.length ? tpoJ1 : extraSources.tpo)
+    if (tp) poc = tp
+    if (tv) vah = tv
+    if (tl) val = tl
+  }
+
+  // Source RTH dédiée (NQ_RTH.csv.txt) — override si TPO toujours vide
+  if (extraSources.rth && extraSources.rth.length && (!poc || !vah || !val)) {
+    const rthJ1 = hasDates
+      ? filterRth(extraSources.rth.filter(r => r.date === j1), instr)
+      : filterRth(extraSources.rth, instr)
+    const { poc: rp, vah: rv, val: rl } = extractTpo(rthJ1.length ? rthJ1 : extraSources.rth)
+    if (!poc && rp) poc = rp
+    if (!vah && rv) vah = rv
+    if (!val && rl) val = rl
+  }
+
+  // ── OVN AVWAP/SD : préférer source OVN dédiée si disponible ────────────────
+  let ovnSd1h = lastNonempty(allOvn, 'sd1h')
+  let ovnSd1l = lastNonempty(allOvn, 'sd1l')
+  let ovnSd2h = lastNonempty(allOvn, 'sd2h')
+  let ovnSd2l = lastNonempty(allOvn, 'sd2l')
+  let ovnVwapFinal = ovnVwap
+
+  if (extraSources.ovn && extraSources.ovn.length) {
+    const ovnRows = hasDates
+      ? extraSources.ovn.filter(r => r.date === today || r.date === j1)
+      : extraSources.ovn
+    if (ovnRows.length) {
+      const computedOvnVwap = computeVwap(ovnRows)
+      if (computedOvnVwap) ovnVwapFinal = computedOvnVwap
+      const s1h = lastNonempty(ovnRows, 'sd1h')
+      const s1l = lastNonempty(ovnRows, 'sd1l')
+      const s2h = lastNonempty(ovnRows, 'sd2h')
+      const s2l = lastNonempty(ovnRows, 'sd2l')
+      if (s1h) ovnSd1h = s1h
+      if (s1l) ovnSd1l = s1l
+      if (s2h) ovnSd2h = s2h
+      if (s2l) ovnSd2l = s2l
+    }
+  }
+
+  // ── Barres today : préférer source 30min (BidVol/AskVol) ────────────────────
+  let barsTodayFinal = todayRows
+  let barsJ1Final    = j1Rows
+
+  if (extraSources.m30 && extraSources.m30.length) {
+    const m30Today = hasDates
+      ? filterRth(extraSources.m30.filter(r => r.date === today), instr)
+      : []
+    const m30J1 = hasDates
+      ? filterRth(extraSources.m30.filter(r => r.date === j1), instr)
+      : []
+    if (m30Today.length) barsTodayFinal = m30Today
+    if (m30J1.length)    barsJ1Final    = m30J1
+  }
 
   return {
     last:      lastVal,
     j1_high:   aggHigh(j1Rows),
     j1_low:    aggLow(j1Rows),
-    j1_open:   firstJ1.open || '',
-    j1_settle: lastJ1.close || '',
-    poc:       lastJ1.tpo_poc || '',
-    vah:       lastJ1.tpo_vah || '',
-    val:       lastJ1.tpo_val || '',
-    ovn_vwap:  ovnVwap,
+    j1_open:   firstJ1.open   || '',
+    j1_settle: lastJ1.close   || '',
+    poc,
+    vah,
+    val,
+    ovn_vwap:  ovnVwapFinal,
     atr_auto:  atrAuto(allRows, instr),
     asia_high:  asiaHs.length ? Math.max(...asiaHs).toFixed(2) : '',
     asia_low:   asiaLs.length ? Math.min(...asiaLs).toFixed(2) : '',
@@ -389,12 +489,12 @@ function buildPayload(instr, allRows) {
     ovn_poc:    lastNonempty(allOvn, 'tpo_poc'),
     ovn_vah:    lastNonempty(allOvn, 'tpo_vah'),
     ovn_val:    lastNonempty(allOvn, 'tpo_val'),
-    ovn_sd1h:   lastNonempty(allOvn, 'sd1h'),
-    ovn_sd1l:   lastNonempty(allOvn, 'sd1l'),
-    ovn_sd2h:   lastNonempty(allOvn, 'sd2h'),
-    ovn_sd2l:   lastNonempty(allOvn, 'sd2l'),
-    bars_today:  [...todayRows].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
-    bars_j1:     [...j1Rows].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
+    ovn_sd1h:   ovnSd1h,
+    ovn_sd1l:   ovnSd1l,
+    ovn_sd2h:   ovnSd2h,
+    ovn_sd2l:   ovnSd2l,
+    bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
+    bars_j1:     [...barsJ1Final].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_asia:   barsAsia.map(barDict),
     bars_london: barsLondon.map(barDict),
   }
@@ -406,7 +506,52 @@ function buildMessage() {
   console.log(`\n  today=${today}  j1=${j1}`)
 
   const data = {}
-  for (const [instr, filepath] of Object.entries(FILES)) {
+
+  // ── NQ : lecture multi-sources ────────────────────────────────────────────
+  {
+    const instr = 'NQ'
+    const diagAuto = !DIAG_DONE.has(instr)
+    if (diagAuto) console.log(`\n  [DIAG] ── NQ auto ─── ${NQ_PATHS.auto}`)
+    const rowsAuto = parseCsv(NQ_PATHS.auto, diagAuto)
+    if (diagAuto) DIAG_DONE.add(instr)
+
+    const extraSources = {}
+    for (const [key, path] of [['m30', NQ_PATHS.m30], ['rth', NQ_PATHS.rth], ['ovn', NQ_PATHS.ovn], ['tpo', NQ_PATHS.tpo]]) {
+      const diagKey = `NQ_${key}`
+      const doD = !DIAG_DONE.has(diagKey)
+      if (existsSync(path)) {
+        if (doD) console.log(`\n  [DIAG] ── NQ ${key} ─── ${path}`)
+        extraSources[key] = parseCsv(path, doD)
+        if (doD) DIAG_DONE.add(diagKey)
+        console.log(`  NQ_${key}: ${extraSources[key].length} lignes`)
+      } else {
+        extraSources[key] = []
+      }
+    }
+
+    // Source principale : rowsAuto (fallback) enrichi par extraSources
+    const mainRows = rowsAuto.length ? rowsAuto
+      : (extraSources.m30.length ? extraSources.m30
+        : (extraSources.rth.length ? extraSources.rth : []))
+
+    if (mainRows.length) {
+      const dated = mainRows.filter(r => r.date).map(r => r.date).sort()
+      if (dated.length) {
+        const lastDate = dated[dated.length - 1]
+        console.log(`  NQ: dernière date CSV=${lastDate}  match=${lastDate === today}`)
+      } else {
+        console.log(`  NQ: aucune date parsée`)
+      }
+
+      data[instr] = buildPayload(instr, mainRows, extraSources)
+      const bt = data[instr].bars_today
+      const bj = data[instr].bars_j1
+      console.log(`  NQ: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}  poc=${data[instr].poc}  vah=${data[instr].vah}  val=${data[instr].val}`)
+    }
+  }
+
+  // ── ES / GC / CL ──────────────────────────────────────────────────────────
+  for (const [instr, filepath] of [['ES', FILES.ES], ['GC', FILES.GC], ['CL', FILES.CL]]) {
     const diag = !DIAG_DONE.has(instr)
     if (diag) console.log(`\n  [DIAG] ── ${instr} ─── ${filepath}`)
     const rows = parseCsv(filepath, diag)
@@ -426,6 +571,7 @@ function buildMessage() {
     const bj = data[instr].bars_j1
     console.log(`  ${instr}: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}`)
   }
+
   return JSON.stringify(data)
 }
 
@@ -460,13 +606,12 @@ const httpServer = createServer((req, res) => {
         const body = Buffer.concat(chunks)
         try {
           const tmp = dest + '.tmp'
-          mkdirSync(join(dest, '..').replace(/[^/]+$/, ''), { recursive: true })
+          mkdirSync(dest.replace(/[^/\\]+$/, ''), { recursive: true })
           writeFileSync(tmp, body)
           renameSync(tmp, dest)
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end('{"ok":true}')
           console.log(`  [upload] ${instr} ${body.length} octets → ${dest}`)
-          // Rebuild immédiat sans attendre le prochain cycle
           try { LAST_MSG = buildMessage() } catch {}
         } catch (e) {
           res.writeHead(500)
@@ -526,15 +671,17 @@ wss.on('listening', () => {
   console.log(`SC Bridge WS    ws://0.0.0.0:${WS_PORT}`)
 })
 
-console.log('\nFichiers configurés :')
-for (const [k, v] of Object.entries(FILES)) {
+console.log('\nFichiers NQ configurés :')
+for (const [k, v] of Object.entries(NQ_PATHS)) {
+  const ok = existsSync(v)
+  console.log(`  NQ_${k}: ${v}  [${ok ? 'OK' : 'absent (ignoré)'}]`)
+}
+console.log('\nFichiers ES/GC/CL :')
+for (const [k, v] of [['ES', FILES.ES], ['GC', FILES.GC], ['CL', FILES.CL]]) {
   const ok = existsSync(v)
   console.log(`  ${k}: ${v}  [${ok ? 'OK' : 'absent (ignoré)'}]`)
 }
 console.log()
 
-// Premier build immédiat
 LAST_MSG = buildMessage()
-
-// Rafraîchissement périodique
 setInterval(refreshAndBroadcast, REFRESH_S * 1000)
