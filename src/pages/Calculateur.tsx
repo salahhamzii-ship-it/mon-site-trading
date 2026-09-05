@@ -453,53 +453,53 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
-  // Données session — auto-appliquées au mount si date ET correspond
-  const SESSION_DATE = '2026-08-28'
+  // Données session — auto-appliquées au mount (remplit champs vides uniquement)
+  const SESSION_DATE = '2026-09-04'
   const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
     NQ: {
-      // J-1 RTH
+      // J-1 RTH (vendredi 2026-09-04 — dernière session connue)
       rOpen:        '29524',
       rHigh:        '29725',
       rLow:         '29401',
-      rSettle:      '29691',
+      rSettle:      '29565',
       rVah:         '29646',
       rVal:         '29532',
-      rPoc:         '29590',
-      // VWAP / SD 18h
+      rPoc:         '29533',
+      // VWAP / SD 18h (recalculer au Globex dimanche)
       atr:          '30',
-      vwap18h:      '29622',
-      ovnSd1h:      '29652',
-      ovnSd1l:      '29592',
-      ovnSd2h:      '29682',
-      ovnSd2l:      '29562',
-      // OVN agrégé 18h–09h30
-      oHigh:        '29707.00',
-      oLow:         '29578.25',
-      oClose:       '29659.00',
+      vwap18h:      '29570',
+      ovnSd1h:      '29608',
+      ovnSd1l:      '29533',
+      ovnSd2h:      '29645',
+      ovnSd2l:      '29496',
+      // OVN agrégé (à mettre à jour après ouverture Globex)
+      oHigh:        '',
+      oLow:         '',
+      oClose:       '',
       // Asie 18h–02h
-      asiaHigh:     '29707.00',
-      asiaLow:      '29592.00',
-      asiaClose:    '29598.25',
+      asiaHigh:     '',
+      asiaLow:      '',
+      asiaClose:    '',
       // Londres 02h–08h30
-      londonHigh:   '29665.00',
-      londonLow:    '29578.25',
-      londonClose:  '29659.00',
-      // IB 09h30–10h30
-      ibHigh:       '29713.00',
-      ibLow:        '29505.00',
-      ibClose:      '29680.00',
-      ibAvwap:      '29628.86',
-      ibOrdre:      'HL',
-      // ORB 09h30–09h50
-      orbHigh:      '29703.25',
-      orbLow:       '29562.75',
-      orbClose:     '29629.00',
+      londonHigh:   '',
+      londonLow:    '',
+      londonClose:  '',
+      // IB (à remplir après 10h30 ET)
+      ibHigh:       '',
+      ibLow:        '',
+      ibClose:      '',
+      ibAvwap:      '',
+      ibOrdre:      '',
+      // ORB
+      orbHigh:      '',
+      orbLow:       '',
+      orbClose:     '',
       // BOX RTH J-1
       boxHigh:      '29725',
       boxLow:       '29401',
       // ALN
-      alnPattern:   'P3',
-      alnFiab:      '80.8',
+      alnPattern:   '',
+      alnFiab:      '',
     },
     ES: {
       // J-1 RTH
@@ -600,8 +600,9 @@ export default function Calculateur() {
   }, [])
 
   useEffect(() => {
+    // Toujours auto-appliquer J-1 session data au mount (ne remplace pas si déjà renseigné)
+    applySessionData()
     const etDate = new Intl.DateTimeFormat('en-CA', { timeZone:'America/New_York' }).format(new Date())
-    if (etDate === SESSION_DATE) applySessionData()
     if (etDate === TD_SESSION_DATE) applySessionTD()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -3486,7 +3487,7 @@ export default function Calculateur() {
         <div style={{ border:`1px solid ${C.brd}`, borderRadius:4, overflow:'hidden' }}>
           <div style={{ padding:'6px 12px', borderLeft:`3px solid ${C.gold}`, background:'rgba(201,168,76,0.05)', borderBottom:`1px solid ${C.brd}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <span style={orb(8.5, 900, { color:C.gold, letterSpacing:'0.22em' })}>◈ TOP-DOWN DALTON · CONTEXTE MARCHÉ</span>
-            <button onClick={()=>applySessionTD(true)} style={{ padding:'3px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:7, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.35)', color:C.gold }}>⟳ CHARGER 29/08</button>
+            <button onClick={()=>applySessionTD(true)} style={{ padding:'3px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:7, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,168,76,0.12)', outline:'1px solid rgba(201,168,76,0.35)', color:C.gold }}>⟳ CHARGER J-1</button>
           </div>
           <div style={{ padding:'10px 12px', background:C.sur }}>
             {renderTD()}

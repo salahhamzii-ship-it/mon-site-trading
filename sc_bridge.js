@@ -18,15 +18,16 @@ const UPLOAD_DIR = '/tmp/sc-bridge'
 
 // NQ multi-sources (5 fichiers Sierra Chart)
 const NQ_PATHS = {
-  auto: IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_auto.csv.txt`  : `${UPLOAD_DIR}/NQ.csv`,
-  m30:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_30min.csv.txt` : `${UPLOAD_DIR}/NQ_30min.csv`,
-  rth:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_RTH.csv.txt`   : `${UPLOAD_DIR}/NQ_RTH.csv`,
-  ovn:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_OVN.csv.txt`   : `${UPLOAD_DIR}/NQ_OVN.csv`,
-  tpo:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_TPO.csv.txt`   : `${UPLOAD_DIR}/NQ_TPO.csv`,
+  main: IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ.csv.txt`        : `${UPLOAD_DIR}/NQ.csv`,
+  auto: IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_auto.csv.txt`   : `${UPLOAD_DIR}/NQ_auto.csv`,
+  m30:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_30min.csv.txt`  : `${UPLOAD_DIR}/NQ_30min.csv`,
+  rth:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_RTH.csv.txt`    : `${UPLOAD_DIR}/NQ_RTH.csv`,
+  ovn:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_OVN.csv.txt`    : `${UPLOAD_DIR}/NQ_OVN.csv`,
+  tpo:  IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_TPO.csv.txt`    : `${UPLOAD_DIR}/NQ_TPO.csv`,
 }
 
 let FILES = {
-  NQ: NQ_PATHS.auto,
+  NQ: NQ_PATHS.main,
   ES: IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv.txt` : `${UPLOAD_DIR}/ES.csv`,
   GC: IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv.txt` : `${UPLOAD_DIR}/GC.csv`,
   CL: IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv.txt` : `${UPLOAD_DIR}/CL.csv`,
