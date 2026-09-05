@@ -454,7 +454,6 @@ export default function Calculateur() {
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
 
   // Données session — auto-appliquées au mount (remplit champs vides uniquement)
-  const SESSION_DATE = '2026-09-05'
   const SESSION_DATA: Partial<Record<Tab, Partial<Record<keyof Instr, string>>>> = {
     NQ: {
       // J-1 RTH (jeudi 2026-09-04)
@@ -513,7 +512,6 @@ export default function Calculateur() {
       alnPattern: '', alnFiab: '',
     },
   }
-  const TD_SESSION_DATE = '2026-09-05'
   const SESSION_TD: Partial<TD> = {
     // MONTHLY NQ Septembre 2026 (en construction — 5 RTH)
     mHigh: '30150',     mLow: '29350',     mPoc: '29800',
