@@ -360,6 +360,48 @@ function extractTpo(rows) {
   return { poc, vah, val }
 }
 
+// Calcule POC/VAH/VAL depuis barres RTH (méthode TPO — distribution temporelle, value area 70%)
+function computeTpoFromBars(bars) {
+  if (!bars || !bars.length) return { poc: '', vah: '', val: '' }
+  const TICK = 0.25
+  const histo = new Map()
+  for (const bar of bars) {
+    const h = parseFloat(bar.high), l = parseFloat(bar.low)
+    if (isNaN(h) || isNaN(l) || h <= 0 || l <= 0 || h < l) continue
+    let p = Math.round(l / TICK) * TICK
+    const hR = Math.round(h / TICK) * TICK
+    while (p <= hR + TICK / 4) {
+      const key = Math.round(p * 100) / 100
+      histo.set(key, (histo.get(key) || 0) + 1)
+      p = Math.round((p + TICK) * 100) / 100
+    }
+  }
+  if (!histo.size) return { poc: '', vah: '', val: '' }
+  let pocPrice = 0, pocCount = 0
+  for (const [price, count] of histo) {
+    if (count > pocCount) { pocCount = count; pocPrice = price }
+  }
+  const sorted = [...histo.entries()].sort((a, b) => a[0] - b[0])
+  const totalTpo = sorted.reduce((s, [, c]) => s + c, 0)
+  const target = totalTpo * 0.70
+  const pocIdx = sorted.findIndex(([p]) => Math.abs(p - pocPrice) < TICK / 2)
+  let lo = pocIdx, hi = pocIdx, accumulated = pocCount
+  while (accumulated < target) {
+    const upVol = hi + 1 < sorted.length  ? sorted[hi + 1][1] : 0
+    const dnVol = lo - 1 >= 0             ? sorted[lo - 1][1] : 0
+    if (lo === 0 && hi === sorted.length - 1) break
+    if (upVol >= dnVol && hi + 1 < sorted.length) { hi++; accumulated += upVol }
+    else if (lo - 1 >= 0)                          { lo--; accumulated += dnVol }
+    else if (hi + 1 < sorted.length)               { hi++; accumulated += upVol }
+    else break
+  }
+  return {
+    poc: pocPrice.toFixed(2),
+    vah: sorted[hi][0].toFixed(2),
+    val: sorted[lo][0].toFixed(2),
+  }
+}
+
 function buildPayload(instr, allRows, extraSources = {}) {
   const today = todayStr()
   const j1    = j1Str()
@@ -428,6 +470,14 @@ function buildPayload(instr, allRows, extraSources = {}) {
     if (!poc && rp) poc = rp
     if (!vah && rv) vah = rv
     if (!val && rl) val = rl
+  }
+
+  // Fallback : calculer POC/VAH/VAL depuis les barres RTH J-1 (méthode TPO Dalton)
+  if ((!poc || !vah || !val) && j1Rows.length >= 2) {
+    const computed = computeTpoFromBars(j1Rows)
+    if (!poc && computed.poc) poc = computed.poc
+    if (!vah && computed.vah) vah = computed.vah
+    if (!val && computed.val) val = computed.val
   }
 
   // ── OVN AVWAP/SD : préférer source OVN dédiée si disponible ────────────────
