@@ -565,9 +565,14 @@ export default function Calculateur() {
   }, [])
 
   useEffect(() => {
-    // Auto-appliquer J-1 session data + Top-Down au mount (ne remplace pas si déjà renseigné)
-    applySessionData()
-    applySessionTD()
+    // Force-overwrite si la date de session a changé depuis le dernier chargement
+    const SESSION_DATE = '2026-09-05'
+    const LS_SESSION_DATE_KEY = 'cmc-session-date'
+    const storedDate = (() => { try { return localStorage.getItem(LS_SESSION_DATE_KEY) } catch { return null } })()
+    const isNewSession = storedDate !== SESSION_DATE
+    applySessionData(isNewSession)
+    applySessionTD(isNewSession)
+    if (isNewSession) { try { localStorage.setItem(LS_SESSION_DATE_KEY, SESSION_DATE) } catch {} }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
