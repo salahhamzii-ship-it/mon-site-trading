@@ -17,7 +17,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     try {
       const controller = new AbortController()
       const tid = setTimeout(() => controller.abort(), 6000)
-      const r = await fetch(url, { signal: controller.signal })
+      const r = await fetch(url, { signal: controller.signal, headers: { 'ngrok-skip-browser-warning': '1' } })
       clearTimeout(tid)
       if (!r.ok) { lastErr = `HTTP ${r.status} from ${url}`; continue }
       const data = await r.json()
