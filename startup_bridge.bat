@@ -13,13 +13,32 @@ if not exist sc_bridge.js (
     exit /b 1
 )
 
-:: Chercher cloudflared
-set CF_EXE=C:\cloudflared\cloudflared.exe
-if not exist "%CF_EXE%" set CF_EXE=C:\Program Files\Cloudflare\cloudflared\cloudflared.exe
-if not exist "%CF_EXE%" (
-    for /f "delims=" %%f in ('where cloudflared 2^>nul') do set CF_EXE=%%f
+:: Lire le token depuis cf_token.txt (cree par cloudflared_setup.bat)
+set CF_TOKEN=
+if exist cf_token.txt (
+    set /p CF_TOKEN=<cf_token.txt
+) else (
+    echo [ERREUR] cf_token.txt introuvable
+    echo Lancez d'abord cloudflared_setup.bat en administrateur
+    pause
+    exit /b 1
 )
-set CF_CONFIG=%USERPROFILE%\.cloudflared\config.yml
+
+:: Creer config.yml pour le tunnel
+set CF_CONFIG=%USERPROFILE%\Desktop\sc-bridge\cf_config.yml
+(
+echo ingress:
+echo   - service: http://localhost:8766
+) > "%CF_CONFIG%"
+
+:: Chercher cloudflared.exe
+set CF_EXE=
+for /f "delims=" %%f in ('where cloudflared 2^>nul') do set CF_EXE=%%f
+if not defined CF_EXE (
+    if exist "C:\Program Files\Cloudflare\cloudflared\cloudflared.exe" (
+        set CF_EXE=C:\Program Files\Cloudflare\cloudflared\cloudflared.exe
+    )
+)
 
 echo ============================================================
 echo   SC BRIDGE + CLOUDFLARE TUNNEL - DEMARRAGE
@@ -29,25 +48,22 @@ echo [1/2] Demarrage SC Bridge (Node.js :8766)...
 start "" /B node sc_bridge.js > sc_bridge.log 2>&1
 timeout /t 3 /nobreak >nul
 
-echo [2/2] Demarrage tunnel Cloudflare...
-if exist "%CF_EXE%" (
-    if exist "%CF_CONFIG%" (
-        start "" /B "%CF_EXE%" tunnel --config "%CF_CONFIG%" run sc-bridge > cf_tunnel.log 2>&1
-        echo    URL: https://sc-bridge.cfargotunnel.com
-    ) else (
-        echo [WARN] config.yml absent - lancer cloudflared_setup.bat d'abord
-    )
+echo [2/2] Demarrage tunnel Cloudflare (tunnel permanent sc-bridge)...
+if defined CF_EXE (
+    start "" /B "%CF_EXE%" tunnel run --token %CF_TOKEN% --config "%CF_CONFIG%" > cf_tunnel.log 2>&1
+    echo    OK - tunnel en cours de connexion...
 ) else (
-    echo [WARN] cloudflared.exe absent - lancer cloudflared_setup.bat d'abord
+    echo [ERREUR] cloudflared.exe introuvable
+    echo Installez cloudflared: winget install Cloudflare.cloudflared
 )
 
-timeout /t 5 /nobreak >nul
+timeout /t 6 /nobreak >nul
 echo.
 echo ============================================================
 echo   STATUT
 echo ============================================================
 echo   Bridge local  : http://localhost:8766/health
-echo   URL publique  : https://sc-bridge.cfargotunnel.com/health
+echo   URL publique  : https://33654683-3a3b-4484-8441-0cda7748d29e.cfargotunnel.com/health
 echo   Log bridge    : %USERPROFILE%\Desktop\sc-bridge\sc_bridge.log
 echo   Log tunnel    : %USERPROFILE%\Desktop\sc-bridge\cf_tunnel.log
 echo ============================================================
