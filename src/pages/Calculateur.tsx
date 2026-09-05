@@ -434,6 +434,8 @@ export default function Calculateur() {
   const [sdReject, setSdReject] = useState<{sp2:number;sm2:number}>({sp2:0,sm2:0})
   // null=offline, false=connected but J-1 stale, true=connected and J-1 fresh
   const [bridgeJ1Fresh, setBridgeJ1Fresh] = useState<boolean|null>(null)
+  const [manualJ1Open, setManualJ1Open] = useState(false)
+  const [manualJ1, setManualJ1] = useState({ high:'', low:'', settle:'', vah:'', val:'', poc:'' })
   const [calc, setCalc] = useState({ avwap:'', sigma:'', rrEntry:'', rrStop:'', rrTarget:'', rrContracts:'1', ibH:'', ibL:'', ibAvwap:'', scClose:'', scAvwap:'', scIbh:'', scIbl:'', scSeq:'' })
   const upCalc = (k: keyof typeof calc, v: string) => setCalc(p=>({...p,[k]:v}))
   const sdTouchRef = useRef<Record<Tab,{sp2:boolean;sm2:boolean}>>({NQ:{sp2:false,sm2:false},ES:{sp2:false,sm2:false},GC:{sp2:false,sm2:false},CL:{sp2:false,sm2:false}})
@@ -454,6 +456,24 @@ export default function Calculateur() {
     triggerSaved()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tdOpen, trOpen, stOpen, td, II, cfg, rthRows, rthRowsJ1, tpoLetters, tpoLettersJ1])
+
+  const applyManualJ1 = useCallback(() => {
+    const t = tab
+    setII(prev => {
+      const cur = prev[t]
+      const upd = { ...cur }
+      if (manualJ1.high)   upd.rHigh   = manualJ1.high
+      if (manualJ1.low)    upd.rLow    = manualJ1.low
+      if (manualJ1.settle) upd.rSettle = manualJ1.settle
+      if (manualJ1.vah)    upd.rVah    = manualJ1.vah
+      if (manualJ1.val)    upd.rVal    = manualJ1.val
+      if (manualJ1.poc)    upd.rPoc    = manualJ1.poc
+      return { ...prev, [t]: upd }
+    })
+    setBridgeJ1Fresh(true)
+    setManualJ1Open(false)
+    setManualJ1({ high:'', low:'', settle:'', vah:'', val:'', poc:'' })
+  }, [tab, manualJ1])
 
   // SESSION_DATA vide — champs J-1 saisis manuellement par l'utilisateur (persistés en localStorage)
   // Le bridge SC remplit OVN/IB/ORB/live en temps réel
@@ -3347,10 +3367,17 @@ export default function Calculateur() {
           </div>
         )}
         {bridgeJ1Fresh === false && (
-          <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(201,140,76,0.10)', outline:'1px solid rgba(201,140,76,0.40)' }}>
-            <span style={{ fontSize:8, color:'#c98c4c' }}>●</span>
-            <span style={orb(7, 700, { color:'#c98c4c', letterSpacing:'0.10em' })}>SC PÉRIMÉ</span>
-          </div>
+          <>
+            <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(201,140,76,0.10)', outline:'1px solid rgba(201,140,76,0.40)' }}>
+              <span style={{ fontSize:8, color:'#c98c4c' }}>●</span>
+              <span style={orb(7, 700, { color:'#c98c4c', letterSpacing:'0.10em' })}>SC PÉRIMÉ</span>
+            </div>
+            <button
+              onClick={()=>setManualJ1Open(o=>!o)}
+              title="Saisir manuellement les données J-1 RTH"
+              style={{ padding:'4px 10px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(201,140,76,0.18)', outline:'1px solid rgba(201,140,76,0.60)', color:'#c98c4c', transition:'all 0.14s' }}
+            >✎ SAISIE J-1</button>
+          </>
         )}
         {bridgeJ1Fresh === null && (
           <div style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 8px', borderRadius:2, background:'rgba(136,153,187,0.06)', outline:'1px solid rgba(136,153,187,0.22)' }}>
@@ -3383,6 +3410,37 @@ export default function Calculateur() {
           ↺ RESET
         </button>
       </div>
+
+      {/* Panel saisie manuelle J-1 (visible quand badge orange SC PÉRIMÉ) */}
+      {manualJ1Open && bridgeJ1Fresh === false && (
+        <div style={{ padding:'10px 14px', border:`1px solid rgba(201,140,76,0.50)`, borderRadius:3, background:'rgba(201,140,76,0.06)', display:'flex', flexDirection:'column', gap:8 }}>
+          <span style={orb(8, 700, { color:'#c98c4c', letterSpacing:'0.16em' })}>✎ SAISIE MANUELLE J-1 RTH — {tab}</span>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:6 }}>
+            {(['high','low','settle','vah','val','poc'] as const).map(k => (
+              <div key={k} style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                <span style={orb(6, 600, { color:C.muted, letterSpacing:'0.12em' })}>{k.toUpperCase()}</span>
+                <input
+                  type="text" inputMode="decimal"
+                  value={manualJ1[k]}
+                  onChange={e => setManualJ1(p=>({...p,[k]:e.target.value}))}
+                  style={{ width:'100%', padding:'4px 6px', background:'rgba(255,255,255,0.05)', border:`1px solid rgba(201,140,76,0.35)`, borderRadius:2, color:'#e8e8e8', fontFamily:'"JetBrains Mono",monospace', fontSize:11, boxSizing:'border-box' }}
+                  placeholder="—"
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ display:'flex', gap:6 }}>
+            <button
+              onClick={applyManualJ1}
+              style={{ padding:'5px 14px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(76,201,107,0.20)', outline:'1px solid rgba(76,201,107,0.60)', color:'#4cc96b' }}
+            >⚡ FORCER MISE À JOUR</button>
+            <button
+              onClick={()=>setManualJ1Open(false)}
+              style={{ padding:'5px 14px', border:'none', borderRadius:2, cursor:'pointer', fontFamily:'Orbitron,monospace', fontSize:8, fontWeight:700, letterSpacing:'0.12em', background:'rgba(136,153,187,0.08)', outline:'1px solid rgba(136,153,187,0.25)', color:C.muted }}
+            >ANNULER</button>
+          </div>
+        </div>
+      )}
 
       {/* Score bar — NQ/ES only */}
       {!isSimple && <div style={{ padding:'8px 14px', border:`1px solid ${C.brd}`, borderRadius:3, background:C.sur, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
