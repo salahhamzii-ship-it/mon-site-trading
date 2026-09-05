@@ -3,8 +3,9 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-// URL permanente tunnel cloudflared — tunnel ID: 33654683-3a3b-4484-8441-0cda7748d29e
+// URLs par ordre de priorité — localtunnel (subdomain fixe) en premier
 const TUNNEL_URLS = [
+  'https://sc-bridge.loca.lt/data',
   'https://33654683-3a3b-4484-8441-0cda7748d29e.cfargotunnel.com/data',
   'https://laughing-urw-sacramento-creations.trycloudflare.com/data',
 ]
