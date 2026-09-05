@@ -1,23 +1,31 @@
-// Vercel serverless function — fetch depuis bridge_receiver.py sur VPS
-// sc_bridge.py (Windows) → HTTP POST → VPS:8767 → GET ici → frontend
+// Vercel serverless function — fetch depuis sc_bridge.js (Windows) via cloudflared tunnel
+// sc_bridge.js (Windows) → cloudflared tunnel → GET ici → frontend
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-const VPS_URL = 'http://2.29.3.199:8766/data'
+// URL active du tunnel (mise a jour a chaque nouvelle session cloudflared)
+const TUNNEL_URLS = [
+  'https://hatbox-placidly-crabmeat.ngrok-free.dev/data',
+]
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Cache-Control', 'no-store')
 
-  try {
-    const controller = new AbortController()
-    const tid = setTimeout(() => controller.abort(), 6000)
-    const r = await fetch(VPS_URL, { signal: controller.signal })
-    clearTimeout(tid)
-    if (!r.ok) throw new Error(`VPS ${r.status}`)
-    const data = await r.json()
-    res.json(data)
-  } catch (e: unknown) {
-    res.status(503).json({ error: 'bridge_offline', detail: String(e) })
+  let lastErr = ''
+  for (const url of TUNNEL_URLS) {
+    try {
+      const controller = new AbortController()
+      const tid = setTimeout(() => controller.abort(), 6000)
+      const r = await fetch(url, { signal: controller.signal, headers: { 'ngrok-skip-browser-warning': '1' } })
+      clearTimeout(tid)
+      if (!r.ok) { lastErr = `HTTP ${r.status} from ${url}`; continue }
+      const data = await r.json()
+      res.json(data)
+      return
+    } catch (e: unknown) {
+      lastErr = String(e)
+    }
   }
+  res.status(503).json({ error: 'bridge_offline', detail: lastErr })
 }
