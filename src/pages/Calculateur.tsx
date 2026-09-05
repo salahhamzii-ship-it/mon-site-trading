@@ -534,13 +534,13 @@ export default function Calculateur() {
                   if (force || !cur[f]) (u as Record<string,string>)[f] = s
                 }
                 sv('lastPx',  d.last,       true) // live price always
-                sv('rHigh',   d.j1_high)
-                sv('rLow',    d.j1_low)
-                sv('rOpen',   d.j1_open)
-                sv('rSettle', d.j1_settle)
-                sv('rPoc',    d.poc)
-                sv('rVah',    d.vah)
-                sv('rVal',    d.val)
+                sv('rHigh',   d.j1_high,   true) // J-1 bridge → toujours prioritaire
+                sv('rLow',    d.j1_low,    true)
+                sv('rOpen',   d.j1_open,   true)
+                sv('rSettle', d.j1_settle, true)
+                sv('rPoc',    d.poc,       true)
+                sv('rVah',    d.vah,       true)
+                sv('rVal',    d.val,       true)
 
                 // Day-reset detection (scoped to whole instrument block)
                 const todayISO = new Date().toISOString().slice(0, 10)
@@ -601,16 +601,12 @@ export default function Calculateur() {
                 if (Array.isArray(d.bars_j1) && d.bars_j1.length) {
                   const bj: ScBar[] = d.bars_j1
                   const firstJ1 = bj[0], lastJ1 = bj[bj.length-1]
-                  sv('rOpen',   firstJ1.open)
-                  sv('rSettle', lastJ1.close)
-                  if (!cur.rHigh) {
-                    const h = Math.max(...bj.map(b=>pf(b.high)))
-                    if (h>0) u.rHigh = String(h)
-                  }
-                  if (!cur.rLow) {
-                    const ls = bj.map(b=>pf(b.low)).filter(v=>v>0)
-                    if (ls.length) u.rLow = String(Math.min(...ls))
-                  }
+                  sv('rOpen',   firstJ1.open,  true)
+                  sv('rSettle', lastJ1.close,  true)
+                  const h = Math.max(...bj.map(b=>pf(b.high)))
+                  if (h>0) u.rHigh = String(h)
+                  const ls = bj.map(b=>pf(b.low)).filter(v=>v>0)
+                  if (ls.length) u.rLow = String(Math.min(...ls))
                 }
 
                 // Asia High/Low/Close directs depuis le bridge (force sur nouveau jour)
