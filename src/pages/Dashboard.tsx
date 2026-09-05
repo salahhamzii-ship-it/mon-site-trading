@@ -1,77 +1,124 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { CockpitChart } from '../components/chart/CockpitChart'
 
 const ORB = "'Orbitron', monospace"
 const JB  = "'JetBrains Mono', monospace"
 
-const NQ_REF = 30044.75
+const fmt = (v: number | string | undefined, dec = 2) => {
+  const n = parseFloat(String(v || ''))
+  if (isNaN(n)) return '—'
+  return n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
 
-/* ── Data cards ──────────────────────────────────────────────────── */
-const DATA_CARDS = [
-  {
-    accent: '#c9a84c', label: '📊 RTH J-1',
-    rows: [
-      { k: 'OPEN',  v: '29,847.50', c: '#e2e8f0' },
-      { k: 'HIGH',  v: '30,043.25', c: '#1eb3bc' },
-      { k: 'LOW',   v: '29,712.00', c: '#ff6b6b' },
-      { k: 'CLOSE', v: '29,984.75', c: '#c9a84c' },
-    ],
-  },
-  {
-    accent: '#1eb3bc', label: '🌙 OVN',
-    rows: [
-      { k: 'BIAIS',    v: 'LONG',      c: '#00ff88', bold: true },
-      { k: 'AVWAP',    v: '30,024.00', c: '#c9a84c' },
-      { k: 'EXCESS',   v: '+1.8%',     c: '#1eb3bc' },
-      { k: 'OVN HIGH', v: '30,158.50', c: '#e2e8f0' },
-    ],
-  },
-  {
-    accent: '#d4af37', label: '🧭 ALN',
-    rows: [
-      { k: 'SESSION',   v: 'P4 London', c: '#d4af37' },
-      { k: 'ASIA HIGH', v: '30,158.50', c: '#1eb3bc' },
-      { k: 'ASIA LOW',  v: '29,962.00', c: '#ff6b6b' },
-      { k: 'CALL WALL', v: '30,600.00', c: '#c9a84c' },
-    ],
-  },
-  {
-    accent: '#f0d070', label: '⚡ IB · GEX',
-    rows: [
-      { k: 'IB HIGH', v: '30,198.75', c: '#1eb3bc' },
-      { k: 'IB LOW',  v: '30,042.50', c: '#ff6b6b' },
-      { k: 'GAMMA',   v: 'POSITIF',   c: '#f0d070' },
-      { k: 'QQQ×40',  v: '540→30,600', c: '#c9a84c' },
-    ],
-  },
-]
-
-/* ── Stats cards ─────────────────────────────────────────────────── */
 const STATS = [
-  { k: 'WIN RATE',      v: '68.4%', c: '#00ff88', bar: 68.4, type: 'bar' as const },
-  { k: 'PROFIT FACTOR', v: '2.14',  c: '#c9a84c', bar: 72,   type: 'bar' as const },
-  { k: 'R-MULTIPLE',    v: '+1.8R', c: '#1eb3bc', bar: 60,   type: 'bar' as const },
-  {
-    k: 'STREAKS', v: '5W · 1L', c: '#f0d070', type: 'dots' as const,
-    dots: [true, true, true, true, true, false],
-  },
+  { k: 'WIN RATE',      v: '68.4%', c: '#00ff88', bar: 68.4, type: 'bar'  as const },
+  { k: 'PROFIT FACTOR', v: '2.14',  c: '#c9a84c', bar: 72,   type: 'bar'  as const },
+  { k: 'R-MULTIPLE',    v: '+1.8R', c: '#1eb3bc', bar: 60,   type: 'bar'  as const },
+  { k: 'STREAKS', v: '5W · 1L', c: '#f0d070', type: 'dots' as const,
+    dots: [true,true,true,true,true,false] },
 ]
+
+interface BridgeNQ {
+  last?: string | number
+  j1_open?: string | number
+  j1_high?: string | number
+  j1_low?: string | number
+  j1_settle?: string | number
+  vah?: string | number
+  val?: string | number
+  poc?: string | number
+  ovn_vwap?: string | number
+  ovn_high?: string | number
+  ovn_low?: string | number
+  ovn_close?: string | number
+  atr_auto?: string | number
+  asia_high?: string | number
+  asia_low?: string | number
+  lon_high?: string | number
+  lon_low?: string | number
+  ovn_sd2h?: string | number
+  ovn_sd2l?: string | number
+}
 
 export default function Dashboard() {
-  const [nq, setNq] = useState(30141.0)
-  const [sigDir, setSigDir] = useState<'ACHAT' | 'VENTE'>('ACHAT')
+  const [bridge, setBridge] = useState<BridgeNQ>({})
+  const [online, setOnline]   = useState(false)
+  const [sigDir, setSigDir]   = useState<'ACHAT' | 'VENTE'>('ACHAT')
+  const prevRef = useRef<number>(0)
 
   useEffect(() => {
-    const t = setInterval(() => setNq(p => +(p + (Math.random() - 0.49) * 3).toFixed(2)), 900)
-    return () => clearInterval(t)
+    let active = true
+    const poll = async () => {
+      try {
+        const r = await fetch('/api/bridge-data')
+        if (r.ok) {
+          const d = await r.json()
+          if (active && !d.error && d.NQ) {
+            setBridge(d.NQ)
+            setOnline(true)
+            prevRef.current = parseFloat(String(d.NQ.last || '0'))
+          }
+        } else { if (active) setOnline(false) }
+      } catch { if (active) setOnline(false) }
+      if (active) setTimeout(poll, 10000)
+    }
+    poll()
+    return () => { active = false }
   }, [])
 
-  const diff = nq - NQ_REF
-  const pct  = (diff / NQ_REF) * 100
-  const up   = diff >= 0
+  const nq      = parseFloat(String(bridge.last || '0')) || prevRef.current
+  const settle  = parseFloat(String(bridge.j1_settle || bridge.last || '0'))
+  const diff    = settle > 0 ? nq - settle : 0
+  const pct     = settle > 0 ? (diff / settle) * 100 : 0
+  const up      = diff >= 0
 
-  const isBuy   = sigDir === 'ACHAT'
+  const isBuy    = sigDir === 'ACHAT'
   const sigColor = isBuy ? '#00ff88' : '#ff4444'
+
+  // OVN biais: prix vs AVWAP18h
+  const avwap18h = parseFloat(String(bridge.ovn_vwap || '0'))
+  const ovnBiais = avwap18h > 0 ? (nq >= avwap18h ? 'LONG' : 'SHORT') : '—'
+  const ovnColor = ovnBiais === 'LONG' ? '#00ff88' : ovnBiais === 'SHORT' ? '#ff4444' : '#8899bb'
+
+  // ALN pattern depuis session (à renseigner manuellement dans calculateur)
+  const DATA_CARDS = [
+    {
+      accent: '#c9a84c', label: '📊 RTH J-1',
+      rows: [
+        { k: 'OPEN',   v: fmt(bridge.j1_open),   c: '#e2e8f0' },
+        { k: 'HIGH',   v: fmt(bridge.j1_high),   c: '#1eb3bc' },
+        { k: 'LOW',    v: fmt(bridge.j1_low),    c: '#ff6b6b' },
+        { k: 'SETTLE', v: fmt(bridge.j1_settle), c: '#c9a84c' },
+      ],
+    },
+    {
+      accent: '#1eb3bc', label: '🌙 OVN',
+      rows: [
+        { k: 'BIAIS',    v: ovnBiais,              c: ovnColor, bold: true },
+        { k: 'AVWAP 18H',v: fmt(bridge.ovn_vwap), c: '#c9a84c' },
+        { k: 'OVN HIGH', v: fmt(bridge.ovn_high), c: '#e2e8f0' },
+        { k: 'OVN LOW',  v: fmt(bridge.ovn_low),  c: '#e2e8f0' },
+      ],
+    },
+    {
+      accent: '#d4af37', label: '🧭 ALN',
+      rows: [
+        { k: 'ASIA HIGH',  v: fmt(bridge.asia_high), c: '#1eb3bc' },
+        { k: 'ASIA LOW',   v: fmt(bridge.asia_low),  c: '#ff6b6b' },
+        { k: 'LON HIGH',   v: fmt(bridge.lon_high),  c: '#1eb3bc' },
+        { k: 'LON LOW',    v: fmt(bridge.lon_low),   c: '#ff6b6b' },
+      ],
+    },
+    {
+      accent: '#f0d070', label: '📐 SD BANDS',
+      rows: [
+        { k: 'SD+2',  v: fmt(bridge.ovn_sd2h), c: '#ff6b6b' },
+        { k: 'VWAP',  v: fmt(bridge.ovn_vwap), c: '#c9a84c' },
+        { k: 'SD-2',  v: fmt(bridge.ovn_sd2l), c: '#00ff88' },
+        { k: 'ATR',   v: fmt(bridge.atr_auto, 0), c: '#8899bb' },
+      ],
+    },
+  ]
 
   return (
     <>
@@ -82,12 +129,10 @@ export default function Dashboard() {
         <div style={{
           background: 'linear-gradient(135deg, #141820, #0e1017)',
           border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: 8,
-          padding: '20px 28px',
+          borderRadius: 8, padding: '20px 28px',
           display: 'flex', alignItems: 'center', gap: 28,
           position: 'relative', overflow: 'hidden',
         }}>
-          {/* 4px left accent bar */}
           <div style={{
             position: 'absolute', top: 0, left: 0, width: 4, height: '100%',
             background: 'linear-gradient(180deg, #c9a84c, #f0d070)',
@@ -96,36 +141,54 @@ export default function Dashboard() {
           <div style={{ paddingLeft: 4 }}>
             <div style={{
               fontSize: 10, fontWeight: 500, letterSpacing: '0.1em',
-              color: 'rgba(255,255,255,0.3)', marginBottom: 4,
-              fontFamily: JB,
-            }}>NQ · NASDAQ-100 FUTURES · CME</div>
+              color: 'rgba(255,255,255,0.3)', marginBottom: 4, fontFamily: JB,
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              NQ · NASDAQ-100 FUTURES · CME
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '1px 6px', borderRadius: 3,
+                background: online ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)',
+                border: `1px solid ${online ? 'rgba(0,255,136,0.3)' : 'rgba(255,68,68,0.3)'}`,
+                fontSize: 9, color: online ? '#00ff88' : '#ff4444',
+              }}>
+                <span style={{
+                  width: 5, height: 5, borderRadius: '50%',
+                  background: online ? '#00ff88' : '#ff4444',
+                  display: 'inline-block',
+                }} />
+                {online ? 'BRIDGE' : 'OFFLINE'}
+              </span>
+            </div>
             <div style={{
               fontFamily: ORB,
               fontSize: 'clamp(42px, 5vw, 60px)',
               fontWeight: 900,
-              color: '#f0d070',
-              textShadow: '0 0 20px rgba(240,208,112,1), 0 0 40px rgba(240,208,112,0.5)',
+              color: nq > 0 ? '#f0d070' : '#444',
+              textShadow: nq > 0 ? '0 0 20px rgba(240,208,112,1), 0 0 40px rgba(240,208,112,0.5)' : 'none',
               lineHeight: 1, letterSpacing: '0.02em',
             }}>
-              {nq.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {nq > 0 ? nq.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '——'}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-              <span style={{
-                fontSize: 14, fontWeight: 700, fontFamily: JB,
-                color: up ? '#00ff88' : '#ff4444',
-                textShadow: up ? '0 0 10px rgba(0,255,136,0.6)' : '0 0 10px rgba(255,68,68,0.6)',
-              }}>
-                {up ? '▲' : '▼'} {up ? '+' : ''}{diff.toFixed(2)} pts
-              </span>
-              <span style={{
-                padding: '2px 8px',
-                background: up ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)',
-                borderRadius: 4, fontSize: 11, fontWeight: 600, fontFamily: JB,
-                color: up ? '#00ff88' : '#ff4444',
-              }}>
-                {up ? '+' : ''}{pct.toFixed(2)}%
-              </span>
-            </div>
+            {settle > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                <span style={{
+                  fontSize: 14, fontWeight: 700, fontFamily: JB,
+                  color: up ? '#00ff88' : '#ff4444',
+                  textShadow: up ? '0 0 10px rgba(0,255,136,0.6)' : '0 0 10px rgba(255,68,68,0.6)',
+                }}>
+                  {up ? '▲' : '▼'} {up ? '+' : ''}{diff.toFixed(2)} pts
+                </span>
+                <span style={{
+                  padding: '2px 8px',
+                  background: up ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)',
+                  borderRadius: 4, fontSize: 11, fontWeight: 600, fontFamily: JB,
+                  color: up ? '#00ff88' : '#ff4444',
+                }}>
+                  {up ? '+' : ''}{pct.toFixed(2)}%
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -140,7 +203,7 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 10, height: 10, borderRadius: '50%',
-              background: sigColor, animation: 'dot 1.3s infinite', color: sigColor,
+              background: sigColor, animation: 'dot 1.3s infinite',
               flexShrink: 0,
             }} />
             <div style={{
@@ -154,15 +217,12 @@ export default function Dashboard() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
             {[
-              { k: 'ENTRY',  v: '30,141.00', c: '#c9a84c' },
-              { k: 'STOP',   v: '30,050.00', c: '#ff4444' },
-              { k: 'TARGET', v: '30,400.00', c: '#00ff88' },
-              { k: 'R·R',    v: '2.8',       c: '#c9a84c' },
+              { k: 'VAH J-1', v: fmt(bridge.vah),      c: '#c9a84c' },
+              { k: 'VAL J-1', v: fmt(bridge.val),       c: '#ff4444' },
+              { k: 'POC J-1', v: fmt(bridge.poc),       c: '#00ff88' },
+              { k: 'ATR',     v: fmt(bridge.atr_auto,0),c: '#8899bb' },
             ].map(p => (
-              <div key={p.k} style={{
-                background: 'rgba(0,0,0,0.2)',
-                borderRadius: 6, padding: '6px 8px',
-              }}>
+              <div key={p.k} style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: '6px 8px' }}>
                 <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', marginBottom: 2, fontFamily: JB }}>{p.k}</div>
                 <div style={{ fontFamily: JB, fontSize: 13, fontWeight: 700, color: p.c }}>{p.v}</div>
               </div>
@@ -228,16 +288,12 @@ export default function Dashboard() {
               fontSize: 9, fontWeight: 500, letterSpacing: '0.1em',
               color: 'rgba(255,255,255,0.3)', marginBottom: 6, fontFamily: JB,
             }}>{s.k}</div>
-            <div style={{
-              fontFamily: ORB, fontSize: 24, fontWeight: 900, color: s.c,
-            }}>{s.v}</div>
-
+            <div style={{ fontFamily: ORB, fontSize: 24, fontWeight: 900, color: s.c }}>{s.v}</div>
             {s.type === 'bar' && (
               <div style={{ marginTop: 6, height: 3, background: `${s.c}26`, borderRadius: 2 }}>
                 <div style={{ height: '100%', width: `${s.bar}%`, background: s.c, borderRadius: 2 }} />
               </div>
             )}
-
             {s.type === 'dots' && s.dots && (
               <div style={{ marginTop: 6, display: 'flex', gap: 2, justifyContent: 'center' }}>
                 {s.dots.map((win, i) => (

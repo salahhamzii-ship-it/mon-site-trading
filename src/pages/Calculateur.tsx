@@ -606,9 +606,8 @@ export default function Calculateur() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // SC Bridge — traitement données (partagé WS + HTTP polling)
+  // SC Bridge — traitement données
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // @ts-ignore — bridge désactivé, fonction conservée pour réactivation future
   const processScData = (data: Record<string, any>) => {
 
             // --- Instr fields (live prices + IB/ORB + J-1) ---
@@ -786,6 +785,21 @@ export default function Calculateur() {
             fillRth(setRthRowsJ1,  'bars_j1')
   }
 
+
+  // Bridge HTTP polling — toutes les 10s
+  useEffect(() => {
+    let active = true
+    const poll = async () => {
+      try {
+        const r = await fetch('/api/bridge-data')
+        if (r.ok) { const d = await r.json(); if (active && !d.error) processScData(d) }
+      } catch {}
+      if (active) setTimeout(poll, 10000)
+    }
+    poll()
+    return () => { active = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const fmt = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })
