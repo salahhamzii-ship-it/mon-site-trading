@@ -3,11 +3,10 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-// URLs par ordre de priorité — localtunnel (subdomain fixe) en premier
+// URL active du tunnel (mise a jour a chaque nouvelle session cloudflared)
 const TUNNEL_URLS = [
+  'https://pulled-auburn-ended-expressed.trycloudflare.com/data',
   'https://sc-bridge.loca.lt/data',
-  'https://33654683-3a3b-4484-8441-0cda7748d29e.cfargotunnel.com/data',
-  'https://laughing-urw-sacramento-creations.trycloudflare.com/data',
 ]
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
