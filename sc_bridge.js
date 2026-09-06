@@ -10,6 +10,7 @@ import { createServer } from 'http'
 import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync } from 'fs'
 import { join } from 'path'
 import { WebSocketServer } from 'ws'
+import { execFile } from 'child_process'
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,45 @@ if (!IS_WIN) {
 let LAST_MSG = '{}'
 const CLIENTS  = new Set()
 const DIAG_DONE = new Set()
+
+// ─── ALERTES LAF / LBF ────────────────────────────────────────────────────────
+// Mémorise l'état précédent pour n'alerter qu'à la TRANSITION false → true
+const ALERT_STATE = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false }
+
+function fireToast(title, msg) {
+  if (!IS_WIN) { console.log(`  [ALERT] ${title} — ${msg}`); return }
+  const ps = `
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime]|Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType=WindowsRuntime]|Out-Null
+$xml=[Windows.Data.Xml.Dom.XmlDocument]::new()
+$xml.LoadXml('<toast duration="long"><visual><binding template="ToastGeneric"><text>${title}</text><text>${msg}</text></binding></visual></toast>')
+$toast=[Windows.UI.Notifications.ToastNotification]::new($xml)
+$notifier=[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("SC Bridge Alert")
+$notifier.Show($toast)
+`
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], (err) => {
+    if (err) console.error(`  [TOAST ERR] ${err.message}`)
+  })
+}
+
+function checkAlerts(data) {
+  for (const sym of ['NQ', 'ES']) {
+    const d = data[sym]
+    if (!d || d._from_snapshot) continue
+    const laf = !!d.laf_sd2
+    const lbf = !!d.lbf_sd2
+    if (laf && !ALERT_STATE[`laf_${sym}`]) {
+      console.log(`  🔴 ALERT ${sym} LAF R34 — price ${d.last} > SD+2 ${d.sd2h}`)
+      fireToast(`🔴 ${sym} — LAF R34 · Questionable High`, `${d.last} dépasse SD+2 ${d.sd2h} — SHORT SETUP`)
+    }
+    if (lbf && !ALERT_STATE[`lbf_${sym}`]) {
+      console.log(`  🟢 ALERT ${sym} LBF R35 — price ${d.last} < SD-2 ${d.sd2l}`)
+      fireToast(`🟢 ${sym} — LBF R35 · Questionable Low`, `${d.last} perce SD-2 ${d.sd2l} — LONG SETUP`)
+    }
+    ALERT_STATE[`laf_${sym}`] = laf
+    ALERT_STATE[`lbf_${sym}`] = lbf
+  }
+}
 
 // ─── UTILITAIRES TEMPS ───────────────────────────────────────────────────────
 
@@ -789,6 +829,7 @@ function refreshAndBroadcast() {
   try {
     const msg = buildMessage()
     LAST_MSG = msg
+    try { checkAlerts(JSON.parse(msg)) } catch {}
     for (const ws of CLIENTS) {
       if (ws.readyState === ws.OPEN) {
         ws.send(msg, err => { if (err) CLIENTS.delete(ws) })

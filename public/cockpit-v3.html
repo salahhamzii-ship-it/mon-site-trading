@@ -1190,6 +1190,62 @@ function autoInitSession(){
 }
 
 // ── AVWAP §9 LIVE ─────────────────────────────────────
+const _avwapPrev = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false }
+
+function playBip(freq, dur){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)()
+    const o=ctx.createOscillator(), g=ctx.createGain()
+    o.connect(g); g.connect(ctx.destination)
+    o.frequency.value=freq; o.type='sine'
+    g.gain.setValueAtTime(0.4, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur)
+    o.start(); o.stop(ctx.currentTime+dur)
+  }catch(e){}
+}
+
+function alertBip(type){
+  // LAF (SHORT) : 3 bips descendants aigus
+  // LBF (LONG)  : 3 bips montants graves
+  if(type==='laf'){
+    setTimeout(()=>playBip(880,0.18),0)
+    setTimeout(()=>playBip(780,0.18),220)
+    setTimeout(()=>playBip(660,0.25),440)
+  } else {
+    setTimeout(()=>playBip(440,0.18),0)
+    setTimeout(()=>playBip(550,0.18),220)
+    setTimeout(()=>playBip(660,0.25),440)
+  }
+}
+
+function checkAvwapAlerts(d){
+  for(const sym of ['NQ','ES']){
+    const instr=d[sym.toUpperCase()]||d[sym.toLowerCase()]
+    if(!instr||instr._from_snapshot)continue
+    const laf=!!instr.laf_sd2, lbf=!!instr.lbf_sd2
+    if(laf&&!_avwapPrev['laf_'+sym]){
+      alertBip('laf')
+      showAvwapFlash(`🔴 ${sym} LAF R34 — QUESTIONABLE HIGH — SHORT SETUP`, 'red')
+    }
+    if(lbf&&!_avwapPrev['lbf_'+sym]){
+      alertBip('lbf')
+      showAvwapFlash(`🟢 ${sym} LBF R35 — QUESTIONABLE LOW — LONG SETUP`, 'green')
+    }
+    _avwapPrev['laf_'+sym]=laf
+    _avwapPrev['lbf_'+sym]=lbf
+  }
+}
+
+function showAvwapFlash(msg, color){
+  const t=document.getElementById('toast')
+  if(!t)return
+  t.textContent=msg
+  t.style.borderColor=color==='red'?'var(--red)':'var(--green)'
+  t.style.color=color==='red'?'var(--red)':'var(--green)'
+  t.classList.add('show')
+  setTimeout(()=>t.classList.remove('show'),8000)
+}
+
 async function fetchAvwap(){
   try{
     const r=await fetch('/api/bridge-data',{cache:'no-store'});
@@ -1206,6 +1262,7 @@ async function fetchAvwap(){
 }
 function renderAvwapPanel(d){
   const nq=d.NQ||d.nq, es=d.ES||d.es;
+  checkAvwapAlerts(d);
   renderAVwapInst('nq',nq);
   renderAVwapInst('es',es);
   // §9
