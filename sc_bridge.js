@@ -31,7 +31,7 @@ const NQ_PATHS = {
 }
 
 let FILES = {
-  NQ: NQ_PATHS.main,
+  NQ: NQ_PATHS.auto,
   ES: IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv.txt` : `${UPLOAD_DIR}/ES.csv`,
   GC: IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv.txt` : `${UPLOAD_DIR}/GC.csv`,
   CL: IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv.txt` : `${UPLOAD_DIR}/CL.csv`,
@@ -699,8 +699,8 @@ function buildMessage() {
 
     // Source principale : rowsAuto (fallback) enrichi par extraSources
     const mainRows = rowsAuto.length ? rowsAuto
-      : (extraSources.m30.length ? extraSources.m30
-        : (extraSources.rth.length ? extraSources.rth : []))
+      : (extraSources.m30?.length ? extraSources.m30
+        : (extraSources.rth?.length ? extraSources.rth : []))
 
     if (mainRows.length) {
       const dated = mainRows.filter(r => r.date).map(r => r.date).sort()
