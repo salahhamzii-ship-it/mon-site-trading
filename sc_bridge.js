@@ -578,6 +578,7 @@ function buildPayload(instr, allRows, extraSources = {}) {
 
   return {
     last:        lastVal,
+    lastUpdate:  new Date().toISOString(),
     j1_date:     j1DateActual,   // date réelle J-1 dans le CSV (null = CSV périmé)
     j1_expected: j1,             // date J-1 attendue aujourd'hui
     j1_high:   aggHigh(j1Rows),

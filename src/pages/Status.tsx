@@ -9,19 +9,26 @@ interface InstrumentStatus {
   ok: boolean
 }
 
+interface BridgeInstrument {
+  last?: string
+  lastUpdate?: string
+  _from_snapshot?: boolean
+  [key: string]: unknown
+}
+
 interface BridgeData {
-  nq?: { settle?: string; lastUpdate?: string }
-  es?: { settle?: string; lastUpdate?: string }
-  gc?: { settle?: string; lastUpdate?: string }
-  cl?: { settle?: string; lastUpdate?: string }
+  NQ?: BridgeInstrument
+  ES?: BridgeInstrument
+  GC?: BridgeInstrument
+  CL?: BridgeInstrument
   _fetchedAt?: string
 }
 
 const STALE_MS = 15 * 60 * 1000
 
-function parseInstrument(key: string, label: string, raw?: { settle?: string; lastUpdate?: string }): InstrumentStatus {
+function parseInstrument(key: string, label: string, raw?: BridgeInstrument): InstrumentStatus {
   if (!raw) return { label, symbol: key.toUpperCase(), lastPrice: '—', lastUpdate: null, stale: true, ok: false }
-  const price = raw.settle || '—'
+  const price = raw.last || '—'
   const ts = raw.lastUpdate || null
   const stale = !ts || Date.now() - new Date(ts).getTime() > STALE_MS
   return { label, symbol: key.toUpperCase(), lastPrice: price, lastUpdate: ts, stale, ok: !!price && price !== '—' }
@@ -67,10 +74,10 @@ export default function Status() {
   }, [])
 
   const instruments: InstrumentStatus[] = [
-    parseInstrument('nq', 'NQ — Nasdaq E-mini', data?.nq),
-    parseInstrument('es', 'ES — S&P E-mini',    data?.es),
-    parseInstrument('gc', 'GC — Gold',           data?.gc),
-    parseInstrument('cl', 'CL — Crude Oil',      data?.cl),
+    parseInstrument('nq', 'NQ — Nasdaq E-mini', data?.NQ),
+    parseInstrument('es', 'ES — S&P E-mini',    data?.ES),
+    parseInstrument('gc', 'GC — Gold',           data?.GC),
+    parseInstrument('cl', 'CL — Crude Oil',      data?.CL),
   ]
 
   const bridgeUp = !error && !!data
