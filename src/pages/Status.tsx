@@ -39,7 +39,7 @@ export default function Status() {
   const [data, setData] = useState<BridgeData | null>(null)
   const [error, setError] = useState(false)
   const [lastFetch, setLastFetch] = useState<Date | null>(null)
-  const [tick, setTick] = useState(0)
+  const [, setTick] = useState(0)
 
   async function fetchData() {
     try {
