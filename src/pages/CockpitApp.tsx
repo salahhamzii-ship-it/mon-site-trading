@@ -1,10 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { CSSProperties } from 'react'
 import { LiveCanvas } from '../components/chart/LiveCanvas'
 
 /* ── Types ──────────────────────────────────────────────────── */
 type View   = 'dash' | 'session' | 'signals' | 'chart' | 'screener' | 'settings'
 type Signal = 'ACHAT' | 'VENTE'
+
+interface BridgePayload {
+  last?: string
+  ovn_vwap?: string
+  ovn_sd1h?: string; ovn_sd1l?: string
+  ovn_sd2h?: string; ovn_sd2l?: string
+  ovn_sd3h?: string; ovn_sd3l?: string
+  avwap_side?: 'above' | 'below' | ''
+  laf_sd2?: boolean; lbf_sd2?: boolean
+  par9?: string
+  poc?: string; vah?: string; val?: string
+  j1_high?: string; j1_low?: string; j1_settle?: string
+}
+interface BridgeData {
+  NQ?: BridgePayload
+  ES?: BridgePayload
+  GC?: BridgePayload
+  CL?: BridgePayload
+}
 
 /* ── Design tokens ──────────────────────────────────────────── */
 const T = {
@@ -48,6 +67,28 @@ export default function CockpitApp() {
   const [prices, setPrices] = useState<TickerPrice[]>(
     INSTRUMENTS.map(i => ({ price: i.base, delta: 0 }))
   )
+  const [bridgeData, setBridgeData] = useState<BridgeData | null>(null)
+  const prevAvwapSide = useRef<string>('')
+
+  // Bridge data — fetch every 30s
+  useEffect(() => {
+    const fetchBridge = async () => {
+      try {
+        const r = await fetch('/api/bridge-data', { cache: 'no-store' })
+        if (!r.ok) return
+        const d: BridgeData = await r.json()
+        setBridgeData(d)
+        const side = d?.NQ?.avwap_side || ''
+        if (side && prevAvwapSide.current && side !== prevAvwapSide.current) {
+          playBip()
+        }
+        if (side) prevAvwapSide.current = side
+      } catch { /* bridge offline */ }
+    }
+    fetchBridge()
+    const id = setInterval(fetchBridge, 30_000)
+    return () => clearInterval(id)
+  }, [])
 
   // Clock — EST
   useEffect(() => {
@@ -195,7 +236,7 @@ export default function CockpitApp() {
 
       {/* ── View Body ── */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {view === 'dash'     && <DashView     signal={signal} nqPrice={prices[0].price} nqDelta={prices[0].delta} />}
+        {view === 'dash'     && <DashView     signal={signal} nqPrice={prices[0].price} nqDelta={prices[0].delta} bridgeData={bridgeData} />}
         {view === 'session'  && <SessionView  />}
         {view === 'signals'  && <SignalsView  signal={signal} />}
         {view === 'chart'    && <ChartView    />}
@@ -206,12 +247,26 @@ export default function CockpitApp() {
   )
 }
 
+/* ── Bip sonore alerte changement AVWAP side ──────────────────── */
+function playBip() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.type = 'sine'; osc.frequency.value = 880
+    gain.gain.setValueAtTime(0.18, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
+    osc.start(); osc.stop(ctx.currentTime + 0.45)
+  } catch { /* autoplay blocked */ }
+}
+
 /* ════════════════════════════════════════════════════════════════
    DASHBOARD VIEW
 ════════════════════════════════════════════════════════════════ */
-interface DashProps { signal: Signal; nqPrice: number; nqDelta: number }
+interface DashProps { signal: Signal; nqPrice: number; nqDelta: number; bridgeData: BridgeData | null }
 
-function DashView({ signal, nqPrice, nqDelta }: DashProps) {
+function DashView({ signal, nqPrice, nqDelta, bridgeData }: DashProps) {
   const isBuy = signal === 'ACHAT'
   const sigCol = isBuy ? T.up : T.down
   const whole = Math.floor(nqPrice).toLocaleString('en-US')
@@ -290,35 +345,8 @@ function DashView({ signal, nqPrice, nqDelta }: DashProps) {
           </div>
         </div>
 
-        {/* 4 Mini-cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {[
-            { id: 'RTH',   col: T.gold,  data: [['OPEN','21 284.00'],['HIGH','21 498.75'],['LOW','21 187.25'],['RANGE','311.50']] },
-            { id: 'OVN',   col: T.teal,  data: [['HIGH','21 321.50'],['LOW','21 089.00'],['CLOSE','21 267.75'],['GAP','+17.25']] },
-            { id: 'ALN',   col: T.amber, data: [['BULL LVL','21 450'],['BEAR LVL','21 150'],['ATR','285 pts'],['VAD','HAUSSE']] },
-            { id: 'IB·GEX',col: T.goldL, data: [['IB HIGH','21 392'],['IB LOW','21 264'],['CALL WALL','21 500'],['PUT WALL','21 000']] },
-          ].map(c => (
-            <div key={c.id} style={{
-              padding: '10px 12px', borderRadius: 3,
-              background: T.surface, borderTop: `2px solid ${c.col}`,
-              border: `1px solid ${T.border}`, borderTopColor: c.col,
-              transition: 'transform 0.15s, background 0.15s', cursor: 'default',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.background = 'rgba(201,168,76,0.04)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; (e.currentTarget as HTMLDivElement).style.background = T.surface }}
-            >
-              <div style={orb(9, 700, { color: c.col, letterSpacing: '0.26em', marginBottom: 7 })}>{c.id}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {c.data.map(([lbl, val]) => (
-                  <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={jb(7.5, 400, { color: T.muted })}>{lbl}</span>
-                    <span style={jb(11, 600, { color: T.gold })}>{val}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* AVWAP §9 panel — données bridge live */}
+        <AvwapPanel bridgeData={bridgeData} />
 
         {/* Stat row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
@@ -356,6 +384,113 @@ function DashView({ signal, nqPrice, nqDelta }: DashProps) {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════
+   AVWAP §9 PANEL — données bridge live NQ + ES
+════════════════════════════════════════════════════════════════ */
+function AvwapPanel({ bridgeData }: { bridgeData: BridgeData | null }) {
+  const nq = bridgeData?.NQ
+  const es = bridgeData?.ES
+
+  const sideColor = (s?: string) =>
+    s === 'above' ? T.up : s === 'below' ? T.down : T.muted
+
+  const sideLabel = (s?: string) =>
+    s === 'above' ? 'ABOVE ↑' : s === 'below' ? 'BELOW ↓' : '——'
+
+  const par9 = nq?.par9
+  const par9Color = par9 === 'above' ? T.up : par9 === 'below' ? T.down : par9 === 'divergent' ? T.amber : T.muted
+  const par9Label = par9 === 'above' ? '§9 LONG' : par9 === 'below' ? '§9 SHORT' : par9 === 'divergent' ? '§9 DIVERGENT' : '§9 ——'
+
+  const fmt = (v?: string) => v && parseFloat(v) > 100 ? parseFloat(v).toFixed(2) : '——'
+
+  const sdRow = (label: string, val?: string, note = '', col = T.muted) => (
+    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '1.5px 0' }}>
+      <span style={jb(7.5, 400, { color: T.muted, minWidth: 38 })}>{label}</span>
+      <span style={jb(10.5, 600, { color: col, fontVariantNumeric: 'tabular-nums' })}>{fmt(val)}</span>
+      {note && <span style={jb(7, 400, { color: T.muted, marginLeft: 4 })}>{note}</span>}
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+
+      {/* §9 badge */}
+      <div style={{
+        padding: '8px 12px', borderRadius: 3,
+        background: T.surface, border: `1px solid ${T.border}`,
+        borderTop: `2px solid ${par9Color}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={orb(7.5, 700, { color: T.muted, letterSpacing: '0.25em', marginBottom: 4 })}>AVWAP 18H · §9 DALTON</div>
+          <div style={orb(20, 900, {
+            color: par9Color, lineHeight: 1,
+            textShadow: par9 !== 'divergent' && par9 ? `0 0 16px ${par9Color}80` : 'none',
+          })}>{par9Label}</div>
+        </div>
+        {(nq?.laf_sd2 || nq?.lbf_sd2) && (
+          <div style={{
+            padding: '3px 8px', borderRadius: 2,
+            background: 'rgba(255,68,68,0.12)', border: '1px solid rgba(255,68,68,0.3)',
+          }}>
+            <span style={orb(8, 700, { color: T.down })}>{nq?.laf_sd2 ? 'LAF SD2' : 'LBF SD2'}</span>
+          </div>
+        )}
+      </div>
+
+      {/* NQ + ES côte à côte */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+        {([['NQ', nq], ['ES', es]] as const).map(([sym, d]) => {
+          const side = d?.avwap_side
+          const col  = sideColor(side)
+          return (
+            <div key={sym} style={{
+              padding: '9px 11px', borderRadius: 3,
+              background: `${col}08`, border: `1px solid ${col}28`,
+              borderTop: `2px solid ${col}`,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'baseline' }}>
+                <span style={orb(10, 900, { color: T.gold })}>{sym}</span>
+                <span style={jb(8, 700, { color: col })}>{sideLabel(side)}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {sdRow('SD+3', d?.ovn_sd3h, '★', T.down)}
+                {sdRow('SD+2', d?.ovn_sd2h, '', T.down)}
+                {sdRow('SD+1', d?.ovn_sd1h)}
+                {sdRow('AVWAP', d?.ovn_vwap, '👑', T.teal)}
+                {sdRow('SD-1', d?.ovn_sd1l)}
+                {sdRow('SD-2', d?.ovn_sd2l, '', T.up)}
+                {sdRow('LAST', d?.last, '', '#fff')}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* J-1 ref */}
+      {nq?.vah && (
+        <div style={{ padding: '8px 11px', borderRadius: 3, background: T.surface, border: `1px solid ${T.border}` }}>
+          <div style={orb(7.5, 700, { color: T.muted, letterSpacing: '0.2em', marginBottom: 5 })}>J-1 NQ · VALUE AREA</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
+            {[['VAH', nq.vah, T.down], ['POC', nq.poc, T.gold], ['VAL', nq.val, T.up]].map(([l, v, c]) => (
+              <div key={l as string} style={{ textAlign: 'center' }}>
+                <div style={jb(7.5, 400, { color: T.muted, marginBottom: 2 })}>{l as string}</div>
+                <div style={jb(11, 600, { color: c as string })}>{fmt(v as string)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!bridgeData && (
+        <div style={{ padding: '8px 12px', textAlign: 'center', borderRadius: 3, border: `1px solid ${T.border}` }}>
+          <span style={jb(9, 400, { color: T.muted })}>Bridge offline — données en attente</span>
+        </div>
+      )}
     </div>
   )
 }
