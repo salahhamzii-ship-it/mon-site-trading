@@ -13,8 +13,11 @@ import { WebSocketServer } from 'ws'
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
-const IS_WIN     = process.platform === 'win32'
-const UPLOAD_DIR = '/tmp/sc-bridge'
+const IS_WIN       = process.platform === 'win32'
+const UPLOAD_DIR   = '/tmp/sc-bridge'
+const SNAPSHOT_FILE = IS_WIN
+  ? String.raw`C:\SierraChart_CME\Data\sc_snapshot.json`
+  : `${UPLOAD_DIR}/sc_snapshot.json`
 
 // NQ multi-sources (5 fichiers Sierra Chart)
 const NQ_PATHS = {
@@ -563,6 +566,37 @@ function buildPayload(instr, allRows, extraSources = {}) {
   }
 }
 
+// ─── SNAPSHOT JSON ────────────────────────────────────────────────────────────
+
+function saveSnapshot(data) {
+  try {
+    const snap = {}
+    for (const [instr, payload] of Object.entries(data)) {
+      if (payload && payload.last && parseFloat(payload.last) > 100 && !payload._from_snapshot) {
+        snap[instr] = { ...payload, _saved_at: new Date().toISOString() }
+      }
+    }
+    if (!Object.keys(snap).length) return
+    const dir = SNAPSHOT_FILE.replace(/[/\\][^/\\]+$/, '')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(SNAPSHOT_FILE, JSON.stringify(snap, null, 2), 'utf-8')
+    console.log(`  [SNAP] Sauvegardé: ${Object.keys(snap).join(', ')}`)
+  } catch (e) {
+    console.log(`  [SNAP] Erreur sauvegarde: ${e.message}`)
+  }
+}
+
+function loadSnapshot() {
+  try {
+    if (!existsSync(SNAPSHOT_FILE)) return {}
+    const snap = JSON.parse(readFileSync(SNAPSHOT_FILE, 'utf-8'))
+    console.log(`  [SNAP] Fichier trouvé: ${Object.keys(snap).join(', ')}`)
+    return snap
+  } catch {
+    return {}
+  }
+}
+
 function buildMessage() {
   const today = todayStr()
   const j1    = j1Str()
@@ -634,6 +668,21 @@ function buildMessage() {
     const bj = data[instr].bars_j1
     console.log(`  ${instr}: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}`)
   }
+
+  // ── Fallback snapshot pour instruments sans données CSV ─────────────────────
+  const snap = loadSnapshot()
+  for (const instr of ['NQ', 'ES', 'GC', 'CL']) {
+    if (!data[instr] && snap[instr]) {
+      data[instr] = { ...snap[instr], _from_snapshot: true }
+      const age = snap[instr]._saved_at
+        ? Math.round((Date.now() - new Date(snap[instr]._saved_at).getTime()) / 3600000) + 'h'
+        : '?'
+      console.log(`  ${instr}: SNAPSHOT (sauvegardé il y a ${age})`)
+    }
+  }
+
+  // ── Sauvegarder les données fraîches du jour ─────────────────────────────
+  saveSnapshot(data)
 
   return JSON.stringify(data)
 }
