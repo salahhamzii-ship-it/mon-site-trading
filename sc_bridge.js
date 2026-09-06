@@ -161,6 +161,8 @@ function parseCsv(filepath, diag = false) {
   let idx_poc  = find('tpo poc', 'tpopoc', 'point of control', 'pointofcontrol')
   let idx_vah  = find('tpo vah', 'tpovah', 'value area high', 'valuearehigh', 'valuearahigh')
   let idx_val  = find('tpo val', 'tpoval', 'value area low', 'valuearealow', 'valueараlow')
+  let idx_sp3  = find('sd+3', 'sd +3', 'vwap sd+3', '+3sd', 'upper3', 'upperband3', 'bande+3')
+  let idx_sm3  = find('sd-3', 'sd -3', 'vwap sd-3', '-3sd', 'lower3', 'lowerband3', 'bande-3')
   // BidVol / AskVol (Règle 13 Excess — Delta)
   let idx_bid  = find('bidvolume', 'bid volume', 'bidvol', 'bid vol')
   let idx_ask  = find('askvolume', 'ask volume', 'askvol', 'ask vol')
@@ -240,6 +242,8 @@ function parseCsv(filepath, diag = false) {
       sd1l:    get(cols, idx_sm1),
       sd2h:    get(cols, idx_sp2),
       sd2l:    get(cols, idx_sm2),
+      sd3h:    get(cols, idx_sp3),
+      sd3l:    get(cols, idx_sm3),
       tpo_poc: get(cols, idx_poc),
       tpo_vah: get(cols, idx_vah),
       tpo_val: get(cols, idx_val),
@@ -559,6 +563,22 @@ function buildPayload(instr, allRows, extraSources = {}) {
     ovn_sd1l:   ovnSd1l,
     ovn_sd2h:   ovnSd2h,
     ovn_sd2l:   ovnSd2l,
+    ovn_sd3h:   lastNonempty(allOvn, 'sd3h') || lastNonempty(todayAll, 'sd3h') || lastNonempty(allRows, 'sd3h'),
+    ovn_sd3l:   lastNonempty(allOvn, 'sd3l') || lastNonempty(todayAll, 'sd3l') || lastNonempty(allRows, 'sd3l'),
+    // ── AVWAP position & signaux ──────────────────────────────────────────────
+    avwap_side: (() => {
+      const p = parseFloat(lastVal), v = parseFloat(ovnVwapFinal)
+      if (isNaN(p) || isNaN(v) || v === 0) return ''
+      return p > v ? 'above' : 'below'
+    })(),
+    laf_sd2: (() => {
+      const p = parseFloat(lastVal), s = parseFloat(ovnSd2h)
+      return !isNaN(p) && !isNaN(s) && s > 0 && p > s
+    })(),
+    lbf_sd2: (() => {
+      const p = parseFloat(lastVal), s = parseFloat(ovnSd2l)
+      return !isNaN(p) && !isNaN(s) && s > 0 && p < s
+    })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_j1:     [...barsJ1Final].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_asia:   barsAsia.map(barDict),
@@ -667,6 +687,14 @@ function buildMessage() {
     const bt = data[instr].bars_today
     const bj = data[instr].bars_j1
     console.log(`  ${instr}: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}`)
+  }
+
+  // ── §9 : NQ + ES alignés vs AVWAP ───────────────────────────────────────────
+  if (data.NQ && data.ES && data.NQ.avwap_side && data.ES.avwap_side) {
+    const par9 = data.NQ.avwap_side === data.ES.avwap_side ? data.NQ.avwap_side : 'divergent'
+    data.NQ.par9 = par9
+    data.ES.par9 = par9
+    console.log(`  §9: NQ=${data.NQ.avwap_side} ES=${data.ES.avwap_side} → ${par9}`)
   }
 
   // ── Fallback snapshot pour instruments sans données CSV ─────────────────────
