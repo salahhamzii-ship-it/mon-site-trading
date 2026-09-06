@@ -9,6 +9,7 @@ import Stats from './pages/Stats'
 import SessionAnalyzer from './pages/SessionAnalyzer'
 import GEXPanel from './pages/GEXPanel'
 import Calculateur from './pages/Calculateur'
+import Status from './pages/Status'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="session" element={<SessionAnalyzer />} />
         <Route path="gex" element={<GEXPanel />} />
         <Route path="calc" element={<Calculateur />} />
+        <Route path="status" element={<Status />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

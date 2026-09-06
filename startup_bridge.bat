@@ -18,6 +18,19 @@ echo   SC BRIDGE + NGROK - DEMARRAGE AUTOMATIQUE
 echo ============================================================
 echo.
 
+:: Créer package.json ESM si absent (requis par Node.js pour les import ESM)
+if not exist package.json (
+    echo {"type":"module"} > package.json
+    echo [OK] package.json ESM cree
+)
+
+:: Installer ws si absent
+if not exist node_modules\ws (
+    echo [INSTALL] Installation ws...
+    npm install ws --save --prefix . >nul 2>&1
+    echo [OK] ws installe
+)
+
 :: Tuer anciens processus
 taskkill /F /IM node.exe >nul 2>&1
 taskkill /F /IM ngrok.exe >nul 2>&1

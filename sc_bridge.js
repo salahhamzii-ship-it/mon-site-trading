@@ -10,11 +10,15 @@ import { createServer } from 'http'
 import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync } from 'fs'
 import { join } from 'path'
 import { WebSocketServer } from 'ws'
+import { execFile } from 'child_process'
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
-const IS_WIN     = process.platform === 'win32'
-const UPLOAD_DIR = '/tmp/sc-bridge'
+const IS_WIN       = process.platform === 'win32'
+const UPLOAD_DIR   = '/tmp/sc-bridge'
+const SNAPSHOT_FILE = IS_WIN
+  ? String.raw`C:\SierraChart_CME\Data\sc_snapshot.json`
+  : `${UPLOAD_DIR}/sc_snapshot.json`
 
 // NQ multi-sources (5 fichiers Sierra Chart)
 const NQ_PATHS = {
@@ -49,6 +53,45 @@ if (!IS_WIN) {
 let LAST_MSG = '{}'
 const CLIENTS  = new Set()
 const DIAG_DONE = new Set()
+
+// ─── ALERTES LAF / LBF ────────────────────────────────────────────────────────
+// Mémorise l'état précédent pour n'alerter qu'à la TRANSITION false → true
+const ALERT_STATE = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false }
+
+function fireToast(title, msg) {
+  if (!IS_WIN) { console.log(`  [ALERT] ${title} — ${msg}`); return }
+  const ps = `
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime]|Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType=WindowsRuntime]|Out-Null
+$xml=[Windows.Data.Xml.Dom.XmlDocument]::new()
+$xml.LoadXml('<toast duration="long"><visual><binding template="ToastGeneric"><text>${title}</text><text>${msg}</text></binding></visual></toast>')
+$toast=[Windows.UI.Notifications.ToastNotification]::new($xml)
+$notifier=[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("SC Bridge Alert")
+$notifier.Show($toast)
+`
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], (err) => {
+    if (err) console.error(`  [TOAST ERR] ${err.message}`)
+  })
+}
+
+function checkAlerts(data) {
+  for (const sym of ['NQ', 'ES']) {
+    const d = data[sym]
+    if (!d || d._from_snapshot) continue
+    const laf = !!d.laf_sd2
+    const lbf = !!d.lbf_sd2
+    if (laf && !ALERT_STATE[`laf_${sym}`]) {
+      console.log(`  🔴 ALERT ${sym} LAF R34 — price ${d.last} > SD+2 ${d.sd2h}`)
+      fireToast(`🔴 ${sym} — LAF R34 · Questionable High`, `${d.last} dépasse SD+2 ${d.sd2h} — SHORT SETUP`)
+    }
+    if (lbf && !ALERT_STATE[`lbf_${sym}`]) {
+      console.log(`  🟢 ALERT ${sym} LBF R35 — price ${d.last} < SD-2 ${d.sd2l}`)
+      fireToast(`🟢 ${sym} — LBF R35 · Questionable Low`, `${d.last} perce SD-2 ${d.sd2l} — LONG SETUP`)
+    }
+    ALERT_STATE[`laf_${sym}`] = laf
+    ALERT_STATE[`lbf_${sym}`] = lbf
+  }
+}
 
 // ─── UTILITAIRES TEMPS ───────────────────────────────────────────────────────
 
@@ -158,6 +201,8 @@ function parseCsv(filepath, diag = false) {
   let idx_poc  = find('tpo poc', 'tpopoc', 'point of control', 'pointofcontrol')
   let idx_vah  = find('tpo vah', 'tpovah', 'value area high', 'valuearehigh', 'valuearahigh')
   let idx_val  = find('tpo val', 'tpoval', 'value area low', 'valuearealow', 'valueараlow')
+  let idx_sp3  = find('sd+3', 'sd +3', 'vwap sd+3', '+3sd', 'upper3', 'upperband3', 'bande+3')
+  let idx_sm3  = find('sd-3', 'sd -3', 'vwap sd-3', '-3sd', 'lower3', 'lowerband3', 'bande-3')
   // BidVol / AskVol (Règle 13 Excess — Delta)
   let idx_bid  = find('bidvolume', 'bid volume', 'bidvol', 'bid vol')
   let idx_ask  = find('askvolume', 'ask volume', 'askvol', 'ask vol')
@@ -222,6 +267,8 @@ function parseCsv(filepath, diag = false) {
 
     if (!time_s) continue
 
+    // nz : filtre les valeurs 0.00 exportées par Sierra Chart avant calcul AVWAP/SD
+    const nz = v => { const f = parseFloat(v); return (!isNaN(f) && f > 0) ? v : '' }
     rows.push({
       date:    date_obj,
       time:    time_s,
@@ -232,11 +279,13 @@ function parseCsv(filepath, diag = false) {
       vol:     get(cols, idx_vol),
       bid:     get(cols, idx_bid),
       ask:     get(cols, idx_ask),
-      vwap:    get(cols, idx_vwap),
-      sd1h:    get(cols, idx_sp1),
-      sd1l:    get(cols, idx_sm1),
-      sd2h:    get(cols, idx_sp2),
-      sd2l:    get(cols, idx_sm2),
+      vwap:    nz(get(cols, idx_vwap)),
+      sd1h:    nz(get(cols, idx_sp1)),
+      sd1l:    nz(get(cols, idx_sm1)),
+      sd2h:    nz(get(cols, idx_sp2)),
+      sd2l:    nz(get(cols, idx_sm2)),
+      sd3h:    nz(get(cols, idx_sp3)),
+      sd3l:    nz(get(cols, idx_sm3)),
       tpo_poc: get(cols, idx_poc),
       tpo_vah: get(cols, idx_vah),
       tpo_val: get(cols, idx_val),
@@ -352,12 +401,56 @@ function lastNonempty(bars, key) {
   return ''
 }
 
-// Extrait tpo_poc/vah/val valide (> 100) depuis un jeu de rows
+// Extrait tpo_poc/vah/val valide (> 100) depuis un jeu de rows (colonnes Sierra Chart)
 function extractTpo(rows) {
   const poc = lastNonempty(rows, 'tpo_poc')
   const vah = lastNonempty(rows, 'tpo_vah')
   const val = lastNonempty(rows, 'tpo_val')
   return { poc, vah, val }
+}
+
+// Calcule POC/VAH/VAL depuis les barres OHLC — méthode Dalton TPO standard
+// Tick NQ = 0.25, Value Area = 70% des TPO totaux
+function calcTpoFromBars(bars, tick = 0.25) {
+  if (!bars || bars.length < 2) return { poc: '', vah: '', val: '' }
+
+  const hist = new Map()
+  for (const r of bars) {
+    const h = parseFloat(r.high), l = parseFloat(r.low)
+    if (isNaN(h) || isNaN(l) || h <= 0 || l <= 0 || h < l) continue
+    const lo = Math.round(l / tick) * tick
+    const hi = Math.round(h / tick) * tick
+    for (let p = lo; p <= hi + tick * 0.01; p = Math.round((p + tick) * 1e6) / 1e6) {
+      const key = Math.round(p / tick)
+      hist.set(key, (hist.get(key) || 0) + 1)
+    }
+  }
+
+  if (!hist.size) return { poc: '', vah: '', val: '' }
+
+  let pocKey = 0, pocCount = 0
+  for (const [k, c] of hist) {
+    if (c > pocCount || (c === pocCount && k > pocKey)) { pocKey = k; pocCount = c }
+  }
+
+  const total = [...hist.values()].reduce((a, b) => a + b, 0)
+  const target = total * 0.70
+
+  const sorted = [...hist.keys()].sort((a, b) => a - b)
+  let lo = pocKey, hi = pocKey
+  let area = pocCount
+  while (area < target) {
+    const nextLo = lo > sorted[0]                    ? (lo - 1) : null
+    const nextHi = hi < sorted[sorted.length - 1]   ? (hi + 1) : null
+    const countLo = nextLo !== null ? (hist.get(nextLo) || 0) : 0
+    const countHi = nextHi !== null ? (hist.get(nextHi) || 0) : 0
+    if (countLo === 0 && countHi === 0) break
+    if (countHi >= countLo) { hi = nextHi; area += countHi }
+    else                     { lo = nextLo; area += countLo }
+  }
+
+  const fmt = k => (k * tick).toFixed(2)
+  return { poc: fmt(pocKey), vah: fmt(hi), val: fmt(lo) }
 }
 
 function buildPayload(instr, allRows, extraSources = {}) {
@@ -430,12 +523,30 @@ function buildPayload(instr, allRows, extraSources = {}) {
     if (!val && rl) val = rl
   }
 
+  // Fallback calcul TPO depuis barres OHLC J-1 — si Sierra Chart ne fournit pas les colonnes
+  if (!poc || !vah || !val) {
+    const barsForTpo = (extraSources.m30 && extraSources.m30.length && hasDates)
+      ? filterRth(extraSources.m30.filter(r => r.date === j1), instr)
+      : j1Rows
+    if (barsForTpo.length >= 2) {
+      const calc = calcTpoFromBars(barsForTpo)
+      if (!poc && calc.poc) { poc = calc.poc; console.log(`  [TPO-CALC] POC calculé depuis ${barsForTpo.length} barres J-1: ${poc}`) }
+      if (!vah && calc.vah) { vah = calc.vah; console.log(`  [TPO-CALC] VAH calculé: ${vah}`) }
+      if (!val && calc.val) { val = calc.val; console.log(`  [TPO-CALC] VAL calculé: ${val}`) }
+    }
+  }
+
   // ── OVN AVWAP/SD : préférer source OVN dédiée si disponible ────────────────
   let ovnSd1h = lastNonempty(allOvn, 'sd1h')
   let ovnSd1l = lastNonempty(allOvn, 'sd1l')
   let ovnSd2h = lastNonempty(allOvn, 'sd2h')
   let ovnSd2l = lastNonempty(allOvn, 'sd2l')
   let ovnVwapFinal = ovnVwap
+
+  // ── Live AVWAP/SD : pendant RTH, Sierra Chart exporte la valeur courante
+  //    à chaque barre → utiliser la dernière barre today (migre avec le marché)
+  //    Pendant OVN todayAll est vide → fallback sur OVN
+  const liveVwap = lastNonempty(todayAll, 'vwap') || ovnVwapFinal
 
   if (extraSources.ovn && extraSources.ovn.length) {
     const ovnRows = hasDates
@@ -481,7 +592,7 @@ function buildPayload(instr, allRows, extraSources = {}) {
     poc,
     vah,
     val,
-    ovn_vwap:  ovnVwapFinal,
+    ovn_vwap:  liveVwap,   // AVWAP 18h valeur courante (migre pendant RTH)
     atr_auto:  atrAuto(allRows, instr),
     asia_high:  asiaHs.length ? Math.max(...asiaHs).toFixed(2) : '',
     asia_low:   asiaLs.length ? Math.min(...asiaLs).toFixed(2) : '',
@@ -499,10 +610,65 @@ function buildPayload(instr, allRows, extraSources = {}) {
     ovn_sd1l:   ovnSd1l,
     ovn_sd2h:   ovnSd2h,
     ovn_sd2l:   ovnSd2l,
+    ovn_sd3h:   lastNonempty(allOvn, 'sd3h') || lastNonempty(todayAll, 'sd3h') || lastNonempty(allRows, 'sd3h'),
+    ovn_sd3l:   lastNonempty(allOvn, 'sd3l') || lastNonempty(todayAll, 'sd3l') || lastNonempty(allRows, 'sd3l'),
+    // ── AVWAP position & signaux (valeurs live RTH) ──────────────────────────
+    // SD live : préférer les barres du jour (RTH migrent les SD) avant de tomber sur OVN
+    vwap:   liveVwap,
+    sd1h:   lastNonempty(todayAll, 'sd1h') || ovnSd1h,
+    sd1l:   lastNonempty(todayAll, 'sd1l') || ovnSd1l,
+    sd2h:   lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'),
+    sd2l:   lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'),
+    avwap_side: (() => {
+      const p = parseFloat(lastVal), v = parseFloat(liveVwap)
+      if (isNaN(p) || isNaN(v) || v === 0) return ''
+      return p > v ? 'above' : 'below'
+    })(),
+    laf_sd2: (() => {
+      const s = parseFloat(lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'))
+      const p = parseFloat(lastVal)
+      return !isNaN(p) && !isNaN(s) && s > 0 && p > s
+    })(),
+    lbf_sd2: (() => {
+      const s = parseFloat(lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'))
+      const p = parseFloat(lastVal)
+      return !isNaN(p) && !isNaN(s) && s > 0 && p < s
+    })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_j1:     [...barsJ1Final].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_asia:   barsAsia.map(barDict),
     bars_london: barsLondon.map(barDict),
+  }
+}
+
+// ─── SNAPSHOT JSON ────────────────────────────────────────────────────────────
+
+function saveSnapshot(data) {
+  try {
+    const snap = {}
+    for (const [instr, payload] of Object.entries(data)) {
+      if (payload && payload.last && parseFloat(payload.last) > 100 && !payload._from_snapshot) {
+        snap[instr] = { ...payload, _saved_at: new Date().toISOString() }
+      }
+    }
+    if (!Object.keys(snap).length) return
+    const dir = SNAPSHOT_FILE.replace(/[/\\][^/\\]+$/, '')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(SNAPSHOT_FILE, JSON.stringify(snap, null, 2), 'utf-8')
+    console.log(`  [SNAP] Sauvegardé: ${Object.keys(snap).join(', ')}`)
+  } catch (e) {
+    console.log(`  [SNAP] Erreur sauvegarde: ${e.message}`)
+  }
+}
+
+function loadSnapshot() {
+  try {
+    if (!existsSync(SNAPSHOT_FILE)) return {}
+    const snap = JSON.parse(readFileSync(SNAPSHOT_FILE, 'utf-8'))
+    console.log(`  [SNAP] Fichier trouvé: ${Object.keys(snap).join(', ')}`)
+    return snap
+  } catch {
+    return {}
   }
 }
 
@@ -577,6 +743,29 @@ function buildMessage() {
     const bj = data[instr].bars_j1
     console.log(`  ${instr}: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}`)
   }
+
+  // ── §9 : NQ + ES alignés vs AVWAP ───────────────────────────────────────────
+  if (data.NQ && data.ES && data.NQ.avwap_side && data.ES.avwap_side) {
+    const par9 = data.NQ.avwap_side === data.ES.avwap_side ? data.NQ.avwap_side : 'divergent'
+    data.NQ.par9 = par9
+    data.ES.par9 = par9
+    console.log(`  §9: NQ=${data.NQ.avwap_side} ES=${data.ES.avwap_side} → ${par9}`)
+  }
+
+  // ── Fallback snapshot pour instruments sans données CSV ─────────────────────
+  const snap = loadSnapshot()
+  for (const instr of ['NQ', 'ES', 'GC', 'CL']) {
+    if (!data[instr] && snap[instr]) {
+      data[instr] = { ...snap[instr], _from_snapshot: true }
+      const age = snap[instr]._saved_at
+        ? Math.round((Date.now() - new Date(snap[instr]._saved_at).getTime()) / 3600000) + 'h'
+        : '?'
+      console.log(`  ${instr}: SNAPSHOT (sauvegardé il y a ${age})`)
+    }
+  }
+
+  // ── Sauvegarder les données fraîches du jour ─────────────────────────────
+  saveSnapshot(data)
 
   return JSON.stringify(data)
 }
@@ -655,6 +844,7 @@ function refreshAndBroadcast() {
   try {
     const msg = buildMessage()
     LAST_MSG = msg
+    try { checkAlerts(JSON.parse(msg)) } catch {}
     for (const ws of CLIENTS) {
       if (ws.readyState === ws.OPEN) {
         ws.send(msg, err => { if (err) CLIENTS.delete(ws) })
