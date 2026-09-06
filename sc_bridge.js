@@ -519,6 +519,17 @@ function buildPayload(instr, allRows, extraSources = {}) {
     }
   }
 
+  // ── Live AVWAP/SD : pendant RTH, Sierra Chart exporte la valeur courante
+  //    à chaque barre → utiliser la dernière barre today pour avwap_side et laf/lbf
+  //    (pendant OVN, todayAll est vide → fallback sur OVN)
+  const liveVwap = lastNonempty(todayAll, 'vwap') || ovnVwapFinal
+  const liveSd1h = lastNonempty(todayAll, 'sd1h') || ovnSd1h
+  const liveSd1l = lastNonempty(todayAll, 'sd1l') || ovnSd1l
+  const liveSd2h = lastNonempty(todayAll, 'sd2h') || ovnSd2h
+  const liveSd2l = lastNonempty(todayAll, 'sd2l') || ovnSd2l
+  const liveSd3h = lastNonempty(todayAll, 'sd3h') || lastNonempty(allOvn, 'sd3h') || lastNonempty(allRows, 'sd3h')
+  const liveSd3l = lastNonempty(todayAll, 'sd3l') || lastNonempty(allOvn, 'sd3l') || lastNonempty(allRows, 'sd3l')
+
   // ── Barres today : préférer source 30min (BidVol/AskVol) ────────────────────
   let barsTodayFinal = todayRows
   let barsJ1Final    = j1Rows
@@ -545,7 +556,7 @@ function buildPayload(instr, allRows, extraSources = {}) {
     poc,
     vah,
     val,
-    ovn_vwap:  ovnVwapFinal,
+    ovn_vwap:  liveVwap,   // AVWAP 18h valeur courante (migre pendant RTH)
     atr_auto:  atrAuto(allRows, instr),
     asia_high:  asiaHs.length ? Math.max(...asiaHs).toFixed(2) : '',
     asia_low:   asiaLs.length ? Math.min(...asiaLs).toFixed(2) : '',
@@ -559,24 +570,24 @@ function buildPayload(instr, allRows, extraSources = {}) {
     ovn_poc:    lastNonempty(allOvn, 'tpo_poc'),
     ovn_vah:    lastNonempty(allOvn, 'tpo_vah'),
     ovn_val:    lastNonempty(allOvn, 'tpo_val'),
-    ovn_sd1h:   ovnSd1h,
-    ovn_sd1l:   ovnSd1l,
-    ovn_sd2h:   ovnSd2h,
-    ovn_sd2l:   ovnSd2l,
-    ovn_sd3h:   lastNonempty(allOvn, 'sd3h') || lastNonempty(todayAll, 'sd3h') || lastNonempty(allRows, 'sd3h'),
-    ovn_sd3l:   lastNonempty(allOvn, 'sd3l') || lastNonempty(todayAll, 'sd3l') || lastNonempty(allRows, 'sd3l'),
-    // ── AVWAP position & signaux ──────────────────────────────────────────────
+    ovn_sd1h:   liveSd1h,  // live : dernière barre RTH si dispo
+    ovn_sd1l:   liveSd1l,
+    ovn_sd2h:   liveSd2h,
+    ovn_sd2l:   liveSd2l,
+    ovn_sd3h:   liveSd3h,
+    ovn_sd3l:   liveSd3l,
+    // ── AVWAP position & signaux (valeurs live RTH) ───────────────────────────
     avwap_side: (() => {
-      const p = parseFloat(lastVal), v = parseFloat(ovnVwapFinal)
+      const p = parseFloat(lastVal), v = parseFloat(liveVwap)
       if (isNaN(p) || isNaN(v) || v === 0) return ''
       return p > v ? 'above' : 'below'
     })(),
     laf_sd2: (() => {
-      const p = parseFloat(lastVal), s = parseFloat(ovnSd2h)
+      const p = parseFloat(lastVal), s = parseFloat(liveSd2h)
       return !isNaN(p) && !isNaN(s) && s > 0 && p > s
     })(),
     lbf_sd2: (() => {
-      const p = parseFloat(lastVal), s = parseFloat(ovnSd2l)
+      const p = parseFloat(lastVal), s = parseFloat(liveSd2l)
       return !isNaN(p) && !isNaN(s) && s > 0 && p < s
     })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
