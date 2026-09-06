@@ -56,6 +56,6 @@ echo ============================================================
 echo.
 echo VERIFIER: http://localhost:8766/health doit repondre OK
 echo.
-echo Services actifs. Ne pas fermer cette fenetre.
-echo.
-pause
+echo Services actifs en arriere-plan.
+echo Cette fenetre va se fermer automatiquement.
+timeout /t 5 /nobreak >nul
