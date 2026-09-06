@@ -32,8 +32,21 @@ function Test-Bridge {
     }
 }
 
+function Show-Toast($title, $msg) {
+    try {
+        [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+        [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
+        $xml = [Windows.Data.Xml.Dom.XmlDocument]::new()
+        $xml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>$title</text><text>$msg</text></binding></visual></toast>")
+        $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+        $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("SC Bridge")
+        $notifier.Show($toast)
+    } catch {}
+}
+
 function Restart-Bridge {
     Write-Log "BRIDGE MORT — lancement $BatFile"
+    Show-Toast "🔴 SC Bridge OFFLINE" "Redemarrage en cours..."
     # Tuer les anciens processus
     Get-Process -Name "node"  -ErrorAction SilentlyContinue | Stop-Process -Force
     Get-Process -Name "ngrok" -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -44,8 +57,10 @@ function Restart-Bridge {
     # Verifier que ca a redemarre
     if (Test-Bridge) {
         Write-Log "RESTART OK — bridge repond sur :8766"
+        Show-Toast "🟢 SC Bridge RESTAURE" "Bridge redémarre et repond sur :8766"
     } else {
         Write-Log "RESTART ECHEC — bridge ne repond toujours pas"
+        Show-Toast "⚠️ SC Bridge ECHEC RESTART" "Verifier manuellement le bridge"
     }
 }
 
