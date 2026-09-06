@@ -606,17 +606,25 @@ function buildPayload(instr, allRows, extraSources = {}) {
     ovn_sd3h:   lastNonempty(allOvn, 'sd3h') || lastNonempty(todayAll, 'sd3h') || lastNonempty(allRows, 'sd3h'),
     ovn_sd3l:   lastNonempty(allOvn, 'sd3l') || lastNonempty(todayAll, 'sd3l') || lastNonempty(allRows, 'sd3l'),
     // ── AVWAP position & signaux ──────────────────────────────────────────────
+    // SD live : préférer les barres du jour (RTH migrent les SD) avant de tomber sur OVN
+    vwap:   ovnVwapFinal,
+    sd1h:   lastNonempty(todayAll, 'sd1h') || ovnSd1h,
+    sd1l:   lastNonempty(todayAll, 'sd1l') || ovnSd1l,
+    sd2h:   lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'),
+    sd2l:   lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'),
     avwap_side: (() => {
       const p = parseFloat(lastVal), v = parseFloat(ovnVwapFinal)
       if (isNaN(p) || isNaN(v) || v === 0) return ''
       return p > v ? 'above' : 'below'
     })(),
     laf_sd2: (() => {
-      const p = parseFloat(lastVal), s = parseFloat(ovnSd2h)
+      const s = parseFloat(lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'))
+      const p = parseFloat(lastVal)
       return !isNaN(p) && !isNaN(s) && s > 0 && p > s
     })(),
     lbf_sd2: (() => {
-      const p = parseFloat(lastVal), s = parseFloat(ovnSd2l)
+      const s = parseFloat(lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'))
+      const p = parseFloat(lastVal)
       return !isNaN(p) && !isNaN(s) && s > 0 && p < s
     })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
