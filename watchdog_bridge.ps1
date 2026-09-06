@@ -2,10 +2,12 @@
 # Si mort -> relance startup_bridge.bat
 # Logs dans C:\SierraChart_CME\Logs\watchdog.log
 
-$LogFile   = "C:\SierraChart_CME\Logs\watchdog.log"
-$BatFile   = "C:\SierraChart_CME\startup_bridge.bat"
-$BridgeUrl = "http://localhost:8766/health"
-$MaxLog    = 500   # lignes max avant rotation
+$LogFile    = "C:\SierraChart_CME\Logs\watchdog.log"
+$BatFile    = "C:\SierraChart_CME\startup_bridge.bat"
+$BridgeUrl  = "http://localhost:8766/health"
+$NgrokUrl   = "https://hatbox-placidly-crabmeat.ngrok-free.dev/health"
+$NgrokDomain = "hatbox-placidly-crabmeat.ngrok-free.dev"
+$MaxLog     = 500   # lignes max avant rotation
 
 function Write-Log($msg) {
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -29,6 +31,37 @@ function Test-Bridge {
         return $r.StatusCode -eq 200
     } catch {
         return $false
+    }
+}
+
+function Test-Ngrok {
+    # Vérifie que ngrok tourne ET que le tunnel répond depuis l'extérieur
+    $proc = Get-Process -Name "ngrok" -ErrorAction SilentlyContinue
+    if (-not $proc) { return $false }
+    try {
+        $r = Invoke-WebRequest -Uri $NgrokUrl -TimeoutSec 8 -UseBasicParsing `
+             -Headers @{ "ngrok-skip-browser-warning" = "1" } -ErrorAction Stop
+        return $r.StatusCode -eq 200
+    } catch {
+        return $false
+    }
+}
+
+function Restart-Ngrok {
+    Write-Log "NGROK MORT — redémarrage tunnel $NgrokDomain"
+    Show-Toast "🔴 ngrok OFFLINE" "Redémarrage tunnel en cours..."
+    Get-Process -Name "ngrok" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 2
+    $ngrokCmd = "ngrok http 8766 --domain=$NgrokDomain"
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c $ngrokCmd" -WindowStyle Hidden
+    Start-Sleep -Seconds 10
+    if (Test-Ngrok) {
+        Write-Log "NGROK RESTART OK — tunnel actif"
+        Show-Toast "🟢 ngrok RESTAURE" "Tunnel $NgrokDomain actif"
+    } else {
+        Write-Log "NGROK RESTART ECHEC — relance startup complet"
+        Show-Toast "⚠️ ngrok ECHEC" "Relance startup_bridge.bat"
+        Restart-Bridge
     }
 }
 
@@ -65,11 +98,17 @@ function Restart-Bridge {
 }
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
-Write-Log "Watchdog demarre — verification bridge :8766"
+Write-Log "Watchdog demarre — verification bridge :8766 + ngrok tunnel"
 
-if (Test-Bridge) {
-    Write-Log "OK — bridge vivant"
-} else {
-    Write-Log "ALERTE — bridge ne repond pas"
+$bridgeOk = Test-Bridge
+$ngrokOk  = Test-Ngrok
+
+if ($bridgeOk -and $ngrokOk) {
+    Write-Log "OK — bridge :8766 vivant + ngrok tunnel actif"
+} elseif (-not $bridgeOk) {
+    Write-Log "ALERTE — bridge ne repond pas (ngrok=$ngrokOk)"
     Restart-Bridge
+} elseif (-not $ngrokOk) {
+    Write-Log "ALERTE — bridge OK mais ngrok tunnel mort"
+    Restart-Ngrok
 }
