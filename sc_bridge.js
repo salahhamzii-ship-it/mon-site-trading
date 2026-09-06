@@ -267,6 +267,8 @@ function parseCsv(filepath, diag = false) {
 
     if (!time_s) continue
 
+    // nz : filtre les valeurs 0.00 exportées par Sierra Chart avant calcul AVWAP/SD
+    const nz = v => { const f = parseFloat(v); return (!isNaN(f) && f > 0) ? v : '' }
     rows.push({
       date:    date_obj,
       time:    time_s,
@@ -277,13 +279,13 @@ function parseCsv(filepath, diag = false) {
       vol:     get(cols, idx_vol),
       bid:     get(cols, idx_bid),
       ask:     get(cols, idx_ask),
-      vwap:    get(cols, idx_vwap),
-      sd1h:    get(cols, idx_sp1),
-      sd1l:    get(cols, idx_sm1),
-      sd2h:    get(cols, idx_sp2),
-      sd2l:    get(cols, idx_sm2),
-      sd3h:    get(cols, idx_sp3),
-      sd3l:    get(cols, idx_sm3),
+      vwap:    nz(get(cols, idx_vwap)),
+      sd1h:    nz(get(cols, idx_sp1)),
+      sd1l:    nz(get(cols, idx_sm1)),
+      sd2h:    nz(get(cols, idx_sp2)),
+      sd2l:    nz(get(cols, idx_sm2)),
+      sd3h:    nz(get(cols, idx_sp3)),
+      sd3l:    nz(get(cols, idx_sm3)),
       tpo_poc: get(cols, idx_poc),
       tpo_vah: get(cols, idx_vah),
       tpo_val: get(cols, idx_val),
