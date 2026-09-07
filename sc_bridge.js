@@ -933,6 +933,14 @@ const httpServer = createServer((req, res) => {
 
 const wss = new WebSocketServer({ port: WS_PORT })
 
+wss.on('error', err => {
+  if (err.code === 'EADDRINUSE') {
+    console.warn(`  [WARN] WS port ${WS_PORT} déjà occupé — WebSocket désactivé, HTTP seul actif`)
+  } else {
+    console.error(`  [WSS ERR] ${err.message}`)
+  }
+})
+
 wss.on('connection', ws => {
   CLIENTS.add(ws)
   console.log(`[+] WS client connecté (${CLIENTS.size} actif(s))`)
