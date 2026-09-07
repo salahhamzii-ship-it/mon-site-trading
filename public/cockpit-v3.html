@@ -1166,6 +1166,51 @@ function autoInitSession(){
   rSD();rIB();rJ1();updTD_SD();
 }
 
+// ── BRIDGE LIVE ──────────────────────────────────────
+let _bridgeTimer=null;
+function _fill(id,val){if(!val&&val!==0)return;var el=document.getElementById(id);if(el&&!el.value)el.value=parseFloat(val).toFixed(2);}
+function _setBadge(ok,price){
+  var b=document.getElementById('bridge-badge');
+  if(!b){
+    b=document.createElement('span');b.id='bridge-badge';
+    b.style.cssText='font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;margin-left:8px;border:1px solid;vertical-align:middle;';
+    var hdr=document.getElementById('hdr-r');if(hdr)hdr.prepend(b);
+  }
+  b.textContent=ok?('⬤ BRIDGE '+(price||'')):'⬤ OFFLINE';
+  b.style.color=ok?'var(--green)':'var(--red)';
+  b.style.borderColor=ok?'var(--green)':'var(--red)';
+}
+function bridgeFetch(){
+  fetch('/api/bridge-data',{cache:'no-store'})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      if(!d||d.error){_setBadge(false);return;}
+      var nq=d.NQ||{},es=d.ES||{};
+      // Live price — always update
+      if(nq.last){var tp=document.getElementById('tp');if(tp)tp.value=parseFloat(nq.last).toFixed(2);}
+      // Compute sigma = SD1H - AVWAP
+      var avwap=parseFloat(nq.ovn_vwap)||0,sd1h=parseFloat(nq.ovn_sd1h)||0;
+      var sigma=sd1h&&avwap?Math.abs(sd1h-avwap):0;
+      // Fill session fields only if empty
+      _fill('s-avwap',avwap||nq.ovn_vwap);
+      if(sigma){var se=document.getElementById('s-sigma');if(se&&!se.value)se.value=sigma.toFixed(2);}
+      _fill('s-vah',nq.vah);_fill('s-val',nq.val);_fill('s-poc',nq.poc);
+      _fill('s-j1h',nq.j1_high);_fill('s-j1l',nq.j1_low);_fill('s-settle',nq.j1_settle);
+      // ES fields
+      var eavwap=parseFloat(es.ovn_vwap)||0,esd1h=parseFloat(es.ovn_sd1h)||0;
+      var esig=esd1h&&eavwap?Math.abs(esd1h-eavwap):0;
+      _fill('s-es-avwap',eavwap||es.ovn_vwap);
+      if(esig){var ese=document.getElementById('s-es-sigma');if(ese&&!ese.value)ese.value=esig.toFixed(2);}
+      _fill('s-es-vah',es.vah);_fill('s-es-val',es.val);_fill('s-es-poc',es.poc);
+      _fill('s-es-j1h',es.j1_high);_fill('s-es-j1l',es.j1_low);_fill('s-es-settle',es.j1_settle);
+      // Trigger SD sync + tracker refresh
+      oSI();updateTracker();updTrLevels();
+      _setBadge(true,parseFloat(nq.last).toFixed(2));
+    }).catch(function(){_setBadge(false);});
+}
+bridgeFetch();
+_bridgeTimer=setInterval(bridgeFetch,30000);
+
 // ── INIT ──────────────────────────────────────────────
 (function(){
   PHASES.forEach(p=>{const b=document.getElementById('body-'+p);if(b)b.classList.add('open');});
