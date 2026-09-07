@@ -205,7 +205,7 @@ const DIAG_DONE = new Set()
 
 // ─── ALERTES LAF / LBF ────────────────────────────────────────────────────────
 // Mémorise l'état précédent pour n'alerter qu'à la TRANSITION false → true
-const ALERT_STATE = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false }
+const ALERT_STATE = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false, sc_NQ: false, sc_ES: false }
 
 function fireToast(title, msg) {
   if (!IS_WIN) { console.log(`  [ALERT] ${title} — ${msg}`); return }
@@ -239,6 +239,17 @@ function checkAlerts(data) {
     }
     ALERT_STATE[`laf_${sym}`] = laf
     ALERT_STATE[`lbf_${sym}`] = lbf
+    // ── Sleeping Camel alert (Asia window)
+    const sc = d.sleeping_camel
+    if (sc && !ALERT_STATE[`sc_${sym}`]) {
+      const ico = sc.direction === 'LONG' ? '🟢' : '🔴'
+      console.log(`  🐪 SLEEPING CAMEL ${sym} ${sc.type} — ${sc.time} entry=${sc.entry} stop=${sc.stop} target=${sc.target||'?'} ratio=${sc.ratio||'?'}`)
+      fireToast(
+        `🐪 ${sym} SLEEPING CAMEL · ${sc.type}`,
+        `${sc.time} · Entrée ${sc.entry} · Stop ${sc.stop} · Cible ${sc.target||'?'} · R=${sc.ratio||'?'}`
+      )
+    }
+    ALERT_STATE[`sc_${sym}`] = !!sc
   }
 }
 
@@ -819,6 +830,67 @@ function buildPayload(instr, allRows, extraSources = {}) {
       const result = currLow <= sd2l && currClose > sd2l
       if (result) console.log(`  [LBF R36] ${instr} low=${currLow} <= sd2l=${sd2l} close=${currClose} > sd2l → LONG`)
       return result
+    })(),
+    // ── SLEEPING CAMEL (Phase 1 — Observation) ──────────────────────────────────
+    // Détecte le premier LBF/LAF dans la fenêtre Asia 19h→02h NY
+    // Phase 1 : affichage cockpit uniquement — aucun ordre automatique
+    sleeping_camel: (() => {
+      // Filtrer barsAsia à la fenêtre 19h→02h
+      const SC_START = t2m('19:00'), SC_END = t2m('02:00')
+      const scBars = barsAsia.filter(r => {
+        const m = t2m(r.time)
+        return m >= SC_START || m < SC_END
+      })
+      // Tri chronologique : 19h→23h59 (J-1) puis 00h→01h59 (today)
+      scBars.sort((a, b) => {
+        const ma = t2m(a.time), mb = t2m(b.time)
+        const ra = ma >= SC_START ? ma - 1440 : ma
+        const rb = mb >= SC_START ? mb - 1440 : mb
+        return ra - rb
+      })
+      if (!scBars.length) return null
+      for (const bar of scBars) {
+        const lo  = parseFloat(bar.low   || '')
+        const hi  = parseFloat(bar.high  || '')
+        const cl  = parseFloat(bar.close || '')
+        if (isNaN(lo) || isNaN(hi) || isNaN(cl)) continue
+        // SD depuis la barre (ils migrent) — fallback sur OVN globaux
+        const bSd2l = parseFloat(bar.sd2l || '')
+        const bSd2h = parseFloat(bar.sd2h || '')
+        const sd2l  = (!isNaN(bSd2l) && bSd2l > 0) ? bSd2l : parseFloat(ovnSd2l || '0')
+        const sd2h  = (!isNaN(bSd2h) && bSd2h > 0) ? bSd2h : parseFloat(ovnSd2h || '0')
+        // LBF : Low ≤ SD-2 ET Close > SD-2
+        if (sd2l > 0 && lo <= sd2l && cl > sd2l) {
+          const entry       = cl
+          const stop        = parseFloat((entry - 100).toFixed(2))
+          const target      = sd2h > 0 ? sd2h : null
+          const pts_reward  = target ? parseFloat((target - entry).toFixed(2)) : null
+          const ratio       = pts_reward !== null ? (pts_reward / 100).toFixed(2) : null
+          console.log(`  [🐪 SC] ${instr} LBF @ ${bar.time} entry=${entry} stop=${stop} tgt=${target} R=${ratio}`)
+          return { type: 'LBF', direction: 'LONG', time: bar.time,
+                   entry: entry.toFixed(2), stop: stop.toFixed(2),
+                   target: target ? target.toFixed(2) : null,
+                   pts_risk: 100, pts_reward: pts_reward ? pts_reward.toFixed(2) : null,
+                   ratio, sd2l: sd2l.toFixed(2), sd2h: sd2h > 0 ? sd2h.toFixed(2) : null,
+                   window: 'ASIA 19h-02h' }
+        }
+        // LAF : High ≥ SD+2 ET Close < SD+2
+        if (sd2h > 0 && hi >= sd2h && cl < sd2h) {
+          const entry       = cl
+          const stop        = parseFloat((entry + 100).toFixed(2))
+          const target      = sd2l > 0 ? sd2l : null
+          const pts_reward  = target ? parseFloat((entry - target).toFixed(2)) : null
+          const ratio       = pts_reward !== null ? (pts_reward / 100).toFixed(2) : null
+          console.log(`  [🐪 SC] ${instr} LAF @ ${bar.time} entry=${entry} stop=${stop} tgt=${target} R=${ratio}`)
+          return { type: 'LAF', direction: 'SHORT', time: bar.time,
+                   entry: entry.toFixed(2), stop: stop.toFixed(2),
+                   target: target ? target.toFixed(2) : null,
+                   pts_risk: 100, pts_reward: pts_reward ? pts_reward.toFixed(2) : null,
+                   ratio, sd2h: sd2h.toFixed(2), sd2l: sd2l > 0 ? sd2l.toFixed(2) : null,
+                   window: 'ASIA 19h-02h' }
+        }
+      }
+      return null
     })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_j1:     [...barsJ1Final].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),

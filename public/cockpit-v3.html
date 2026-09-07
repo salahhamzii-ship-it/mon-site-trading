@@ -653,6 +653,14 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
     </div>
   </div>
 
+  <!-- 🐪 SLEEPING CAMEL -->
+  <div class="card" id="sc-card" style="margin-top:12px;border:1px solid var(--border)">
+    <div class="ct" style="letter-spacing:.08em">🐪 SLEEPING CAMEL — ASIA 19H→02H</div>
+    <div id="sc-nq" style="margin-bottom:8px"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">NQ — En attente…</span></div>
+    <div id="sc-es"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">ES — En attente…</span></div>
+    <div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em">PHASE 1 · OBSERVATION · AUCUN ORDRE AUTOMATIQUE</div>
+  </div>
+
   <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center">
     Rafraîchissement 30s · Source : /api/bridge-data · <span id="avwap-err" style="color:var(--red)"></span>
   </div>
@@ -1316,6 +1324,13 @@ function checkAvwapAlerts(d){
     }
     _avwapPrev['laf_'+sym]=laf
     _avwapPrev['lbf_'+sym]=lbf
+    // Sleeping Camel alert
+    const sc=instr.sleeping_camel
+    if(sc&&!_avwapPrev['sc_'+sym]){
+      alertBip(sc.direction==='LONG'?'lbf':'laf')
+      showAvwapFlash(`🐪 ${sym} SLEEPING CAMEL · ${sc.type} · ${sc.time} · Entrée ${sc.entry} · R=${sc.ratio||'?'}`, sc.direction==='LONG'?'green':'red')
+    }
+    _avwapPrev['sc_'+sym]=!!sc
   }
 }
 
@@ -1348,6 +1363,8 @@ function renderAvwapPanel(d){
   checkAvwapAlerts(d);
   renderAVwapInst('nq',nq);
   renderAVwapInst('es',es);
+  renderSleepingCamel('nq',nq);
+  renderSleepingCamel('es',es);
   // §9
   const par9=nq&&nq.par9;
   const b=document.getElementById('par9-banner');
@@ -1406,6 +1423,33 @@ function renderAVwapInst(sym,data){
       <span class="sl">SD-1</span><span class="sv s1d">${sd1l}</span><span class="sd"></span>
       <span class="sl">SD-2</span><span class="sv s2d">${sd2l}</span><span class="sd" style="color:var(--green)">${lbf?'⚠ LBF R36':''}</span>
       <span class="sl">SD-3</span><span class="sv s3d">${sd3l}</span><span class="sd"></span>
+    </div>`;
+}
+function renderSleepingCamel(sym,data){
+  const el=document.getElementById('sc-'+sym);
+  const label=sym.toUpperCase();
+  if(!data){el.innerHTML=`<span style="color:var(--muted);font-family:var(--mono);font-size:11px">${label} — pas de données</span>`;return;}
+  const sc=data.sleeping_camel;
+  if(!sc){
+    el.innerHTML=`<span style="color:var(--muted);font-family:var(--mono);font-size:11px">${label} — aucun signal Asia</span>`;
+    document.getElementById('sc-card').style.borderColor='var(--border)';
+    return;
+  }
+  const isLong=sc.direction==='LONG';
+  const col=isLong?'var(--green)':'var(--red)';
+  const ico=isLong?'🟢':'🔴';
+  const f=v=>{const n=parseFloat(v||'0');return n>0?n.toFixed(2):'—';};
+  document.getElementById('sc-card').style.borderColor=isLong?'rgba(76,175,130,.4)':'rgba(224,92,92,.4)';
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${col};letter-spacing:.06em">${ico} ${label} · ${sc.type} SD${isLong?'-2':'+2'} · ${sc.time}</span>
+      <span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:${isLong?'rgba(76,175,130,.12)':'rgba(224,92,92,.12)'};border:1px solid ${isLong?'rgba(76,175,130,.3)':'rgba(224,92,92,.3)'};color:${col}">${sc.window}</span>
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;line-height:2;display:grid;grid-template-columns:80px 1fr 1fr;gap:0 8px">
+      <span style="color:var(--muted)">Entrée</span><span style="color:${col};font-weight:600">${f(sc.entry)}</span><span></span>
+      <span style="color:var(--muted)">Stop</span><span style="color:var(--red);font-weight:600">${f(sc.stop)}</span><span style="color:var(--muted);font-size:10px">−${sc.pts_risk} pts</span>
+      <span style="color:var(--muted)">Cible</span><span style="color:var(--gold);font-weight:600">${f(sc.target)}</span><span style="color:var(--muted);font-size:10px">SD${isLong?'+2':'-2'} ${sc.pts_reward?'+'+sc.pts_reward+' pts':''}</span>
+      <span style="color:var(--muted)">Ratio</span><span style="color:${(parseFloat(sc.ratio)||0)>=1.5?'var(--green)':'var(--amber)'};font-weight:600">1 : ${sc.ratio||'?'}</span><span></span>
     </div>`;
 }
 setInterval(fetchAvwap,30000);fetchAvwap();
