@@ -41,7 +41,7 @@ start "" /B node "%USERPROFILE%\Desktop\sc-bridge\sc_bridge.js" > "%USERPROFILE%
 timeout /t 3 /nobreak >nul
 
 echo [2/2] Demarrage tunnel ngrok permanent...
-start "" /B ngrok http --domain=hatbox-placidly-crabmeat.ngrok-free.dev 8766 > "%USERPROFILE%\Desktop\sc-bridge\ngrok.log" 2>&1
+start "" /B ngrok http --url=hatbox-placidly-crabmeat.ngrok-free.dev 8766 > "%USERPROFILE%\Desktop\sc-bridge\ngrok.log" 2>&1
 timeout /t 5 /nobreak >nul
 
 echo.
@@ -56,6 +56,6 @@ echo ============================================================
 echo.
 echo VERIFIER: http://localhost:8766/health doit repondre OK
 echo.
-echo Services actifs. Ne pas fermer cette fenetre.
+echo Services actifs. Fenetre se ferme dans 10 secondes...
 echo.
-pause
+timeout /t 10 /nobreak >nul
