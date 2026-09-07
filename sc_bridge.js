@@ -52,7 +52,7 @@ let FILES = {
 // Format commande: "Action=<BUY|SELL|FLATTEN>\nSymbol=<sym>\nQuantity=<n>\nOrderType=<MARKET|LIMIT>\nAccountNum=<n>\n"
 const SC_UDP_HOST = process.env.SC_UDP_HOST || '127.0.0.1'
 const SC_UDP_PORT = parseInt(process.env.SC_UDP_PORT || '11098', 10)
-const SC_ACCOUNT  = process.env.SC_ACCOUNT  || '1'   // numéro compte SIM Sierra Chart
+const SC_ACCOUNT  = process.env.SC_ACCOUNT  || 'Sim1' // compte SIM Sierra Chart (Sim1 = premier compte simulation)
 
 function sendScOrder({ action, symbol, quantity = 1, orderType = 'MARKET', price = 0 }) {
   return new Promise((resolve, reject) => {
