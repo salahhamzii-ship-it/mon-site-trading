@@ -930,15 +930,23 @@ const httpServer = createServer((req, res) => {
 })
 
 // ─── SERVEUR WEBSOCKET ────────────────────────────────────────────────────────
+// Note: WebSocketServer({ port }) crée un serveur HTTP interne dont les erreurs
+// ne remontent PAS sur wss.on('error'). On crée donc un serveur HTTP séparé et
+// on lui attache le WebSocketServer — c'est là que l'EADDRINUSE est capturé.
 
-const wss = new WebSocketServer({ port: WS_PORT })
+const wsHttpServer = createServer()
+const wss = new WebSocketServer({ server: wsHttpServer })
 
-wss.on('error', err => {
+wsHttpServer.on('error', err => {
   if (err.code === 'EADDRINUSE') {
     console.warn(`  [WARN] WS port ${WS_PORT} déjà occupé — WebSocket désactivé, HTTP seul actif`)
   } else {
     console.error(`  [WSS ERR] ${err.message}`)
   }
+})
+
+wsHttpServer.listen(WS_PORT, '0.0.0.0', () => {
+  console.log(`SC Bridge WS    ws://0.0.0.0:${WS_PORT}`)
 })
 
 wss.on('connection', ws => {
@@ -977,10 +985,6 @@ function refreshAndBroadcast() {
 
 httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
   console.log(`SC Bridge HTTP  http://0.0.0.0:${HTTP_PORT}/data`)
-})
-
-wss.on('listening', () => {
-  console.log(`SC Bridge WS    ws://0.0.0.0:${WS_PORT}`)
 })
 
 // Auto-découverte : trouve les CSV Sierra Chart avant tout diagnostic
