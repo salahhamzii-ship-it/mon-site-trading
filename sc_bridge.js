@@ -230,12 +230,12 @@ function checkAlerts(data) {
     const laf = !!d.laf_sd2
     const lbf = !!d.lbf_sd2
     if (laf && !ALERT_STATE[`laf_${sym}`]) {
-      console.log(`  🔴 ALERT ${sym} LAF R34 — price ${d.last} > SD+2 ${d.sd2h}`)
-      fireToast(`🔴 ${sym} — LAF R34 · Questionable High`, `${d.last} dépasse SD+2 ${d.sd2h} — SHORT SETUP`)
+      console.log(`  🔴 ALERT ${sym} LAF R37 — SD+2 rejeté ${d.sd2h} last=${d.last} → SHORT`)
+      fireToast(`🔴 ${sym} — LAF R37 · SD+2 REJETÉ`, `Barre fermée sous SD+2 ${d.sd2h} — SHORT SETUP`)
     }
     if (lbf && !ALERT_STATE[`lbf_${sym}`]) {
-      console.log(`  🟢 ALERT ${sym} LBF R35 — price ${d.last} < SD-2 ${d.sd2l}`)
-      fireToast(`🟢 ${sym} — LBF R35 · Questionable Low`, `${d.last} perce SD-2 ${d.sd2l} — LONG SETUP`)
+      console.log(`  🟢 ALERT ${sym} LBF R36 — SD-2 rejeté ${d.sd2l} last=${d.last} → LONG`)
+      fireToast(`🟢 ${sym} — LBF R36 · SD-2 REJETÉ`, `Barre fermée sur SD-2 ${d.sd2l} — LONG SETUP`)
     }
     ALERT_STATE[`laf_${sym}`] = laf
     ALERT_STATE[`lbf_${sym}`] = lbf
@@ -789,32 +789,36 @@ function buildPayload(instr, allRows, extraSources = {}) {
       return p > v ? 'above' : 'below'
     })(),
     laf_sd2: (() => {
-      // LAF SD+2 : barre précédente High >= SD+2 ET barre courante Close < SD+2 (rejet confirmé)
+      // LAF SD+2 (R37) : barre courante High >= SD+2 ET Close < SD+2
+      // = même bougie touche SD+2 et ferme en dessous (rejet immédiat)
+      // Aligné avec la logique backtest : hi>=sp2 && cl<sp2
       const sd2h = parseFloat(lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'))
       if (isNaN(sd2h) || sd2h <= 0) return false
       const bars = [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time))
-      if (bars.length >= 2) {
-        const prev = bars[bars.length - 2]
-        const curr = bars[bars.length - 1]
-        const prevHigh = parseFloat(prev.high || '')
-        const currClose = parseFloat(curr.close || '')
-        if (!isNaN(prevHigh) && !isNaN(currClose)) return prevHigh >= sd2h && currClose < sd2h
-      }
-      return false
+      if (!bars.length) return false
+      const curr = bars[bars.length - 1]
+      const currHigh  = parseFloat(curr.high  || '')
+      const currClose = parseFloat(curr.close || '')
+      if (isNaN(currHigh) || isNaN(currClose)) return false
+      const result = currHigh >= sd2h && currClose < sd2h
+      if (result) console.log(`  [LAF R37] ${instr} high=${currHigh} >= sd2h=${sd2h} close=${currClose} < sd2h → SHORT`)
+      return result
     })(),
     lbf_sd2: (() => {
-      // LBF SD-2 : barre précédente Low <= SD-2 ET barre courante Close > SD-2 (rejet confirmé)
+      // LBF SD-2 (R36) : barre courante Low <= SD-2 ET Close > SD-2
+      // = même bougie touche SD-2 et ferme au-dessus (rejet immédiat)
+      // Aligné avec la logique backtest : lo<=sm2 && cl>sm2
       const sd2l = parseFloat(lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'))
       if (isNaN(sd2l) || sd2l <= 0) return false
       const bars = [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time))
-      if (bars.length >= 2) {
-        const prev = bars[bars.length - 2]
-        const curr = bars[bars.length - 1]
-        const prevLow = parseFloat(prev.low || '')
-        const currClose = parseFloat(curr.close || '')
-        if (!isNaN(prevLow) && !isNaN(currClose)) return prevLow <= sd2l && currClose > sd2l
-      }
-      return false
+      if (!bars.length) return false
+      const curr = bars[bars.length - 1]
+      const currLow   = parseFloat(curr.low   || '')
+      const currClose = parseFloat(curr.close || '')
+      if (isNaN(currLow) || isNaN(currClose)) return false
+      const result = currLow <= sd2l && currClose > sd2l
+      if (result) console.log(`  [LBF R36] ${instr} low=${currLow} <= sd2l=${sd2l} close=${currClose} > sd2l → LONG`)
+      return result
     })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_j1:     [...barsJ1Final].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
