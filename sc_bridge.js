@@ -10,6 +10,7 @@ import { createServer } from 'http'
 import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync } from 'fs'
 import { join } from 'path'
 import { WebSocketServer } from 'ws'
+import { execFile } from 'child_process'
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ const NQ_PATHS = {
 }
 
 let FILES = {
-  NQ: NQ_PATHS.main,
+  NQ: NQ_PATHS.auto,
   ES: IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv.txt` : `${UPLOAD_DIR}/ES.csv`,
   GC: IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv.txt` : `${UPLOAD_DIR}/GC.csv`,
   CL: IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv.txt` : `${UPLOAD_DIR}/CL.csv`,
@@ -52,6 +53,45 @@ if (!IS_WIN) {
 let LAST_MSG = '{}'
 const CLIENTS  = new Set()
 const DIAG_DONE = new Set()
+
+// ─── ALERTES LAF / LBF ────────────────────────────────────────────────────────
+// Mémorise l'état précédent pour n'alerter qu'à la TRANSITION false → true
+const ALERT_STATE = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false }
+
+function fireToast(title, msg) {
+  if (!IS_WIN) { console.log(`  [ALERT] ${title} — ${msg}`); return }
+  const ps = `
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime]|Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType=WindowsRuntime]|Out-Null
+$xml=[Windows.Data.Xml.Dom.XmlDocument]::new()
+$xml.LoadXml('<toast duration="long"><visual><binding template="ToastGeneric"><text>${title}</text><text>${msg}</text></binding></visual></toast>')
+$toast=[Windows.UI.Notifications.ToastNotification]::new($xml)
+$notifier=[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("SC Bridge Alert")
+$notifier.Show($toast)
+`
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], (err) => {
+    if (err) console.error(`  [TOAST ERR] ${err.message}`)
+  })
+}
+
+function checkAlerts(data) {
+  for (const sym of ['NQ', 'ES']) {
+    const d = data[sym]
+    if (!d || d._from_snapshot) continue
+    const laf = !!d.laf_sd2
+    const lbf = !!d.lbf_sd2
+    if (laf && !ALERT_STATE[`laf_${sym}`]) {
+      console.log(`  🔴 ALERT ${sym} LAF R34 — price ${d.last} > SD+2 ${d.sd2h}`)
+      fireToast(`🔴 ${sym} — LAF R34 · Questionable High`, `${d.last} dépasse SD+2 ${d.sd2h} — SHORT SETUP`)
+    }
+    if (lbf && !ALERT_STATE[`lbf_${sym}`]) {
+      console.log(`  🟢 ALERT ${sym} LBF R35 — price ${d.last} < SD-2 ${d.sd2l}`)
+      fireToast(`🟢 ${sym} — LBF R35 · Questionable Low`, `${d.last} perce SD-2 ${d.sd2l} — LONG SETUP`)
+    }
+    ALERT_STATE[`laf_${sym}`] = laf
+    ALERT_STATE[`lbf_${sym}`] = lbf
+  }
+}
 
 // ─── UTILITAIRES TEMPS ───────────────────────────────────────────────────────
 
@@ -227,6 +267,8 @@ function parseCsv(filepath, diag = false) {
 
     if (!time_s) continue
 
+    // nz : filtre les valeurs 0.00 exportées par Sierra Chart avant calcul AVWAP/SD
+    const nz = v => { const f = parseFloat(v); return (!isNaN(f) && f > 0) ? v : '' }
     rows.push({
       date:    date_obj,
       time:    time_s,
@@ -237,13 +279,13 @@ function parseCsv(filepath, diag = false) {
       vol:     get(cols, idx_vol),
       bid:     get(cols, idx_bid),
       ask:     get(cols, idx_ask),
-      vwap:    get(cols, idx_vwap),
-      sd1h:    get(cols, idx_sp1),
-      sd1l:    get(cols, idx_sm1),
-      sd2h:    get(cols, idx_sp2),
-      sd2l:    get(cols, idx_sm2),
-      sd3h:    get(cols, idx_sp3),
-      sd3l:    get(cols, idx_sm3),
+      vwap:    nz(get(cols, idx_vwap)),
+      sd1h:    nz(get(cols, idx_sp1)),
+      sd1l:    nz(get(cols, idx_sm1)),
+      sd2h:    nz(get(cols, idx_sp2)),
+      sd2l:    nz(get(cols, idx_sm2)),
+      sd3h:    nz(get(cols, idx_sp3)),
+      sd3l:    nz(get(cols, idx_sm3)),
       tpo_poc: get(cols, idx_poc),
       tpo_vah: get(cols, idx_vah),
       tpo_val: get(cols, idx_val),
@@ -519,17 +561,6 @@ function buildPayload(instr, allRows, extraSources = {}) {
     }
   }
 
-  // ── Live AVWAP/SD : pendant RTH, Sierra Chart exporte la valeur courante
-  //    à chaque barre → utiliser la dernière barre today pour avwap_side et laf/lbf
-  //    (pendant OVN, todayAll est vide → fallback sur OVN)
-  const liveVwap = lastNonempty(todayAll, 'vwap') || ovnVwapFinal
-  const liveSd1h = lastNonempty(todayAll, 'sd1h') || ovnSd1h
-  const liveSd1l = lastNonempty(todayAll, 'sd1l') || ovnSd1l
-  const liveSd2h = lastNonempty(todayAll, 'sd2h') || ovnSd2h
-  const liveSd2l = lastNonempty(todayAll, 'sd2l') || ovnSd2l
-  const liveSd3h = lastNonempty(todayAll, 'sd3h') || lastNonempty(allOvn, 'sd3h') || lastNonempty(allRows, 'sd3h')
-  const liveSd3l = lastNonempty(todayAll, 'sd3l') || lastNonempty(allOvn, 'sd3l') || lastNonempty(allRows, 'sd3l')
-
   // ── Barres today : préférer source 30min (BidVol/AskVol) ────────────────────
   let barsTodayFinal = todayRows
   let barsJ1Final    = j1Rows
@@ -547,6 +578,7 @@ function buildPayload(instr, allRows, extraSources = {}) {
 
   return {
     last:        lastVal,
+    lastUpdate:  new Date().toISOString(),
     j1_date:     j1DateActual,   // date réelle J-1 dans le CSV (null = CSV périmé)
     j1_expected: j1,             // date J-1 attendue aujourd'hui
     j1_high:   aggHigh(j1Rows),
@@ -556,7 +588,7 @@ function buildPayload(instr, allRows, extraSources = {}) {
     poc,
     vah,
     val,
-    ovn_vwap:  liveVwap,   // AVWAP 18h valeur courante (migre pendant RTH)
+    ovn_vwap:  ovnVwapFinal,
     atr_auto:  atrAuto(allRows, instr),
     asia_high:  asiaHs.length ? Math.max(...asiaHs).toFixed(2) : '',
     asia_low:   asiaLs.length ? Math.min(...asiaLs).toFixed(2) : '',
@@ -570,24 +602,32 @@ function buildPayload(instr, allRows, extraSources = {}) {
     ovn_poc:    lastNonempty(allOvn, 'tpo_poc'),
     ovn_vah:    lastNonempty(allOvn, 'tpo_vah'),
     ovn_val:    lastNonempty(allOvn, 'tpo_val'),
-    ovn_sd1h:   liveSd1h,  // live : dernière barre RTH si dispo
-    ovn_sd1l:   liveSd1l,
-    ovn_sd2h:   liveSd2h,
-    ovn_sd2l:   liveSd2l,
-    ovn_sd3h:   liveSd3h,
-    ovn_sd3l:   liveSd3l,
-    // ── AVWAP position & signaux (valeurs live RTH) ───────────────────────────
+    ovn_sd1h:   ovnSd1h,
+    ovn_sd1l:   ovnSd1l,
+    ovn_sd2h:   ovnSd2h,
+    ovn_sd2l:   ovnSd2l,
+    ovn_sd3h:   lastNonempty(allOvn, 'sd3h') || lastNonempty(todayAll, 'sd3h') || lastNonempty(allRows, 'sd3h'),
+    ovn_sd3l:   lastNonempty(allOvn, 'sd3l') || lastNonempty(todayAll, 'sd3l') || lastNonempty(allRows, 'sd3l'),
+    // ── AVWAP position & signaux ──────────────────────────────────────────────
+    // SD live : préférer les barres du jour (RTH migrent les SD) avant de tomber sur OVN
+    vwap:   ovnVwapFinal,
+    sd1h:   lastNonempty(todayAll, 'sd1h') || ovnSd1h,
+    sd1l:   lastNonempty(todayAll, 'sd1l') || ovnSd1l,
+    sd2h:   lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'),
+    sd2l:   lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'),
     avwap_side: (() => {
-      const p = parseFloat(lastVal), v = parseFloat(liveVwap)
+      const p = parseFloat(lastVal), v = parseFloat(ovnVwapFinal)
       if (isNaN(p) || isNaN(v) || v === 0) return ''
       return p > v ? 'above' : 'below'
     })(),
     laf_sd2: (() => {
-      const p = parseFloat(lastVal), s = parseFloat(liveSd2h)
+      const s = parseFloat(lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'))
+      const p = parseFloat(lastVal)
       return !isNaN(p) && !isNaN(s) && s > 0 && p > s
     })(),
     lbf_sd2: (() => {
-      const p = parseFloat(lastVal), s = parseFloat(liveSd2l)
+      const s = parseFloat(lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'))
+      const p = parseFloat(lastVal)
       return !isNaN(p) && !isNaN(s) && s > 0 && p < s
     })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
@@ -659,8 +699,8 @@ function buildMessage() {
 
     // Source principale : rowsAuto (fallback) enrichi par extraSources
     const mainRows = rowsAuto.length ? rowsAuto
-      : (extraSources.m30.length ? extraSources.m30
-        : (extraSources.rth.length ? extraSources.rth : []))
+      : (extraSources.m30?.length ? extraSources.m30
+        : (extraSources.rth?.length ? extraSources.rth : []))
 
     if (mainRows.length) {
       const dated = mainRows.filter(r => r.date).map(r => r.date).sort()
@@ -800,6 +840,7 @@ function refreshAndBroadcast() {
   try {
     const msg = buildMessage()
     LAST_MSG = msg
+    try { checkAlerts(JSON.parse(msg)) } catch {}
     for (const ws of CLIENTS) {
       if (ws.readyState === ws.OPEN) {
         ws.send(msg, err => { if (err) CLIENTS.delete(ws) })
