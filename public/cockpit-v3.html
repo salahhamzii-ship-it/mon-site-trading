@@ -1271,11 +1271,11 @@ function checkAvwapAlerts(d){
     const laf=!!instr.laf_sd2, lbf=!!instr.lbf_sd2
     if(laf&&!_avwapPrev['laf_'+sym]){
       alertBip('laf')
-      showAvwapFlash(`🔴 ${sym} LAF R34 — QUESTIONABLE HIGH — SHORT SETUP`, 'red')
+      showAvwapFlash(`🔴 ${sym} LAF R37 — SD+2 REJETÉ → SHORT SETUP`, 'red')
     }
     if(lbf&&!_avwapPrev['lbf_'+sym]){
       alertBip('lbf')
-      showAvwapFlash(`🟢 ${sym} LBF R35 — QUESTIONABLE LOW — LONG SETUP`, 'green')
+      showAvwapFlash(`🟢 ${sym} LBF R36 — SD-2 REJETÉ → LONG SETUP`, 'green')
     }
     _avwapPrev['laf_'+sym]=laf
     _avwapPrev['lbf_'+sym]=lbf
@@ -1349,8 +1349,8 @@ function renderAVwapInst(sym,data){
   const sideLabel=side==='above'?'ABOVE':side==='below'?'BELOW':'—';
   const sideBg=side==='above'?'rgba(76,175,130,.15)':side==='below'?'rgba(224,92,92,.15)':'var(--surface2)';
   const sideBorder=side==='above'?'rgba(76,175,130,.3)':side==='below'?'rgba(224,92,92,.3)':'var(--border)';
-  const lafBadge=laf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(224,92,92,.15);border:1px solid rgba(224,92,92,.3);color:var(--red);letter-spacing:.06em">LAF R34</span>`:'';
-  const lbfBadge=lbf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.3);color:var(--green);letter-spacing:.06em">LBF R35</span>`:'';
+  const lafBadge=laf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(224,92,92,.15);border:1px solid rgba(224,92,92,.3);color:var(--red);letter-spacing:.06em">LAF R37 ⚡</span>`:'';
+  const lbfBadge=lbf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.3);color:var(--green);letter-spacing:.06em">LBF R36 ⚡</span>`:'';
   const snapBadge=snap?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(212,144,58,.12);border:1px solid rgba(212,144,58,.3);color:var(--amber);letter-spacing:.06em">SNAPSHOT</span>`:'';
   el.innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
@@ -1361,13 +1361,13 @@ function renderAVwapInst(sym,data){
     </div>
     <div class="sdg">
       <span class="sl">SD+3</span><span class="sv s3u">${sd3h}</span><span class="sd"></span>
-      <span class="sl">SD+2</span><span class="sv s2u">${sd2h}</span><span class="sd" style="color:var(--red)">${laf?'⚠ R34':''}</span>
+      <span class="sl">SD+2</span><span class="sv s2u">${sd2h}</span><span class="sd" style="color:var(--red)">${laf?'⚠ LAF R37':''}</span>
       <span class="sl">SD+1</span><span class="sv s1u">${sd1h}</span><span class="sd"></span>
       <div class="sep"></div>
       <span class="sl">AVWAP 👑</span><span class="sv svw">${avwap}</span><span class="sd"></span>
       <div class="sep"></div>
       <span class="sl">SD-1</span><span class="sv s1d">${sd1l}</span><span class="sd"></span>
-      <span class="sl">SD-2</span><span class="sv s2d">${sd2l}</span><span class="sd" style="color:var(--green)">${lbf?'⚠ R35':''}</span>
+      <span class="sl">SD-2</span><span class="sv s2d">${sd2l}</span><span class="sd" style="color:var(--green)">${lbf?'⚠ LBF R36':''}</span>
       <span class="sl">SD-3</span><span class="sv s3d">${sd3l}</span><span class="sd"></span>
     </div>`;
 }
