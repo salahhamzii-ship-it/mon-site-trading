@@ -813,6 +813,31 @@ const httpServer = createServer((req, res) => {
     return
   }
 
+  if (req.method === 'GET' && req.url === '/scan') {
+    // Scan automatique des dossiers Sierra Chart courants
+    import('fs').then(({readdirSync}) => {
+      const roots = [
+        String.raw`C:\SierraChart\CME\Data`,
+        String.raw`C:\SierraChart\Data`,
+        String.raw`C:\SierraChart_CME\Data`,
+        String.raw`C:\Program Files\SierraChart\Data`,
+        String.raw`C:\Program Files (x86)\SierraChart\Data`,
+        `C:\\Users\\${process.env.USERNAME || 'USER'}\\Documents\\SierraChart\\Data`,
+      ]
+      const found = []
+      for (const root of roots) {
+        try {
+          const files = readdirSync(root)
+          const csvs = files.filter(f => f.toLowerCase().includes('.csv'))
+          if (csvs.length) found.push({ dir: root, files: csvs.slice(0, 20) })
+        } catch {}
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ found, checked: roots }, null, 2))
+    })
+    return
+  }
+
   if (req.method === 'POST') {
     const parts = req.url.replace(/^\/+/, '').split('/')
     if (parts.length === 2 && parts[0] === 'upload' && INSTRUMENTS.has(parts[1].toUpperCase())) {
