@@ -48,10 +48,10 @@ const jb   = (sz: number, w = 400, extra?: CSSProperties): CSSProperties =>
 
 /* ── Ticker instruments ─────────────────────────────────────── */
 const INSTRUMENTS = [
-  { sym: 'NQ100', base: 21456.75, mult: 8 },
-  { sym: 'ES',    base: 5632.25,  mult: 2.5 },
-  { sym: 'GC',    base: 2654.30,  mult: 1.2 },
-  { sym: 'CL',    base: 78.42,    mult: 0.4 },
+  { sym: 'NQ100', base: 29500, mult: 8 },
+  { sym: 'ES',    base: 7700,  mult: 2.5 },
+  { sym: 'GC',    base: 4450,  mult: 1.2 },
+  { sym: 'CL',    base: 92,    mult: 0.4 },
 ]
 
 interface TickerPrice { price: number; delta: number }
@@ -78,7 +78,19 @@ export default function CockpitApp() {
         if (!r.ok) return
         const d: BridgeData = await r.json()
         setBridgeData(d)
+        // Seed ticker prices from real bridge data
+        setPrices(prev => {
+          const keys = ['NQ', 'ES', 'GC', 'CL'] as const
+          return prev.map((p, i) => {
+            const real = parseFloat(String(d[keys[i]]?.last || ''))
+            if (!isNaN(real) && real > 0) return { price: real, delta: +(real - p.price).toFixed(2) }
+            return p
+          })
+        })
+        // Signal from AVWAP side
         const side = d?.NQ?.avwap_side || ''
+        if (side === 'above') setSignal('ACHAT')
+        else if (side === 'below') setSignal('VENTE')
         if (side && prevAvwapSide.current && side !== prevAvwapSide.current) {
           playBip()
         }
@@ -112,11 +124,6 @@ export default function CockpitApp() {
     return () => clearInterval(id)
   }, [])
 
-  // Toggle signal periodically for demo
-  useEffect(() => {
-    const id = setInterval(() => setSignal(s => s === 'ACHAT' ? 'VENTE' : 'ACHAT'), 12000)
-    return () => clearInterval(id)
-  }, [])
 
   const NAV: { id: View; icon: string; label: string }[] = [
     { id: 'dash',     icon: '⬡', label: 'DASHBOARD' },
