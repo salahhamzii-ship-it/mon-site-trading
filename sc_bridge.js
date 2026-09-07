@@ -9,9 +9,8 @@
 import { createServer } from 'http'
 import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, readdirSync } from 'fs'
 import { join } from 'path'
-import { WebSocketServer } from 'ws'
+import { WebSocketServer, WebSocket } from 'ws'
 import { execFile } from 'child_process'
-import { createSocket } from 'dgram'
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
@@ -46,35 +45,84 @@ let FILES = {
   CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
 }
 
-// ─── SIERRA CHART ORDER BRIDGE — UDP Trading Order Service ───────────────────
-// Architecture : cockpit → sc_bridge POST /order → UDP → SC port 22904 (SIM)
-// Sierra Chart Server Settings > General > UDP Port = 22904 (actif)
-// Format : ASCII key=value, une ligne par champ, terminé par \n
-const SC_UDP_HOST = process.env.SC_UDP_HOST || '127.0.0.1'
-const SC_UDP_PORT = parseInt(process.env.SC_UDP_PORT || '22904', 10)
+// ─── SIERRA CHART ORDER BRIDGE — DTC Protocol (port 11099) ──────────────────
+// Architecture : cockpit → sc_bridge POST /order → WS DTC → SC port 11099 (SIM)
+// SC Server Settings > DTC Protocol Server : Enable=Yes, Port=11099, Allow Trading=Yes
+// Flow : connect → LogonRequest → LogonResponse → SubmitOrder/Flatten → close
+const SC_DTC_HOST = process.env.SC_DTC_HOST || '127.0.0.1'
+const SC_DTC_PORT = parseInt(process.env.SC_DTC_PORT || '11099', 10)
 const SC_ACCOUNT  = process.env.SC_ACCOUNT  || 'Sim1'
 
+const DTC_TYPE = {
+  LOGON_REQUEST: 1,
+  LOGON_RESPONSE: 2,
+  FLATTEN_POSITIONS: 112,
+  SUBMIT_NEW_SINGLE_ORDER: 208,
+  ORDER_TYPE_MARKET: 1,
+  ORDER_TYPE_LIMIT: 2,
+  BUY: 1,
+  SELL: 2,
+  TIME_IN_FORCE_DAY: 1,
+}
+
 function sendScOrder({ action, symbol, quantity = 1, orderType = 'MARKET', price = 0 }) {
-  const id = Date.now()
-  const scAction = action.toUpperCase()
-  const scType   = (orderType || 'MARKET').toUpperCase() === 'LIMIT' ? 'LMT' : 'MKT'
-  const lines = [
-    `Action=${scAction}`,
-    `Symbol=${symbol}`,
-    `Quantity=${quantity}`,
-    `OrderType=${scType}`,
-    ...(price > 0 && scType === 'LMT' ? [`Price=${price}`] : []),
-    `AccountNum=${SC_ACCOUNT}`,
-    `ClientOrderID=${id}`,
-  ]
-  const msg = Buffer.from(lines.join('\n') + '\n', 'utf-8')
   return new Promise((resolve, reject) => {
-    const sock = createSocket('udp4')
-    sock.send(msg, 0, msg.length, SC_UDP_PORT, SC_UDP_HOST, (err) => {
-      sock.close()
-      if (err) reject(err)
-      else resolve({ sent: lines, host: SC_UDP_HOST, port: SC_UDP_PORT })
+    const ws = new WebSocket(`ws://${SC_DTC_HOST}:${SC_DTC_PORT}`)
+    const timer = setTimeout(() => { ws.terminate(); reject(new Error('DTC timeout 5s')) }, 5000)
+
+    ws.on('open', () => {
+      ws.send(JSON.stringify({
+        Type: DTC_TYPE.LOGON_REQUEST,
+        ProtocolVersion: 8,
+        Username: '',
+        Password: '',
+        ClientName: 'sc_bridge',
+        HeartbeatIntervalInSeconds: 60,
+        TradeAccount: SC_ACCOUNT,
+      }))
     })
+
+    ws.on('message', (raw) => {
+      let msg
+      try { msg = JSON.parse(raw.toString()) } catch { return }
+      if (msg.Type !== DTC_TYPE.LOGON_RESPONSE) return
+
+      if (msg.Result !== 1) {
+        clearTimeout(timer); ws.terminate()
+        reject(new Error(`DTC logon refusé: ${msg.ResultText || msg.Result}`))
+        return
+      }
+
+      const scAction = action.toUpperCase()
+      let payload
+      if (scAction === 'FLATTEN') {
+        payload = { Type: DTC_TYPE.FLATTEN_POSITIONS, TradeAccount: SC_ACCOUNT }
+      } else {
+        const isLimit = (orderType || '').toUpperCase() === 'LIMIT'
+        payload = {
+          Type: DTC_TYPE.SUBMIT_NEW_SINGLE_ORDER,
+          ClientOrderID: String(Date.now()),
+          Symbol: symbol,
+          Exchange: 'CME',
+          TradeAccount: SC_ACCOUNT,
+          OrderType: isLimit ? DTC_TYPE.ORDER_TYPE_LIMIT : DTC_TYPE.ORDER_TYPE_MARKET,
+          BuySell: scAction === 'BUY' ? DTC_TYPE.BUY : DTC_TYPE.SELL,
+          Quantity: Number(quantity),
+          TimeInForce: DTC_TYPE.TIME_IN_FORCE_DAY,
+          Price1: isLimit ? Number(price) : 0,
+          Price2: 0,
+          IsAutomatedOrder: 1,
+        }
+      }
+      ws.send(JSON.stringify(payload))
+      // SC ne renvoie pas de confirmation synchrone — fermer proprement après 400ms
+      setTimeout(() => {
+        clearTimeout(timer); ws.close()
+        resolve({ ok: true, action: scAction, symbol, payload })
+      }, 400)
+    })
+
+    ws.on('error', (err) => { clearTimeout(timer); reject(err) })
   })
 }
 
@@ -965,7 +1013,7 @@ const httpServer = createServer((req, res) => {
       }
       try {
         const result = await sendScOrder({ action: action.toUpperCase(), symbol, quantity: quantity || 1, orderType: orderType || 'MARKET', price: price || 0 })
-        const log = `[ORDER] ${action.toUpperCase()} ${quantity||1} ${symbol} ${orderType||'MARKET'} → UDP ${SC_UDP_HOST}:${SC_UDP_PORT}`
+        const log = `[ORDER] ${action.toUpperCase()} ${quantity||1} ${symbol} ${orderType||'MARKET'} → DTC ${SC_DTC_HOST}:${SC_DTC_PORT}`
         console.log(log)
         res.writeHead(200); res.end(JSON.stringify({ ok: true, log, ...result }))
       } catch (e) {
