@@ -708,14 +708,32 @@ function buildPayload(instr, allRows, extraSources = {}) {
       return p > v ? 'above' : 'below'
     })(),
     laf_sd2: (() => {
-      const s = parseFloat(lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'))
-      const p = parseFloat(lastVal)
-      return !isNaN(p) && !isNaN(s) && s > 0 && p > s
+      // LAF SD+2 : barre précédente High >= SD+2 ET barre courante Close < SD+2 (rejet confirmé)
+      const sd2h = parseFloat(lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'))
+      if (isNaN(sd2h) || sd2h <= 0) return false
+      const bars = [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time))
+      if (bars.length >= 2) {
+        const prev = bars[bars.length - 2]
+        const curr = bars[bars.length - 1]
+        const prevHigh = parseFloat(prev.high || '')
+        const currClose = parseFloat(curr.close || '')
+        if (!isNaN(prevHigh) && !isNaN(currClose)) return prevHigh >= sd2h && currClose < sd2h
+      }
+      return false
     })(),
     lbf_sd2: (() => {
-      const s = parseFloat(lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'))
-      const p = parseFloat(lastVal)
-      return !isNaN(p) && !isNaN(s) && s > 0 && p < s
+      // LBF SD-2 : barre précédente Low <= SD-2 ET barre courante Close > SD-2 (rejet confirmé)
+      const sd2l = parseFloat(lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'))
+      if (isNaN(sd2l) || sd2l <= 0) return false
+      const bars = [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time))
+      if (bars.length >= 2) {
+        const prev = bars[bars.length - 2]
+        const curr = bars[bars.length - 1]
+        const prevLow = parseFloat(prev.low || '')
+        const currClose = parseFloat(curr.close || '')
+        if (!isNaN(prevLow) && !isNaN(currClose)) return prevLow <= sd2l && currClose > sd2l
+      }
+      return false
     })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_j1:     [...barsJ1Final].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
