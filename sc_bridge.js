@@ -20,21 +20,29 @@ const SNAPSHOT_FILE = IS_WIN
   ? String.raw`C:\SierraChart\CME\Data\sc_snapshot.json`
   : `${UPLOAD_DIR}/sc_snapshot.json`
 
+// Résout le chemin CSV : essaie .csv puis .csv.txt (Sierra Chart peut ajouter .txt)
+function resolveCsv(base) {
+  if (!IS_WIN) return base
+  if (existsSync(base)) return base
+  if (existsSync(base + '.txt')) return base + '.txt'
+  return base // retourne base même si absent (pour le diagnostic)
+}
+
 // NQ multi-sources (5 fichiers Sierra Chart)
 const NQ_PATHS = {
-  main: IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ.csv`        : `${UPLOAD_DIR}/NQ.csv`,
-  auto: IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_auto.csv`   : `${UPLOAD_DIR}/NQ_auto.csv`,
-  m30:  IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_30min.csv`  : `${UPLOAD_DIR}/NQ_30min.csv`,
-  rth:  IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_RTH.csv`    : `${UPLOAD_DIR}/NQ_RTH.csv`,
-  ovn:  IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_OVN.csv`    : `${UPLOAD_DIR}/NQ_OVN.csv`,
-  tpo:  IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_TPO.csv`    : `${UPLOAD_DIR}/NQ_TPO.csv`,
+  main: resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ.csv`        : `${UPLOAD_DIR}/NQ.csv`),
+  auto: resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_auto.csv`   : `${UPLOAD_DIR}/NQ_auto.csv`),
+  m30:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_30min.csv`  : `${UPLOAD_DIR}/NQ_30min.csv`),
+  rth:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_RTH.csv`    : `${UPLOAD_DIR}/NQ_RTH.csv`),
+  ovn:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_OVN.csv`    : `${UPLOAD_DIR}/NQ_OVN.csv`),
+  tpo:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\NQ_TPO.csv`    : `${UPLOAD_DIR}/NQ_TPO.csv`),
 }
 
 let FILES = {
   NQ: NQ_PATHS.auto,
-  ES: IS_WIN ? String.raw`C:\SierraChart\CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`,
-  GC: IS_WIN ? String.raw`C:\SierraChart\CME\Data\GC.csv` : `${UPLOAD_DIR}/GC.csv`,
-  CL: IS_WIN ? String.raw`C:\SierraChart\CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`,
+  ES: resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`),
+  GC: resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\GC.csv` : `${UPLOAD_DIR}/GC.csv`),
+  CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart\CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
 }
 
 const RTH_START = { NQ: '09:30', ES: '09:30', GC: '08:20', CL: '09:00' }
