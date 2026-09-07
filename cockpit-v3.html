@@ -210,6 +210,7 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   <div class="ni" data-s="reglages" onclick="nav(this)"><span class="ni-ico">⚙</span>RÉGLAGES IB/OR</div>
   <div class="ni" data-s="backtest" onclick="nav(this)"><span class="ni-ico">◈</span>BACKTEST SD-2</div>
   <div class="ni" data-s="position" onclick="nav(this)"><span class="ni-ico">⬡</span>POSITION ACTIVE</div>
+  <div class="ni" data-s="avwap" onclick="nav(this)"><span class="ni-ico">⚡</span>AVWAP §9 LIVE</div>
 </nav>
 <main id="main">
 
@@ -596,6 +597,28 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
       <div class="pm"><div class="pm-l">Risque ($)</div><div class="pm-v" id="pp-rusd" style="color:var(--muted)">—</div></div>
       <div class="pm"><div class="pm-l">Target (pts)</div><div class="pm-v" id="pp-tpts" style="color:var(--muted)">—</div></div>
     </div></div>
+</div>
+
+<!-- ── AVWAP §9 LIVE ── -->
+<div class="sec" id="sec-avwap">
+  <div class="sh"><h2>⚡ AVWAP §9 LIVE</h2><span id="avwap-ts" style="font-size:10px;color:var(--muted);margin-left:8px">—</span></div>
+
+  <div id="par9-banner" style="padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:var(--surface);border:1px solid var(--border);color:var(--muted)">§9 — EN ATTENTE DE DONNÉES</div>
+
+  <div class="r2">
+    <div class="card" id="avwap-nq-card">
+      <div class="ct">NQ — NASDAQ E-MINI</div>
+      <div id="avwap-nq"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">En attente…</span></div>
+    </div>
+    <div class="card" id="avwap-es-card">
+      <div class="ct" style="color:var(--blue)">ES — S&P E-MINI</div>
+      <div id="avwap-es"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">En attente…</span></div>
+    </div>
+  </div>
+
+  <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center">
+    Rafraîchissement 30s · Source : /api/bridge-data · <span id="avwap-err" style="color:var(--red)"></span>
+  </div>
 </div>
 
 </main>
@@ -1165,6 +1188,144 @@ function autoInitSession(){
   SD.ibh=parseFloat(DEF_SESSION.ibh);SD.ibl=parseFloat(DEF_SESSION.ibl);
   rSD();rIB();rJ1();updTD_SD();
 }
+
+// ── AVWAP §9 LIVE ─────────────────────────────────────
+const _avwapPrev = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false }
+
+function playBip(freq, dur){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)()
+    const o=ctx.createOscillator(), g=ctx.createGain()
+    o.connect(g); g.connect(ctx.destination)
+    o.frequency.value=freq; o.type='sine'
+    g.gain.setValueAtTime(0.4, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur)
+    o.start(); o.stop(ctx.currentTime+dur)
+  }catch(e){}
+}
+
+function alertBip(type){
+  // LAF (SHORT) : 3 bips descendants aigus
+  // LBF (LONG)  : 3 bips montants graves
+  if(type==='laf'){
+    setTimeout(()=>playBip(880,0.18),0)
+    setTimeout(()=>playBip(780,0.18),220)
+    setTimeout(()=>playBip(660,0.25),440)
+  } else {
+    setTimeout(()=>playBip(440,0.18),0)
+    setTimeout(()=>playBip(550,0.18),220)
+    setTimeout(()=>playBip(660,0.25),440)
+  }
+}
+
+function checkAvwapAlerts(d){
+  for(const sym of ['NQ','ES']){
+    const instr=d[sym.toUpperCase()]||d[sym.toLowerCase()]
+    if(!instr||instr._from_snapshot)continue
+    const laf=!!instr.laf_sd2, lbf=!!instr.lbf_sd2
+    if(laf&&!_avwapPrev['laf_'+sym]){
+      alertBip('laf')
+      showAvwapFlash(`🔴 ${sym} LAF R34 — QUESTIONABLE HIGH — SHORT SETUP`, 'red')
+    }
+    if(lbf&&!_avwapPrev['lbf_'+sym]){
+      alertBip('lbf')
+      showAvwapFlash(`🟢 ${sym} LBF R35 — QUESTIONABLE LOW — LONG SETUP`, 'green')
+    }
+    _avwapPrev['laf_'+sym]=laf
+    _avwapPrev['lbf_'+sym]=lbf
+  }
+}
+
+function showAvwapFlash(msg, color){
+  const t=document.getElementById('toast')
+  if(!t)return
+  t.textContent=msg
+  t.style.borderColor=color==='red'?'var(--red)':'var(--green)'
+  t.style.color=color==='red'?'var(--red)':'var(--green)'
+  t.classList.add('show')
+  setTimeout(()=>t.classList.remove('show'),8000)
+}
+
+async function fetchAvwap(){
+  try{
+    const r=await fetch('/api/bridge-data',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    document.getElementById('avwap-err').textContent='';
+    renderAvwapPanel(d);
+    const ts=d._fetchedAt?new Date(d._fetchedAt).toLocaleTimeString('fr-FR'):new Date().toLocaleTimeString('fr-FR');
+    document.getElementById('avwap-ts').textContent='Sync '+ts;
+  }catch(e){
+    document.getElementById('avwap-err').textContent=e.message;
+    document.getElementById('avwap-ts').textContent='⚠ erreur';
+  }
+}
+function renderAvwapPanel(d){
+  const nq=d.NQ||d.nq, es=d.ES||d.es;
+  checkAvwapAlerts(d);
+  renderAVwapInst('nq',nq);
+  renderAVwapInst('es',es);
+  // §9
+  const par9=nq&&nq.par9;
+  const b=document.getElementById('par9-banner');
+  if(par9==='above'){
+    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:rgba(76,175,130,.12);border:1px solid rgba(76,175,130,.3);color:var(--green)';
+    b.textContent='§9 · NQ + ES ALIGNÉS HAUSSIERS ▲ — ABOVE AVWAP';
+  }else if(par9==='below'){
+    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:rgba(224,92,92,.12);border:1px solid rgba(224,92,92,.3);color:var(--red)';
+    b.textContent='§9 · NQ + ES ALIGNÉS BAISSIERS ▼ — BELOW AVWAP';
+  }else if(par9==='divergent'){
+    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:rgba(212,144,58,.12);border:1px solid rgba(212,144,58,.3);color:var(--amber)';
+    b.textContent='§9 · DIVERGENCE NQ ≠ ES — CAUTION — ATTENDRE ALIGNEMENT';
+  }else{
+    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:var(--surface);border:1px solid var(--border);color:var(--muted)';
+    b.textContent='§9 — EN ATTENTE DE DONNÉES';
+  }
+}
+function renderAVwapInst(sym,data){
+  const el=document.getElementById('avwap-'+sym);
+  const card=document.getElementById('avwap-'+sym+'-card');
+  if(!data){
+    el.innerHTML='<span style="color:var(--muted);font-family:var(--mono);font-size:11px">Pas de données CSV</span>';
+    card.style.borderColor='var(--border)';return;
+  }
+  const side=data.avwap_side, laf=data.laf_sd2, lbf=data.lbf_sd2, snap=data._from_snapshot;
+  if(side==='above')card.style.borderColor='rgba(76,175,130,.4)';
+  else if(side==='below')card.style.borderColor='rgba(224,92,92,.4)';
+  else card.style.borderColor='var(--border)';
+  const fv=v=>{const n=parseFloat(v||'0');return n>0?n.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1'):'—';};
+  const price=fv(data.last||data.settle);
+  const avwap=fv(data.vwap);
+  const sd1h=fv(data.sd1h), sd2h=fv(data.sd2h), sd3h=fv(data.ovn_sd3h||data.sd3h);
+  const sd1l=fv(data.sd1l), sd2l=fv(data.sd2l), sd3l=fv(data.ovn_sd3l||data.sd3l);
+  const pc=side==='above'?'var(--green)':side==='below'?'var(--red)':'var(--text)';
+  const arrow=side==='above'?'▲':side==='below'?'▼':'—';
+  const sideLabel=side==='above'?'ABOVE':side==='below'?'BELOW':'—';
+  const sideBg=side==='above'?'rgba(76,175,130,.15)':side==='below'?'rgba(224,92,92,.15)':'var(--surface2)';
+  const sideBorder=side==='above'?'rgba(76,175,130,.3)':side==='below'?'rgba(224,92,92,.3)':'var(--border)';
+  const lafBadge=laf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(224,92,92,.15);border:1px solid rgba(224,92,92,.3);color:var(--red);letter-spacing:.06em">LAF R34</span>`:'';
+  const lbfBadge=lbf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.3);color:var(--green);letter-spacing:.06em">LBF R35</span>`:'';
+  const snapBadge=snap?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(212,144,58,.12);border:1px solid rgba(212,144,58,.3);color:var(--amber);letter-spacing:.06em">SNAPSHOT</span>`:'';
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <span style="font-family:var(--mono);font-size:22px;font-weight:600;color:${pc};letter-spacing:.02em">${price}</span>
+      <span style="font-size:14px;color:${pc}">${arrow}</span>
+      <span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;font-weight:700;background:${sideBg};border:1px solid ${sideBorder};color:${pc};letter-spacing:.1em">${sideLabel}</span>
+      ${lafBadge}${lbfBadge}${snapBadge}
+    </div>
+    <div class="sdg">
+      <span class="sl">SD+3</span><span class="sv s3u">${sd3h}</span><span class="sd"></span>
+      <span class="sl">SD+2</span><span class="sv s2u">${sd2h}</span><span class="sd" style="color:var(--red)">${laf?'⚠ R34':''}</span>
+      <span class="sl">SD+1</span><span class="sv s1u">${sd1h}</span><span class="sd"></span>
+      <div class="sep"></div>
+      <span class="sl">AVWAP 👑</span><span class="sv svw">${avwap}</span><span class="sd"></span>
+      <div class="sep"></div>
+      <span class="sl">SD-1</span><span class="sv s1d">${sd1l}</span><span class="sd"></span>
+      <span class="sl">SD-2</span><span class="sv s2d">${sd2l}</span><span class="sd" style="color:var(--green)">${lbf?'⚠ R35':''}</span>
+      <span class="sl">SD-3</span><span class="sv s3d">${sd3l}</span><span class="sd"></span>
+    </div>`;
+}
+setInterval(fetchAvwap,30000);fetchAvwap();
 
 // ── INIT ──────────────────────────────────────────────
 (function(){
