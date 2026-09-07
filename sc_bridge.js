@@ -7,7 +7,7 @@
  */
 
 import { createServer } from 'http'
-import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { WebSocketServer } from 'ws'
 import { execFile } from 'child_process'
@@ -43,6 +43,66 @@ let FILES = {
   ES: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`),
   GC: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv` : `${UPLOAD_DIR}/GC.csv`),
   CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
+}
+
+// ─── AUTO-DÉCOUVERTE des fichiers Sierra Chart ────────────────────────────────
+// Scanne tous les dossiers Sierra Chart connus et met à jour FILES automatiquement
+function autoDiscoverFiles() {
+  if (!IS_WIN) return
+  const USERNAME = process.env.USERNAME || process.env.USER || 'USER'
+  const searchDirs = [
+    String.raw`C:\SierraChart_CME\Data`,
+    String.raw`C:\SierraChart\Data`,
+    String.raw`C:\SierraChart\CME\Data`,
+    `C:\\Users\\${USERNAME}\\SierraChart\\Data`,
+    `C:\\Users\\${USERNAME}\\Documents\\SierraChart\\Data`,
+    String.raw`C:\Program Files\SierraChart\Data`,
+    String.raw`C:\Program Files (x86)\SierraChart\Data`,
+    String.raw`D:\SierraChart_CME\Data`,
+    String.raw`D:\SierraChart\Data`,
+  ]
+
+  const found = {}  // sym → [full_path, ...]
+  for (const sym of ['NQ', 'ES', 'GC', 'CL']) found[sym] = []
+
+  console.log('\n[AUTO-SCAN] Recherche des fichiers CSV Sierra Chart...')
+  for (const dir of searchDirs) {
+    if (!existsSync(dir)) continue
+    let files
+    try { files = readdirSync(dir) } catch { continue }
+    const csvs = files.filter(f => f.toLowerCase().includes('.csv'))
+    if (!csvs.length) continue
+    console.log(`  [SCAN] ${dir} → ${csvs.length} fichier(s) CSV trouvé(s): ${csvs.slice(0,8).join(', ')}`)
+    for (const f of csvs) {
+      const fl = f.toLowerCase()
+      for (const sym of ['NQ', 'ES', 'GC', 'CL']) {
+        if (fl.startsWith(sym.toLowerCase())) {
+          found[sym].push(join(dir, f))
+        }
+      }
+    }
+  }
+
+  // Sélectionne le meilleur fichier par instrument : préfère _auto, sinon premier
+  for (const sym of ['NQ', 'ES', 'GC', 'CL']) {
+    const list = found[sym]
+    if (!list.length) continue
+    const auto = list.find(f => f.toLowerCase().includes('_auto'))
+    const chosen = auto || list[0]
+    FILES[sym] = chosen
+    console.log(`  [AUTO] ${sym} → ${chosen}`)
+  }
+
+  // NQ_PATHS : cherche aussi les variantes spécialisées
+  const allNqFiles = found.NQ
+  const pick = (keyword) => allNqFiles.find(f => f.toLowerCase().includes(keyword)) || ''
+  if (pick('_30min') || pick('_30m')) NQ_PATHS.m30 = pick('_30min') || pick('_30m')
+  if (pick('_rth'))   NQ_PATHS.rth = pick('_rth')
+  if (pick('_ovn'))   NQ_PATHS.ovn = pick('_ovn')
+  if (pick('_tpo'))   NQ_PATHS.tpo = pick('_tpo')
+  if (!NQ_PATHS.auto || !existsSync(NQ_PATHS.auto)) NQ_PATHS.auto = FILES.NQ
+
+  console.log()
 }
 
 const RTH_START = { NQ: '09:30', ES: '09:30', GC: '08:20', CL: '09:00' }
@@ -915,15 +975,20 @@ wss.on('listening', () => {
   console.log(`SC Bridge WS    ws://0.0.0.0:${WS_PORT}`)
 })
 
+// Auto-découverte : trouve les CSV Sierra Chart avant tout diagnostic
+autoDiscoverFiles()
+
 console.log('\nFichiers NQ configurés :')
 for (const [k, v] of Object.entries(NQ_PATHS)) {
+  if (!v) continue
   const ok = existsSync(v)
-  console.log(`  NQ_${k}: ${v}  [${ok ? 'OK' : 'absent (ignoré)'}]`)
+  console.log(`  NQ_${k}: ${v}  [${ok ? 'OK ✓' : 'absent (ignoré)'}]`)
 }
 console.log('\nFichiers ES/GC/CL :')
 for (const [k, v] of [['ES', FILES.ES], ['GC', FILES.GC], ['CL', FILES.CL]]) {
+  if (!v) continue
   const ok = existsSync(v)
-  console.log(`  ${k}: ${v}  [${ok ? 'OK' : 'absent (ignoré)'}]`)
+  console.log(`  ${k}: ${v}  [${ok ? 'OK ✓' : 'absent (ignoré)'}]`)
 }
 console.log()
 
