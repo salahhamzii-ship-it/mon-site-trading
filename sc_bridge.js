@@ -46,32 +46,36 @@ let FILES = {
   CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
 }
 
-// ─── SIERRA CHART UDP TRADING API ─────────────────────────────────────────────
-// Doc: https://www.sierrachart.com/index.php?page=doc/UDPAPI.html
-// SC reçoit des paquets UDP text-based sur le port configuré dans SC > Global Settings > Trading > Trading API Port
-// Format commande: "Action=<BUY|SELL|FLATTEN>\nSymbol=<sym>\nQuantity=<n>\nOrderType=<MARKET|LIMIT>\nAccountNum=<n>\n"
-const SC_UDP_HOST = process.env.SC_UDP_HOST || '127.0.0.1'
-const SC_UDP_PORT = parseInt(process.env.SC_UDP_PORT || '11098', 10)
-const SC_ACCOUNT  = process.env.SC_ACCOUNT  || 'Sim1' // compte SIM Sierra Chart (Sim1 = premier compte simulation)
+// ─── SIERRA CHART ORDER BRIDGE — fichier + AutoHotKey ────────────────────────
+// Architecture : cockpit → sc_bridge POST /order → écrit sc_order_queue.txt
+// AutoHotKey (Windows) poll le fichier → envoie keystrokes à Sierra Chart SIM
+// Teton CME Routing + Dorman = pas d'UDP externe → approche fichier uniquement
+const SC_ACCOUNT  = process.env.SC_ACCOUNT  || 'Sim1'
+const SC_ORDER_FILE = IS_WIN
+  ? String.raw`C:\SierraChart_CME\Data\sc_order_queue.txt`
+  : `${UPLOAD_DIR}/sc_order_queue.txt`
 
 function sendScOrder({ action, symbol, quantity = 1, orderType = 'MARKET', price = 0 }) {
-  return new Promise((resolve, reject) => {
-    const lines = [
-      `Action=${action}`,          // BUY | SELL | FLATTEN
-      `Symbol=${symbol}`,          // ex: NQU26-CME ou NQ
-      `Quantity=${quantity}`,
-      `OrderType=${orderType}`,    // MARKET | LIMIT
-      `Price=${price}`,            // ignoré si MARKET
-      `AccountNum=${SC_ACCOUNT}`,
-      `ClientOrderID=${Date.now()}`,
-    ]
-    const msg = Buffer.from(lines.join('\n') + '\n', 'utf-8')
-    const sock = createSocket('udp4')
-    sock.send(msg, 0, msg.length, SC_UDP_PORT, SC_UDP_HOST, (err) => {
-      sock.close()
-      if (err) { reject(err) } else { resolve({ sent: lines }) }
-    })
-  })
+  const id = Date.now()
+  const lines = [
+    `Action=${action}`,
+    `Symbol=${symbol}`,
+    `Quantity=${quantity}`,
+    `OrderType=${orderType}`,
+    `Price=${price}`,
+    `AccountNum=${SC_ACCOUNT}`,
+    `ClientOrderID=${id}`,
+    `Timestamp=${new Date().toISOString()}`,
+    `Status=PENDING`,
+  ]
+  const content = lines.join('\n') + '\n'
+  try {
+    mkdirSync(SC_ORDER_FILE.replace(/[^/\\]+$/, ''), { recursive: true })
+    writeFileSync(SC_ORDER_FILE, content, 'utf-8')
+    return Promise.resolve({ sent: lines, file: SC_ORDER_FILE })
+  } catch (e) {
+    return Promise.reject(e)
+  }
 }
 
 // ─── AUTO-DÉCOUVERTE des fichiers Sierra Chart ────────────────────────────────
