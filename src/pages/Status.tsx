@@ -9,17 +9,24 @@ interface InstrumentStatus {
   ok: boolean
 }
 
+interface BridgeInstrument {
+  last?: string
+  lastUpdate?: string
+  _from_snapshot?: boolean
+  [key: string]: unknown
+}
+
 interface BridgeData {
-  NQ?: { last?: string; lastUpdate?: string }
-  ES?: { last?: string; lastUpdate?: string }
-  GC?: { last?: string; lastUpdate?: string }
-  CL?: { last?: string; lastUpdate?: string }
+  NQ?: BridgeInstrument
+  ES?: BridgeInstrument
+  GC?: BridgeInstrument
+  CL?: BridgeInstrument
   _fetchedAt?: string
 }
 
 const STALE_MS = 15 * 60 * 1000
 
-function parseInstrument(key: string, label: string, raw?: { last?: string; lastUpdate?: string }): InstrumentStatus {
+function parseInstrument(key: string, label: string, raw?: BridgeInstrument): InstrumentStatus {
   if (!raw) return { label, symbol: key.toUpperCase(), lastPrice: '—', lastUpdate: null, stale: true, ok: false }
   const price = raw.last || '—'
   const ts = raw.lastUpdate || null

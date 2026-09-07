@@ -1,5 +1,5 @@
 # SC BRIDGE — HANDOFF CLAUDE CODE
-*Document de passation technique — mis à jour le 2026-09-06*
+*Document de passation technique — mis à jour le 2026-09-06 · v2*
 
 ---
 
@@ -144,17 +144,69 @@ Sur chaque chart : **Analysis → Write Bar and Study Data to File**
 
 ---
 
-## CE QUI POURRAIT ÊTRE AMÉLIORÉ (FUTURE)
+## CE QUI POURRAIT ÊTRE AMÉLIORÉ (FUTURE — PROCHAINE SESSION)
 
 - Ajouter NQ_TPO.csv.txt dans Sierra Chart pour POC/VAH/VAL natif plus précis
 - Ajouter ES_TPO.csv.txt si besoin de TPO Sierra Chart pour ES
 - Historique multi-jours (actuellement J-1 only)
 - Dashboard /status avec graphe uptime
 - Export snapshot vers Vercel KV pour partage multi-device
+- Alerte §9 : notifier quand NQ+ES passent de divergent → alignés (signal de confirmation)
+- Intégrer barres 78min dans le payload (5 barres RTH avec delta)
+- Page /avwap dédiée mobile-first (font plus grande, one-hand scroll)
+- Son customisable : volume + fréquences réglables dans le cockpit
 
 ---
 
-## ÉTAT AU 2026-09-06
+## AVWAP §9 — AJOUTS SESSION 2026-09-06
+
+### Payload enrichi (sc_bridge.js — buildPayload)
+
+| Champ | Calcul | Usage |
+|-------|--------|-------|
+| `avwap_side` | `'above'` / `'below'` — last vs ovnVwapFinal | Position vs AVWAP 18h |
+| `laf_sd2` | `true` si last > ovnSd2h (R34) | Questionable High |
+| `lbf_sd2` | `true` si last < ovnSd2l (R35) | Questionable Low |
+| `ovn_sd3h` | SD+3 haut — lastNonempty sur allOvn/todayAll/allRows | Extrême haussier |
+| `ovn_sd3l` | SD+3 bas | Extrême baissier |
+
+### §9 par9 (sc_bridge.js — buildMessage)
+
+Calculé après NQ + ES assemblés :
+- `NQ.avwap_side === ES.avwap_side` → `par9 = 'above'` ou `'below'`
+- sinon → `par9 = 'divergent'`
+- Injecté dans `data.NQ.par9` et `data.ES.par9`
+
+### Panel AVWAP §9 (public/cockpit-v3.html)
+
+- Nav item `⚡ AVWAP §9 LIVE` → section `sec-avwap`
+- Banner §9 couleur dynamique : vert above / rouge below / amber divergent
+- NQ + ES côte à côte — bordure colorée selon `avwap_side`
+- Grid SD+3/+2/+1 / AVWAP 👑 / SD-1/-2/-3 avec classes CSS existantes
+- Badges `LAF R34` (rouge) et `LBF R35` (vert) quand actifs
+- Badge `SNAPSHOT` (amber) si données du cache JSON
+- Fetch `/api/bridge-data` toutes les 30s, auto-start au chargement
+
+### Alertes LAF / LBF (Step C)
+
+**sc_bridge.js :**
+- `ALERT_STATE` objet global — mémorise état précédent laf/lbf par instrument
+- `fireToast(title, msg)` — PowerShell `ToastNotificationManager` durée `long`
+- `checkAlerts(data)` — appelé après chaque `refreshAndBroadcast()`
+- Alerte uniquement à la transition `false → true` — anti-spam
+- Non-Windows : log console
+
+**cockpit-v3.html :**
+- `_avwapPrev` — même logique anti-spam côté browser
+- `playBip(freq, dur)` — Web Audio API, zéro dépendance externe
+- LAF SHORT : 3 bips descendants 880→780→660 Hz
+- LBF LONG : 3 bips montants 440→550→660 Hz
+- `showAvwapFlash(msg, color)` — banner toast 8s (élément `#toast` existant)
+- `checkAvwapAlerts(d)` — appelé dans `renderAvwapPanel()` à chaque fetch
+
+---
+
+## ÉTAT AU 2026-09-06 v2
 
 - ✅ Bridge opérationnel NQ + ES + GC + CL
 - ✅ Boot automatique Windows
@@ -162,3 +214,6 @@ Sur chaque chart : **Analysis → Write Bar and Study Data to File**
 - ✅ Snapshot weekends/fériés
 - ✅ Page /status monitoring
 - ✅ Déployé Vercel production
+- ✅ Payload AVWAP §9 enrichi (avwap_side, laf/lbf_sd2, sd3h/l, par9)
+- ✅ Panel AVWAP §9 LIVE dans cockpit-v3.html
+- ✅ Alertes Windows Toast + bip audio navigateur sur LAF/LBF
