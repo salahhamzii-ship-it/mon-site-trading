@@ -20,6 +20,9 @@ const STATS = [
 
 interface BridgeNQ {
   last?: string | number
+  last_csv_date?: string
+  j1_date?: string
+  j1_expected?: string
   j1_open?: string | number
   j1_high?: string | number
   j1_low?: string | number
@@ -67,10 +70,15 @@ export default function Dashboard() {
   }, [])
 
   const nq      = parseFloat(String(bridge.last || '0')) || prevRef.current
-  const settle  = parseFloat(String(bridge.j1_settle || bridge.last || '0'))
-  const diff    = settle > 0 ? nq - settle : 0
-  const pct     = settle > 0 ? (diff / settle) * 100 : 0
+  const settle  = parseFloat(String(bridge.j1_settle || '0'))
+  const diff    = settle > 0 && nq > 0 ? nq - settle : 0
+  const pct     = settle > 0 && nq > 0 ? (diff / settle) * 100 : 0
   const up      = diff >= 0
+
+  // Staleness: j1_date ≠ j1_expected → CSV périmé → "last" = settle du CSV
+  const csvStale = !!bridge.last_csv_date && bridge.j1_date !== bridge.j1_expected
+  const csvDate  = bridge.last_csv_date || bridge.j1_date || ''
+  const csvLabel = csvDate ? csvDate.slice(5).replace('-', '/') : ''  // "MM/DD"
 
   const isBuy    = sigDir === 'ACHAT'
   const sigColor = isBuy ? '#00ff88' : '#ff4444'
@@ -148,16 +156,16 @@ export default function Dashboard() {
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 padding: '1px 6px', borderRadius: 3,
-                background: online ? 'rgba(0,255,136,0.1)' : 'rgba(255,68,68,0.1)',
-                border: `1px solid ${online ? 'rgba(0,255,136,0.3)' : 'rgba(255,68,68,0.3)'}`,
-                fontSize: 9, color: online ? '#00ff88' : '#ff4444',
+                background: online ? (csvStale ? 'rgba(255,140,80,0.1)' : 'rgba(0,255,136,0.1)') : 'rgba(255,68,68,0.1)',
+                border: `1px solid ${online ? (csvStale ? 'rgba(255,140,80,0.3)' : 'rgba(0,255,136,0.3)') : 'rgba(255,68,68,0.3)'}`,
+                fontSize: 9, color: online ? (csvStale ? '#ff8c50' : '#00ff88') : '#ff4444',
               }}>
                 <span style={{
                   width: 5, height: 5, borderRadius: '50%',
-                  background: online ? '#00ff88' : '#ff4444',
+                  background: online ? (csvStale ? '#ff8c50' : '#00ff88') : '#ff4444',
                   display: 'inline-block',
                 }} />
-                {online ? 'BRIDGE' : 'OFFLINE'}
+                {online ? (csvStale ? `CSV ${csvLabel}` : 'LIVE') : 'OFFLINE'}
               </span>
             </div>
             <div style={{
