@@ -1,2 +1,4 @@
 Set WshShell = CreateObject("WScript.Shell")
-WshShell.Run "C:\mon-site-trading\lancer_bridge.bat", 0, False
+Dim bat
+bat = WshShell.ExpandEnvironmentStrings("%USERPROFILE%") & "\Desktop\sc-bridge\startup_bridge.bat"
+WshShell.Run """" & bat & """", 0, False

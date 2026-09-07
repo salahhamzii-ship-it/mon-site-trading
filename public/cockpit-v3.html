@@ -207,6 +207,7 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   <div class="ni" data-s="launcher" onclick="nav(this)"><span class="ni-ico">◉</span>SETUP LAUNCHER</div>
   <div class="ni" data-s="topdown" onclick="nav(this)"><span class="ni-ico">▲</span>TOP-DOWN DALTON</div>
   <div class="ni" data-s="tracker" onclick="nav(this)"><span class="ni-ico">⊕</span>LIVE TRACKER</div>
+  <div class="ni" data-s="order" onclick="nav(this)"><span class="ni-ico">🎯</span>ORDER SIM</div>
   <div class="ni" data-s="reglages" onclick="nav(this)"><span class="ni-ico">⚙</span>RÉGLAGES IB/OR</div>
   <div class="ni" data-s="backtest" onclick="nav(this)"><span class="ni-ico">◈</span>BACKTEST SD-2</div>
   <div class="ni" data-s="position" onclick="nav(this)"><span class="ni-ico">⬡</span>POSITION ACTIVE</div>
@@ -468,6 +469,42 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
     <div id="td2"></div><div id="tsig"></div></div>
   <div class="card"><div class="ct">NIVEAUX DE RÉFÉRENCE</div>
     <div id="tlevels" style="font-family:var(--mono);font-size:12px;line-height:2.1"><span style="color:var(--muted)">Chargez une session.</span></div></div>
+</div>
+
+<!-- ── ORDER SIM ── -->
+<div class="sec" id="sec-order">
+  <div class="sh"><h2>🎯 ORDER SIM — SIERRA CHART</h2></div>
+  <div class="card" style="border:1px solid rgba(224,92,92,.3)">
+    <div class="ct" style="color:var(--red)">⚠ MODE SIMULATION — SIM UNIQUEMENT</div>
+    <p style="font-size:10px;color:var(--muted);margin:4px 0 10px">Envoie les ordres au compte SIM Sierra Chart via UDP local (sc_bridge). Aucun ordre réel.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="flex:1;min-width:160px">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Symbole SC (ex: NQU26_FUT_CME)</label>
+        <input id="ord-sym" type="text" value="NQU26_FUT_CME" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;border-radius:3px;font-family:var(--mono);font-size:12px;box-sizing:border-box" spellcheck="false" autocomplete="off">
+      </div>
+      <div style="flex:0 0 80px">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Quantité</label>
+        <input id="ord-qty" type="number" min="1" max="10" value="1" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;border-radius:3px;font-family:var(--mono);font-size:12px;text-align:center">
+      </div>
+      <div style="flex:1;min-width:120px">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Type</label>
+        <select id="ord-type" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;border-radius:3px;font-family:var(--mono);font-size:12px">
+          <option value="MARKET">MARKET</option>
+          <option value="LIMIT">LIMIT</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:100px" id="ord-price-wrap" style="display:none">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Prix LIMIT</label>
+        <input id="ord-price" type="number" step=".25" placeholder="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;border-radius:3px;font-family:var(--mono);font-size:12px">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <button onclick="sendOrder('BUY')"  style="padding:12px 6px;background:rgba(76,175,130,.18);border:1px solid rgba(76,175,130,.45);color:var(--green);font-family:var(--mono);font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:.06em">▲ BUY</button>
+      <button onclick="sendOrder('FLATTEN')" style="padding:12px 6px;background:rgba(212,144,58,.12);border:1px solid rgba(212,144,58,.3);color:var(--amber);font-family:var(--mono);font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:.06em">⊟ FLAT</button>
+      <button onclick="sendOrder('SELL')" style="padding:12px 6px;background:rgba(224,92,92,.15);border:1px solid rgba(224,92,92,.35);color:var(--red);font-family:var(--mono);font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:.06em">▼ SELL</button>
+    </div>
+    <div id="ord-log" style="font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface1);border:1px solid var(--border);border-radius:3px;padding:8px;min-height:40px;max-height:120px;overflow-y:auto">En attente...</div>
+  </div>
 </div>
 
 <!-- ── RÉGLAGES ── -->
@@ -905,8 +942,9 @@ function updateTracker(){
   const bands=[{l:'SD+3',v:a+3*s,c:'s3u'},{l:'SD+2',v:a+2*s,c:'s2u'},{l:'SD+1',v:a+s,c:'s1u'},{l:'AVWAP',v:a,c:'svw'},{l:'SD-1',v:a-s,c:'s1d'},{l:'SD-2',v:a-2*s,c:'s2d'},{l:'SD-3',v:a-3*s,c:'s3d'}];
   document.getElementById('td2').innerHTML=bands.map(b=>`<div class="tb ${Math.abs(price-b.v)<s*.45?'ab':''}"><div class="tbl ${b.c}">${b.l}</div><div class="tbv ${b.c}">${b.v.toFixed(2)}</div><div class="tbd">${(price-b.v>0?'+':'')+(price-b.v).toFixed(2)}</div></div>`).join('');
   const sig=document.getElementById('tsig');
-  if(price>=a+3*s){sig.textContent='🚨 R34 — ABOVE SD+3 — QUESTIONABLE HIGH → SHORT PRIORITAIRE';sig.className='ss';sig.style.display='block';}
-  else if(price<=a-2*s){sig.textContent='✅ R36 — LBF SD-2 + Higher Low → LONG setup';sig.className='sl';sig.style.display='block';}
+  if(price>=a+3*s){sig.textContent='🚨 R34 — SD+3 EXTRÊME → SHORT — Questionable High';sig.className='ss';sig.style.display='block';}
+  else if(price>=a+2*s){sig.textContent='⚡ R37 — Prix ≥ SD+2 → Attendre LAF (barre suivante Lower High < SD+2)';sig.className='ss';sig.style.display='block';}
+  else if(price<=a-2*s){sig.textContent='⚡ R36 — Prix ≤ SD-2 → Attendre LBF (barre suivante Higher Low > SD-2)';sig.className='sl';sig.style.display='block';}
   else if(Math.abs(price-a)<s*.25){sig.textContent='⚖ AVWAP 18H 👑 — Zone de décision';sig.className='sn';sig.style.display='block';}
   else sig.style.display='none';
 }
@@ -1270,11 +1308,11 @@ function checkAvwapAlerts(d){
     const laf=!!instr.laf_sd2, lbf=!!instr.lbf_sd2
     if(laf&&!_avwapPrev['laf_'+sym]){
       alertBip('laf')
-      showAvwapFlash(`🔴 ${sym} LAF R34 — QUESTIONABLE HIGH — SHORT SETUP`, 'red')
+      showAvwapFlash(`🔴 ${sym} LAF R37 — SD+2 REJETÉ → SHORT SETUP`, 'red')
     }
     if(lbf&&!_avwapPrev['lbf_'+sym]){
       alertBip('lbf')
-      showAvwapFlash(`🟢 ${sym} LBF R35 — QUESTIONABLE LOW — LONG SETUP`, 'green')
+      showAvwapFlash(`🟢 ${sym} LBF R36 — SD-2 REJETÉ → LONG SETUP`, 'green')
     }
     _avwapPrev['laf_'+sym]=laf
     _avwapPrev['lbf_'+sym]=lbf
@@ -1348,8 +1386,8 @@ function renderAVwapInst(sym,data){
   const sideLabel=side==='above'?'ABOVE':side==='below'?'BELOW':'—';
   const sideBg=side==='above'?'rgba(76,175,130,.15)':side==='below'?'rgba(224,92,92,.15)':'var(--surface2)';
   const sideBorder=side==='above'?'rgba(76,175,130,.3)':side==='below'?'rgba(224,92,92,.3)':'var(--border)';
-  const lafBadge=laf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(224,92,92,.15);border:1px solid rgba(224,92,92,.3);color:var(--red);letter-spacing:.06em">LAF R34</span>`:'';
-  const lbfBadge=lbf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.3);color:var(--green);letter-spacing:.06em">LBF R35</span>`:'';
+  const lafBadge=laf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(224,92,92,.15);border:1px solid rgba(224,92,92,.3);color:var(--red);letter-spacing:.06em">LAF R37 ⚡</span>`:'';
+  const lbfBadge=lbf?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.3);color:var(--green);letter-spacing:.06em">LBF R36 ⚡</span>`:'';
   const snapBadge=snap?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(212,144,58,.12);border:1px solid rgba(212,144,58,.3);color:var(--amber);letter-spacing:.06em">SNAPSHOT</span>`:'';
   el.innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
@@ -1360,17 +1398,50 @@ function renderAVwapInst(sym,data){
     </div>
     <div class="sdg">
       <span class="sl">SD+3</span><span class="sv s3u">${sd3h}</span><span class="sd"></span>
-      <span class="sl">SD+2</span><span class="sv s2u">${sd2h}</span><span class="sd" style="color:var(--red)">${laf?'⚠ R34':''}</span>
+      <span class="sl">SD+2</span><span class="sv s2u">${sd2h}</span><span class="sd" style="color:var(--red)">${laf?'⚠ LAF R37':''}</span>
       <span class="sl">SD+1</span><span class="sv s1u">${sd1h}</span><span class="sd"></span>
       <div class="sep"></div>
       <span class="sl">AVWAP 👑</span><span class="sv svw">${avwap}</span><span class="sd"></span>
       <div class="sep"></div>
       <span class="sl">SD-1</span><span class="sv s1d">${sd1l}</span><span class="sd"></span>
-      <span class="sl">SD-2</span><span class="sv s2d">${sd2l}</span><span class="sd" style="color:var(--green)">${lbf?'⚠ R35':''}</span>
+      <span class="sl">SD-2</span><span class="sv s2d">${sd2l}</span><span class="sd" style="color:var(--green)">${lbf?'⚠ LBF R36':''}</span>
       <span class="sl">SD-3</span><span class="sv s3d">${sd3l}</span><span class="sd"></span>
     </div>`;
 }
 setInterval(fetchAvwap,30000);fetchAvwap();
+
+// ── ORDER SIM ─────────────────────────────────────────
+document.getElementById('ord-type').addEventListener('change',function(){
+  document.getElementById('ord-price-wrap').style.display=this.value==='LIMIT'?'':'none';
+});
+async function sendOrder(action){
+  const sym=document.getElementById('ord-sym').value;
+  const qty=parseInt(document.getElementById('ord-qty').value)||1;
+  const otype=document.getElementById('ord-type').value;
+  const price=parseFloat(document.getElementById('ord-price').value)||0;
+  const log=document.getElementById('ord-log');
+  const ts=new Date().toTimeString().slice(0,8);
+  log.style.color='var(--amber)';
+  log.textContent=`[${ts}] ${action} ${qty} ${sym} ${otype}… envoi en cours`;
+  try{
+    const r=await fetch('/api/order',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action,symbol:sym,quantity:qty,orderType:otype,price})
+    });
+    const d=await r.json();
+    if(d.ok){
+      log.style.color=action==='BUY'?'var(--green)':action==='SELL'?'var(--red)':'var(--amber)';
+      log.textContent=`[${ts}] ✅ ${d.log||action+' '+qty+' '+sym}`;
+    } else {
+      log.style.color='var(--red)';
+      log.textContent=`[${ts}] ❌ ERR: ${d.error||'inconnu'}`;
+    }
+  } catch(e){
+    log.style.color='var(--red)';
+    log.textContent=`[${ts}] ❌ BRIDGE OFFLINE — vérifier sc_bridge (${e.message})`;
+  }
+}
 
 // ── INIT ──────────────────────────────────────────────
 (function(){

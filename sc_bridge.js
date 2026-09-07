@@ -9,7 +9,7 @@
 import { createServer } from 'http'
 import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, readdirSync } from 'fs'
 import { join } from 'path'
-import { WebSocketServer } from 'ws'
+import { WebSocketServer, WebSocket } from 'ws'
 import { execFile } from 'child_process'
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
@@ -43,6 +43,87 @@ let FILES = {
   ES: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`),
   GC: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv` : `${UPLOAD_DIR}/GC.csv`),
   CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
+}
+
+// ─── SIERRA CHART ORDER BRIDGE — DTC Protocol (port 11099) ──────────────────
+// Architecture : cockpit → sc_bridge POST /order → WS DTC → SC port 11099 (SIM)
+// SC Server Settings > DTC Protocol Server : Enable=Yes, Port=11099, Allow Trading=Yes
+// Flow : connect → LogonRequest → LogonResponse → SubmitOrder/Flatten → close
+const SC_DTC_HOST = process.env.SC_DTC_HOST || '127.0.0.1'
+const SC_DTC_PORT = parseInt(process.env.SC_DTC_PORT || '11099', 10)
+const SC_ACCOUNT  = process.env.SC_ACCOUNT  || 'Sim1'
+
+const DTC_TYPE = {
+  LOGON_REQUEST: 1,
+  LOGON_RESPONSE: 2,
+  FLATTEN_POSITIONS: 112,
+  SUBMIT_NEW_SINGLE_ORDER: 208,
+  ORDER_TYPE_MARKET: 1,
+  ORDER_TYPE_LIMIT: 2,
+  BUY: 1,
+  SELL: 2,
+  TIME_IN_FORCE_DAY: 1,
+}
+
+function sendScOrder({ action, symbol, quantity = 1, orderType = 'MARKET', price = 0 }) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`ws://${SC_DTC_HOST}:${SC_DTC_PORT}`)
+    const timer = setTimeout(() => { ws.terminate(); reject(new Error('DTC timeout 5s')) }, 5000)
+
+    ws.on('open', () => {
+      ws.send(JSON.stringify({
+        Type: DTC_TYPE.LOGON_REQUEST,
+        ProtocolVersion: 8,
+        Username: '',
+        Password: '',
+        ClientName: 'sc_bridge',
+        HeartbeatIntervalInSeconds: 60,
+        TradeAccount: SC_ACCOUNT,
+      }))
+    })
+
+    ws.on('message', (raw) => {
+      let msg
+      try { msg = JSON.parse(raw.toString()) } catch { return }
+      if (msg.Type !== DTC_TYPE.LOGON_RESPONSE) return
+
+      if (msg.Result !== 1) {
+        clearTimeout(timer); ws.terminate()
+        reject(new Error(`DTC logon refusé: ${msg.ResultText || msg.Result}`))
+        return
+      }
+
+      const scAction = action.toUpperCase()
+      let payload
+      if (scAction === 'FLATTEN') {
+        payload = { Type: DTC_TYPE.FLATTEN_POSITIONS, TradeAccount: SC_ACCOUNT }
+      } else {
+        const isLimit = (orderType || '').toUpperCase() === 'LIMIT'
+        payload = {
+          Type: DTC_TYPE.SUBMIT_NEW_SINGLE_ORDER,
+          ClientOrderID: String(Date.now()),
+          Symbol: symbol,
+          Exchange: 'CME',
+          TradeAccount: SC_ACCOUNT,
+          OrderType: isLimit ? DTC_TYPE.ORDER_TYPE_LIMIT : DTC_TYPE.ORDER_TYPE_MARKET,
+          BuySell: scAction === 'BUY' ? DTC_TYPE.BUY : DTC_TYPE.SELL,
+          Quantity: Number(quantity),
+          TimeInForce: DTC_TYPE.TIME_IN_FORCE_DAY,
+          Price1: isLimit ? Number(price) : 0,
+          Price2: 0,
+          IsAutomatedOrder: 1,
+        }
+      }
+      ws.send(JSON.stringify(payload))
+      // SC ne renvoie pas de confirmation synchrone — fermer proprement après 400ms
+      setTimeout(() => {
+        clearTimeout(timer); ws.close()
+        resolve({ ok: true, action: scAction, symbol, payload })
+      }, 400)
+    })
+
+    ws.on('error', (err) => { clearTimeout(timer); reject(err) })
+  })
 }
 
 // ─── AUTO-DÉCOUVERTE des fichiers Sierra Chart ────────────────────────────────
@@ -708,14 +789,32 @@ function buildPayload(instr, allRows, extraSources = {}) {
       return p > v ? 'above' : 'below'
     })(),
     laf_sd2: (() => {
-      const s = parseFloat(lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'))
-      const p = parseFloat(lastVal)
-      return !isNaN(p) && !isNaN(s) && s > 0 && p > s
+      // LAF SD+2 : barre précédente High >= SD+2 ET barre courante Close < SD+2 (rejet confirmé)
+      const sd2h = parseFloat(lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'))
+      if (isNaN(sd2h) || sd2h <= 0) return false
+      const bars = [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time))
+      if (bars.length >= 2) {
+        const prev = bars[bars.length - 2]
+        const curr = bars[bars.length - 1]
+        const prevHigh = parseFloat(prev.high || '')
+        const currClose = parseFloat(curr.close || '')
+        if (!isNaN(prevHigh) && !isNaN(currClose)) return prevHigh >= sd2h && currClose < sd2h
+      }
+      return false
     })(),
     lbf_sd2: (() => {
-      const s = parseFloat(lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'))
-      const p = parseFloat(lastVal)
-      return !isNaN(p) && !isNaN(s) && s > 0 && p < s
+      // LBF SD-2 : barre précédente Low <= SD-2 ET barre courante Close > SD-2 (rejet confirmé)
+      const sd2l = parseFloat(lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'))
+      if (isNaN(sd2l) || sd2l <= 0) return false
+      const bars = [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time))
+      if (bars.length >= 2) {
+        const prev = bars[bars.length - 2]
+        const curr = bars[bars.length - 1]
+        const prevLow = parseFloat(prev.low || '')
+        const currClose = parseFloat(curr.close || '')
+        if (!isNaN(prevLow) && !isNaN(currClose)) return prevLow <= sd2l && currClose > sd2l
+      }
+      return false
     })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_j1:     [...barsJ1Final].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
@@ -894,6 +993,33 @@ const httpServer = createServer((req, res) => {
       }
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ found, checked: roots }, null, 2))
+    })
+    return
+  }
+
+  // ── POST /order — Sierra Chart UDP Trading API (SIM)
+  if (req.method === 'POST' && req.url === '/order') {
+    const chunks = []
+    req.on('data', c => chunks.push(c))
+    req.on('end', async () => {
+      res.setHeader('Content-Type', 'application/json')
+      let body
+      try { body = JSON.parse(Buffer.concat(chunks).toString()) } catch {
+        res.writeHead(400); res.end('{"error":"invalid JSON"}'); return
+      }
+      const { action, symbol, quantity, orderType, price } = body
+      if (!action || !symbol) {
+        res.writeHead(400); res.end('{"error":"action + symbol requis"}'); return
+      }
+      try {
+        const result = await sendScOrder({ action: action.toUpperCase(), symbol, quantity: quantity || 1, orderType: orderType || 'MARKET', price: price || 0 })
+        const log = `[ORDER] ${action.toUpperCase()} ${quantity||1} ${symbol} ${orderType||'MARKET'} → DTC ${SC_DTC_HOST}:${SC_DTC_PORT}`
+        console.log(log)
+        res.writeHead(200); res.end(JSON.stringify({ ok: true, log, ...result }))
+      } catch (e) {
+        console.error(`[ORDER ERR] ${e.message}`)
+        res.writeHead(500); res.end(JSON.stringify({ ok: false, error: e.message }))
+      }
     })
     return
   }

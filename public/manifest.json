@@ -1,0 +1,18 @@
+{
+  "name": "Camel Market Cockpit",
+  "short_name": "🐪 Cockpit",
+  "description": "Méthode Salah — NQ·ES·CL·GC Live Trading Dashboard",
+  "start_url": "/#/cockpit",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#863bff",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
