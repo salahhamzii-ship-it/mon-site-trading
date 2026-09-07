@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, readdir
 import { join } from 'path'
 import { WebSocketServer } from 'ws'
 import { execFile } from 'child_process'
+import { createSocket } from 'dgram'
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,34 @@ let FILES = {
   ES: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`),
   GC: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv` : `${UPLOAD_DIR}/GC.csv`),
   CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
+}
+
+// ─── SIERRA CHART UDP TRADING API ─────────────────────────────────────────────
+// Doc: https://www.sierrachart.com/index.php?page=doc/UDPAPI.html
+// SC reçoit des paquets UDP text-based sur le port configuré dans SC > Global Settings > Trading > Trading API Port
+// Format commande: "Action=<BUY|SELL|FLATTEN>\nSymbol=<sym>\nQuantity=<n>\nOrderType=<MARKET|LIMIT>\nAccountNum=<n>\n"
+const SC_UDP_HOST = process.env.SC_UDP_HOST || '127.0.0.1'
+const SC_UDP_PORT = parseInt(process.env.SC_UDP_PORT || '11098', 10)
+const SC_ACCOUNT  = process.env.SC_ACCOUNT  || '1'   // numéro compte SIM Sierra Chart
+
+function sendScOrder({ action, symbol, quantity = 1, orderType = 'MARKET', price = 0 }) {
+  return new Promise((resolve, reject) => {
+    const lines = [
+      `Action=${action}`,          // BUY | SELL | FLATTEN
+      `Symbol=${symbol}`,          // ex: NQU26-CME ou NQ
+      `Quantity=${quantity}`,
+      `OrderType=${orderType}`,    // MARKET | LIMIT
+      `Price=${price}`,            // ignoré si MARKET
+      `AccountNum=${SC_ACCOUNT}`,
+      `ClientOrderID=${Date.now()}`,
+    ]
+    const msg = Buffer.from(lines.join('\n') + '\n', 'utf-8')
+    const sock = createSocket('udp4')
+    sock.send(msg, 0, msg.length, SC_UDP_PORT, SC_UDP_HOST, (err) => {
+      sock.close()
+      if (err) { reject(err) } else { resolve({ sent: lines }) }
+    })
+  })
 }
 
 // ─── AUTO-DÉCOUVERTE des fichiers Sierra Chart ────────────────────────────────
@@ -912,6 +941,33 @@ const httpServer = createServer((req, res) => {
       }
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ found, checked: roots }, null, 2))
+    })
+    return
+  }
+
+  // ── POST /order — Sierra Chart UDP Trading API (SIM)
+  if (req.method === 'POST' && req.url === '/order') {
+    const chunks = []
+    req.on('data', c => chunks.push(c))
+    req.on('end', async () => {
+      res.setHeader('Content-Type', 'application/json')
+      let body
+      try { body = JSON.parse(Buffer.concat(chunks).toString()) } catch {
+        res.writeHead(400); res.end('{"error":"invalid JSON"}'); return
+      }
+      const { action, symbol, quantity, orderType, price } = body
+      if (!action || !symbol) {
+        res.writeHead(400); res.end('{"error":"action + symbol requis"}'); return
+      }
+      try {
+        const result = await sendScOrder({ action: action.toUpperCase(), symbol, quantity: quantity || 1, orderType: orderType || 'MARKET', price: price || 0 })
+        const log = `[ORDER] ${action.toUpperCase()} ${quantity||1} ${symbol} ${orderType||'MARKET'} @ ${SC_UDP_HOST}:${SC_UDP_PORT}`
+        console.log(log)
+        res.writeHead(200); res.end(JSON.stringify({ ok: true, log, ...result }))
+      } catch (e) {
+        console.error(`[ORDER ERR] ${e.message}`)
+        res.writeHead(500); res.end(JSON.stringify({ ok: false, error: e.message }))
+      }
     })
     return
   }

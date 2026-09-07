@@ -207,6 +207,7 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   <div class="ni" data-s="launcher" onclick="nav(this)"><span class="ni-ico">◉</span>SETUP LAUNCHER</div>
   <div class="ni" data-s="topdown" onclick="nav(this)"><span class="ni-ico">▲</span>TOP-DOWN DALTON</div>
   <div class="ni" data-s="tracker" onclick="nav(this)"><span class="ni-ico">⊕</span>LIVE TRACKER</div>
+  <div class="ni" data-s="order" onclick="nav(this)"><span class="ni-ico">🎯</span>ORDER SIM</div>
   <div class="ni" data-s="reglages" onclick="nav(this)"><span class="ni-ico">⚙</span>RÉGLAGES IB/OR</div>
   <div class="ni" data-s="backtest" onclick="nav(this)"><span class="ni-ico">◈</span>BACKTEST SD-2</div>
   <div class="ni" data-s="position" onclick="nav(this)"><span class="ni-ico">⬡</span>POSITION ACTIVE</div>
@@ -468,6 +469,47 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
     <div id="td2"></div><div id="tsig"></div></div>
   <div class="card"><div class="ct">NIVEAUX DE RÉFÉRENCE</div>
     <div id="tlevels" style="font-family:var(--mono);font-size:12px;line-height:2.1"><span style="color:var(--muted)">Chargez une session.</span></div></div>
+</div>
+
+<!-- ── ORDER SIM ── -->
+<div class="sec" id="sec-order">
+  <div class="sh"><h2>🎯 ORDER SIM — SIERRA CHART</h2></div>
+  <div class="card" style="border:1px solid rgba(224,92,92,.3)">
+    <div class="ct" style="color:var(--red)">⚠ MODE SIMULATION — SIM UNIQUEMENT</div>
+    <p style="font-size:10px;color:var(--muted);margin:4px 0 10px">Envoie les ordres au compte SIM Sierra Chart via UDP local (sc_bridge). Aucun ordre réel.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="flex:1;min-width:120px">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Instrument</label>
+        <select id="ord-sym" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;border-radius:3px;font-family:var(--mono);font-size:12px">
+          <option value="NQ">NQ — Nasdaq</option>
+          <option value="ES">ES — S&amp;P 500</option>
+          <option value="GC">GC — Gold</option>
+          <option value="CL">CL — Crude</option>
+        </select>
+      </div>
+      <div style="flex:0 0 80px">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Quantité</label>
+        <input id="ord-qty" type="number" min="1" max="10" value="1" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;border-radius:3px;font-family:var(--mono);font-size:12px;text-align:center">
+      </div>
+      <div style="flex:1;min-width:120px">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Type</label>
+        <select id="ord-type" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;border-radius:3px;font-family:var(--mono);font-size:12px">
+          <option value="MARKET">MARKET</option>
+          <option value="LIMIT">LIMIT</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:100px" id="ord-price-wrap" style="display:none">
+        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Prix LIMIT</label>
+        <input id="ord-price" type="number" step=".25" placeholder="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px;border-radius:3px;font-family:var(--mono);font-size:12px">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <button onclick="sendOrder('BUY')"  style="padding:12px 6px;background:rgba(76,175,130,.18);border:1px solid rgba(76,175,130,.45);color:var(--green);font-family:var(--mono);font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:.06em">▲ BUY</button>
+      <button onclick="sendOrder('FLATTEN')" style="padding:12px 6px;background:rgba(212,144,58,.12);border:1px solid rgba(212,144,58,.3);color:var(--amber);font-family:var(--mono);font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:.06em">⊟ FLAT</button>
+      <button onclick="sendOrder('SELL')" style="padding:12px 6px;background:rgba(224,92,92,.15);border:1px solid rgba(224,92,92,.35);color:var(--red);font-family:var(--mono);font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:.06em">▼ SELL</button>
+    </div>
+    <div id="ord-log" style="font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface1);border:1px solid var(--border);border-radius:3px;padding:8px;min-height:40px;max-height:120px;overflow-y:auto">En attente...</div>
+  </div>
 </div>
 
 <!-- ── RÉGLAGES ── -->
@@ -1372,6 +1414,39 @@ function renderAVwapInst(sym,data){
     </div>`;
 }
 setInterval(fetchAvwap,30000);fetchAvwap();
+
+// ── ORDER SIM ─────────────────────────────────────────
+document.getElementById('ord-type').addEventListener('change',function(){
+  document.getElementById('ord-price-wrap').style.display=this.value==='LIMIT'?'':'none';
+});
+async function sendOrder(action){
+  const sym=document.getElementById('ord-sym').value;
+  const qty=parseInt(document.getElementById('ord-qty').value)||1;
+  const otype=document.getElementById('ord-type').value;
+  const price=parseFloat(document.getElementById('ord-price').value)||0;
+  const log=document.getElementById('ord-log');
+  const ts=new Date().toTimeString().slice(0,8);
+  log.style.color='var(--amber)';
+  log.textContent=`[${ts}] ${action} ${qty} ${sym} ${otype}… envoi en cours`;
+  try{
+    const r=await fetch('/api/order',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action,symbol:sym,quantity:qty,orderType:otype,price})
+    });
+    const d=await r.json();
+    if(d.ok){
+      log.style.color=action==='BUY'?'var(--green)':action==='SELL'?'var(--red)':'var(--amber)';
+      log.textContent=`[${ts}] ✅ ${d.log||action+' '+qty+' '+sym}`;
+    } else {
+      log.style.color='var(--red)';
+      log.textContent=`[${ts}] ❌ ERR: ${d.error||'inconnu'}`;
+    }
+  } catch(e){
+    log.style.color='var(--red)';
+    log.textContent=`[${ts}] ❌ BRIDGE OFFLINE — vérifier sc_bridge (${e.message})`;
+  }
+}
 
 // ── INIT ──────────────────────────────────────────────
 (function(){
