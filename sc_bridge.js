@@ -46,36 +46,36 @@ let FILES = {
   CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
 }
 
-// ─── SIERRA CHART ORDER BRIDGE — fichier + AutoHotKey ────────────────────────
-// Architecture : cockpit → sc_bridge POST /order → écrit sc_order_queue.txt
-// AutoHotKey (Windows) poll le fichier → envoie keystrokes à Sierra Chart SIM
-// Teton CME Routing + Dorman = pas d'UDP externe → approche fichier uniquement
+// ─── SIERRA CHART ORDER BRIDGE — UDP Trading Order Service ───────────────────
+// Architecture : cockpit → sc_bridge POST /order → UDP → SC port 22904 (SIM)
+// Sierra Chart Server Settings > General > UDP Port = 22904 (actif)
+// Format : ASCII key=value, une ligne par champ, terminé par \n
+const SC_UDP_HOST = process.env.SC_UDP_HOST || '127.0.0.1'
+const SC_UDP_PORT = parseInt(process.env.SC_UDP_PORT || '22904', 10)
 const SC_ACCOUNT  = process.env.SC_ACCOUNT  || 'Sim1'
-const SC_ORDER_FILE = IS_WIN
-  ? String.raw`C:\SierraChart_CME\Data\sc_order_queue.txt`
-  : `${UPLOAD_DIR}/sc_order_queue.txt`
 
 function sendScOrder({ action, symbol, quantity = 1, orderType = 'MARKET', price = 0 }) {
   const id = Date.now()
+  const scAction = action.toUpperCase()
+  const scType   = (orderType || 'MARKET').toUpperCase() === 'LIMIT' ? 'LMT' : 'MKT'
   const lines = [
-    `Action=${action}`,
+    `Action=${scAction}`,
     `Symbol=${symbol}`,
     `Quantity=${quantity}`,
-    `OrderType=${orderType}`,
-    `Price=${price}`,
+    `OrderType=${scType}`,
+    ...(price > 0 && scType === 'LMT' ? [`Price=${price}`] : []),
     `AccountNum=${SC_ACCOUNT}`,
     `ClientOrderID=${id}`,
-    `Timestamp=${new Date().toISOString()}`,
-    `Status=PENDING`,
   ]
-  const content = lines.join('\n') + '\n'
-  try {
-    mkdirSync(SC_ORDER_FILE.replace(/[^/\\]+$/, ''), { recursive: true })
-    writeFileSync(SC_ORDER_FILE, content, 'utf-8')
-    return Promise.resolve({ sent: lines, file: SC_ORDER_FILE })
-  } catch (e) {
-    return Promise.reject(e)
-  }
+  const msg = Buffer.from(lines.join('\n') + '\n', 'utf-8')
+  return new Promise((resolve, reject) => {
+    const sock = createSocket('udp4')
+    sock.send(msg, 0, msg.length, SC_UDP_PORT, SC_UDP_HOST, (err) => {
+      sock.close()
+      if (err) reject(err)
+      else resolve({ sent: lines, host: SC_UDP_HOST, port: SC_UDP_PORT })
+    })
+  })
 }
 
 // ─── AUTO-DÉCOUVERTE des fichiers Sierra Chart ────────────────────────────────
@@ -965,7 +965,7 @@ const httpServer = createServer((req, res) => {
       }
       try {
         const result = await sendScOrder({ action: action.toUpperCase(), symbol, quantity: quantity || 1, orderType: orderType || 'MARKET', price: price || 0 })
-        const log = `[ORDER] ${action.toUpperCase()} ${quantity||1} ${symbol} ${orderType||'MARKET'} @ ${SC_UDP_HOST}:${SC_UDP_PORT}`
+        const log = `[ORDER] ${action.toUpperCase()} ${quantity||1} ${symbol} ${orderType||'MARKET'} → UDP ${SC_UDP_HOST}:${SC_UDP_PORT}`
         console.log(log)
         res.writeHead(200); res.end(JSON.stringify({ ok: true, log, ...result }))
       } catch (e) {
