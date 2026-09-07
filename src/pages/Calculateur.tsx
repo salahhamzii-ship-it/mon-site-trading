@@ -556,11 +556,12 @@ export default function Calculateur() {
                   if (force || !cur[f]) (u as Record<string,string>)[f] = s
                 }
                 sv('lastPx',  d.last,       true) // live price always
-                // J-1 bridge data — only apply if date is fresh (matches expected J-1 date)
-                // Prevents stale CSV data from overwriting user-entered or correct values
-                const j1Fresh = d.j1_date && d.j1_expected && d.j1_date === d.j1_expected
-                setBridgeJ1Fresh(j1Fresh ? true : false)
-                if (j1Fresh) {
+                // j1Available: bridge has ANY j1 data (even fallback date) → populate fields
+                // j1Fresh: bridge j1_date matches expected date exactly → badge green
+                const j1Available = !!d.j1_date
+                const j1Fresh = !!(d.j1_date && d.j1_expected && d.j1_date === d.j1_expected)
+                setBridgeJ1Fresh(j1Available ? (j1Fresh ? true : false) : null)
+                if (j1Available) {
                   sv('rHigh',   d.j1_high,   true)
                   sv('rLow',    d.j1_low,    true)
                   sv('rOpen',   d.j1_open,   true)
