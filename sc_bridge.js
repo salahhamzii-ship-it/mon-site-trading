@@ -99,7 +99,8 @@ function todayStr() {
 function j1Str() {
   const now = new Date()
   const dow = now.getDay()
-  const delta = dow === 1 ? 3 : 1
+  // Sun(0)→vendredi(-2), Mon(1)→vendredi(-3), autres→hier(-1)
+  const delta = dow === 0 ? 2 : dow === 1 ? 3 : 1
   const j1 = new Date(now)
   j1.setDate(j1.getDate() - delta)
   return `${j1.getFullYear()}-${String(j1.getMonth()+1).padStart(2,'0')}-${String(j1.getDate()).padStart(2,'0')}`
@@ -418,16 +419,33 @@ function buildPayload(instr, allRows, extraSources = {}) {
   const hasDates = allRows.slice(0, 20).some(r => r.date !== null)
 
   let todayRows, j1Rows, todayAll, barsAsia, barsLondon, barsPre
+  let j1Target = j1  // date j1 effectivement utilisée (peut être antérieure si CSV périmé)
+  let lastCsvDate = ''
 
   if (hasDates) {
     todayAll  = allRows.filter(r => r.date === today)
     todayRows = filterRth(todayAll, instr)
-    j1Rows    = filterRth(allRows.filter(r => r.date === j1), instr)
-    const asiaJ1    = allRows.filter(r => r.date === j1    && t2m(r.time) >= t2m('18:00'))
-    const asiaToday = allRows.filter(r => r.date === today && t2m(r.time) <  t2m('02:00'))
+
+    // Fallback j1 intelligent : si pas de données pour la date j1 attendue,
+    // utiliser la date la plus récente disponible dans le CSV (hors today)
+    if (!allRows.some(r => r.date === j1)) {
+      const csvDates = [...new Set(allRows.filter(r => r.date && r.date !== today).map(r => r.date))].sort()
+      const fallback = csvDates[csvDates.length - 1]
+      if (fallback) {
+        j1Target = fallback
+        console.log(`  [FALLBACK] j1 attendu=${j1} → utilise ${j1Target} (CSV périmé)`)
+      }
+    }
+
+    j1Rows = filterRth(allRows.filter(r => r.date === j1Target), instr)
+    const asiaJ1    = allRows.filter(r => r.date === j1Target && t2m(r.time) >= t2m('18:00'))
+    const asiaToday = allRows.filter(r => r.date === today    && t2m(r.time) <  t2m('02:00'))
     barsAsia   = [...asiaJ1, ...asiaToday]
     barsLondon = allRows.filter(r => r.date === today && t2m(r.time) >= t2m('02:00') && t2m(r.time) < t2m('08:00'))
     barsPre    = allRows.filter(r => r.date === today && t2m(r.time) >= t2m('08:00') && t2m(r.time) < t2m(RTH_START[instr]))
+
+    const allCsvDates = [...new Set(allRows.filter(r => r.date).map(r => r.date))].sort()
+    lastCsvDate = allCsvDates[allCsvDates.length - 1] || ''
   } else {
     ;[todayRows, j1Rows] = sessionSplit(allRows, instr)
     todayAll = todayRows
@@ -437,8 +455,8 @@ function buildPayload(instr, allRows, extraSources = {}) {
   const lastJ1  = j1Rows.length ? j1Rows[j1Rows.length - 1] : {}
   const firstJ1 = j1Rows.length ? j1Rows[0]                 : {}
 
-  // j1_date = date réelle des données J-1 ; null si CSV périmé ou sans dates
-  const j1DateActual = (hasDates && j1Rows.length > 0) ? j1 : null
+  // j1_date = date réellement utilisée ; si ≠ j1_expected → frontend affiche avertissement stale
+  const j1DateActual = (hasDates && j1Rows.length > 0) ? j1Target : null
 
   let lastVal = ''
   if (todayRows.length)     lastVal = todayRows[todayRows.length - 1].close
@@ -546,10 +564,11 @@ function buildPayload(instr, allRows, extraSources = {}) {
   }
 
   return {
-    last:        lastVal,
-    lastUpdate:  new Date().toISOString(),
-    j1_date:     j1DateActual,   // date réelle J-1 dans le CSV (null = CSV périmé)
-    j1_expected: j1,             // date J-1 attendue aujourd'hui
+    last:         lastVal,
+    lastUpdate:   new Date().toISOString(),
+    last_csv_date: lastCsvDate,  // dernière date présente dans le CSV
+    j1_date:      j1DateActual,  // date réelle J-1 utilisée (null = aucune donnée)
+    j1_expected:  j1,            // date J-1 attendue aujourd'hui
     j1_high:   aggHigh(j1Rows),
     j1_low:    aggLow(j1Rows),
     j1_open:   firstJ1.open   || '',
