@@ -38,11 +38,18 @@ const NQ_PATHS = {
   tpo:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_TPO.csv`    : `${UPLOAD_DIR}/NQ_TPO.csv`),
 }
 
+// GC multi-sources : GC.csv = 10min (confirm) | GC_30min.csv = 30min (alert)
+const GC_PATHS = {
+  m10:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv`       : `${UPLOAD_DIR}/GC.csv`),
+  m30:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC_30min.csv` : `${UPLOAD_DIR}/GC_30min.csv`),
+}
+
 let FILES = {
-  NQ: NQ_PATHS.auto,
-  ES: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`),
-  GC: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv` : `${UPLOAD_DIR}/GC.csv`),
-  CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
+  NQ:     NQ_PATHS.auto,
+  ES:     resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`),
+  GC:     GC_PATHS.m10,
+  GC_30m: GC_PATHS.m30,
+  CL:     resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
 }
 
 // ─── SIERRA CHART ORDER BRIDGE — DTC Protocol (port 11099) ──────────────────
@@ -205,7 +212,7 @@ const DIAG_DONE = new Set()
 
 // ─── ALERTES LAF / LBF ────────────────────────────────────────────────────────
 // Mémorise l'état précédent pour n'alerter qu'à la TRANSITION false → true
-const ALERT_STATE = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false, sc_NQ: false, sc_ES: false }
+const ALERT_STATE = { laf_NQ: false, lbf_NQ: false, laf_ES: false, lbf_ES: false, sc_NQ: false, sc_ES: false, sc_GC: false }
 
 function fireToast(title, msg) {
   if (!IS_WIN) { console.log(`  [ALERT] ${title} — ${msg}`); return }
@@ -224,7 +231,7 @@ $notifier.Show($toast)
 }
 
 function checkAlerts(data) {
-  for (const sym of ['NQ', 'ES']) {
+  for (const sym of ['NQ', 'ES', 'GC']) {
     const d = data[sym]
     if (!d || d._from_snapshot) continue
     const laf = !!d.laf_sd2
@@ -832,12 +839,10 @@ function buildPayload(instr, allRows, extraSources = {}) {
       return result
     })(),
     // ── SLEEPING CAMEL (Phase 1 — Observation) ──────────────────────────────────
-    // Détecte le premier LBF/LAF dans la fenêtre Asia 19h→02h NY
-    // Stop : 200 pts (absorbe bruit IB 09h30-10h30)
-    // Tenu jusqu'à 16h RTH close (swing ~19h)
-    // Phase 1 : affichage cockpit uniquement — aucun ordre automatique
+    // Priorité 1 : LBF SD-2 / LAF SD+2 (signal principal)
+    // Priorité 2 : SD-1 cassé → retest → accept (signal secondaire — GC)
+    // Stop NQ/ES : 200 pts fixes (absorbe bruit IB) | GC/CL : natural (bar low/high)
     sleeping_camel: (() => {
-      // Phase du trade selon heure NY courante
       const nowNY = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
       const nowM  = nowNY.getHours() * 60 + nowNY.getMinutes()
       const scPhase = nowM >= t2m('16:00') ? 'EXPIRE'
@@ -845,13 +850,8 @@ function buildPayload(instr, allRows, extraSources = {}) {
                     : nowM >= t2m('09:30') ? 'REVEIL_IB'
                     : 'OVN_SLEEP'
 
-      // Filtrer barsAsia à la fenêtre 19h→02h
       const SC_START = t2m('19:00'), SC_END = t2m('02:00')
-      const scBars = barsAsia.filter(r => {
-        const m = t2m(r.time)
-        return m >= SC_START || m < SC_END
-      })
-      // Tri chronologique : 19h→23h59 (J-1) puis 00h→01h59 (today)
+      const scBars = barsAsia.filter(r => { const m = t2m(r.time); return m >= SC_START || m < SC_END })
       scBars.sort((a, b) => {
         const ma = t2m(a.time), mb = t2m(b.time)
         const ra = ma >= SC_START ? ma - 1440 : ma
@@ -859,48 +859,73 @@ function buildPayload(instr, allRows, extraSources = {}) {
         return ra - rb
       })
       if (!scBars.length) return null
+
+      // NQ/ES → stop 200 pts fixes (IB buffer) | GC/CL → stop naturel au low/high de la barre
+      const useFixed = instr === 'NQ' || instr === 'ES'
+
+      let sd1BreakBar = null  // pour SD-1 break→retest→accept
+
       for (const bar of scBars) {
-        const lo  = parseFloat(bar.low   || '')
-        const hi  = parseFloat(bar.high  || '')
-        const cl  = parseFloat(bar.close || '')
+        const lo = parseFloat(bar.low || ''), hi = parseFloat(bar.high || ''), cl = parseFloat(bar.close || '')
         if (isNaN(lo) || isNaN(hi) || isNaN(cl)) continue
-        // SD depuis la barre (ils migrent) — fallback sur OVN globaux
-        const bSd2l = parseFloat(bar.sd2l || '')
-        const bSd2h = parseFloat(bar.sd2h || '')
+
+        const bSd2l = parseFloat(bar.sd2l || ''), bSd2h = parseFloat(bar.sd2h || '')
+        const bSd1l = parseFloat(bar.sd1l || ''), bSd1h = parseFloat(bar.sd1h || '')
         const sd2l  = (!isNaN(bSd2l) && bSd2l > 0) ? bSd2l : parseFloat(ovnSd2l || '0')
         const sd2h  = (!isNaN(bSd2h) && bSd2h > 0) ? bSd2h : parseFloat(ovnSd2h || '0')
-        // LBF : Low ≤ SD-2 ET Close > SD-2
+        const sd1l  = (!isNaN(bSd1l) && bSd1l > 0) ? bSd1l : parseFloat(ovnSd1l || '0')
+
+        // ── P1 : LBF SD-2 ──────────────────────────────────────────────────────
         if (sd2l > 0 && lo <= sd2l && cl > sd2l) {
-          const SC_RISK     = 200
-          const entry       = cl
-          const stop        = parseFloat((entry - SC_RISK).toFixed(2))
-          const target      = sd2h > 0 ? sd2h : null
-          const pts_reward  = target ? parseFloat((target - entry).toFixed(2)) : null
-          const ratio       = pts_reward !== null ? (pts_reward / SC_RISK).toFixed(2) : null
-          console.log(`  [🐪 SC] ${instr} LBF @ ${bar.time} entry=${entry} stop=${stop} tgt=${target} R=${ratio}`)
+          const risk = useFixed ? 200 : Math.max(parseFloat((cl - lo).toFixed(2)), 2)
+          const stop = useFixed ? parseFloat((cl - risk).toFixed(2)) : parseFloat(lo.toFixed(2))
+          const tgt  = sd2h > 0 ? sd2h : null
+          const rwd  = tgt ? parseFloat((tgt - cl).toFixed(2)) : null
+          console.log(`  [🐪 SC] ${instr} LBF @ ${bar.time} entry=${cl} stop=${stop} tgt=${tgt} R=${rwd&&(rwd/risk).toFixed(2)}`)
           return { type: 'LBF', direction: 'LONG', time: bar.time,
-                   entry: entry.toFixed(2), stop: stop.toFixed(2),
-                   target: target ? target.toFixed(2) : null,
-                   pts_risk: SC_RISK, pts_reward: pts_reward ? pts_reward.toFixed(2) : null,
-                   ratio, sd2l: sd2l.toFixed(2), sd2h: sd2h > 0 ? sd2h.toFixed(2) : null,
+                   entry: cl.toFixed(2), stop: stop.toFixed(2),
+                   target: tgt ? tgt.toFixed(2) : null,
+                   pts_risk: risk, pts_reward: rwd ? rwd.toFixed(2) : null,
+                   ratio: rwd ? (rwd / risk).toFixed(2) : null,
+                   sd2l: sd2l.toFixed(2), sd2h: sd2h > 0 ? sd2h.toFixed(2) : null,
                    window: 'ASIA 19h-02h', phase: scPhase }
         }
-        // LAF : High ≥ SD+2 ET Close < SD+2
+        // ── P1 : LAF SD+2 ──────────────────────────────────────────────────────
         if (sd2h > 0 && hi >= sd2h && cl < sd2h) {
-          const SC_RISK     = 200
-          const entry       = cl
-          const stop        = parseFloat((entry + SC_RISK).toFixed(2))
-          const target      = sd2l > 0 ? sd2l : null
-          const pts_reward  = target ? parseFloat((entry - target).toFixed(2)) : null
-          const ratio       = pts_reward !== null ? (pts_reward / SC_RISK).toFixed(2) : null
-          console.log(`  [🐪 SC] ${instr} LAF @ ${bar.time} entry=${entry} stop=${stop} tgt=${target} R=${ratio}`)
+          const risk = useFixed ? 200 : Math.max(parseFloat((hi - cl).toFixed(2)), 2)
+          const stop = useFixed ? parseFloat((cl + risk).toFixed(2)) : parseFloat(hi.toFixed(2))
+          const tgt  = sd2l > 0 ? sd2l : null
+          const rwd  = tgt ? parseFloat((cl - tgt).toFixed(2)) : null
+          console.log(`  [🐪 SC] ${instr} LAF @ ${bar.time} entry=${cl} stop=${stop} tgt=${tgt}`)
           return { type: 'LAF', direction: 'SHORT', time: bar.time,
-                   entry: entry.toFixed(2), stop: stop.toFixed(2),
-                   target: target ? target.toFixed(2) : null,
-                   pts_risk: SC_RISK, pts_reward: pts_reward ? pts_reward.toFixed(2) : null,
-                   ratio, sd2h: sd2h.toFixed(2), sd2l: sd2l > 0 ? sd2l.toFixed(2) : null,
+                   entry: cl.toFixed(2), stop: stop.toFixed(2),
+                   target: tgt ? tgt.toFixed(2) : null,
+                   pts_risk: risk, pts_reward: rwd ? rwd.toFixed(2) : null,
+                   ratio: rwd ? (rwd / risk).toFixed(2) : null,
+                   sd2h: sd2h.toFixed(2), sd2l: sd2l > 0 ? sd2l.toFixed(2) : null,
                    window: 'ASIA 19h-02h', phase: scPhase }
         }
+        // ── P2 : SD-1 break → retest → accept (LONG) ──────────────────────────
+        if (sd1BreakBar) {
+          const ref = sd1BreakBar._sd1l
+          if (ref > 0 && lo < ref && cl > ref) {
+            const risk = useFixed ? 200 : Math.max(parseFloat((cl - lo).toFixed(2)), 2)
+            const stop = useFixed ? parseFloat((cl - risk).toFixed(2)) : parseFloat(lo.toFixed(2))
+            const tgt  = sd2h > 0 ? sd2h : null
+            const rwd  = tgt ? parseFloat((tgt - cl).toFixed(2)) : null
+            console.log(`  [🐪 SC] ${instr} SD1_ACCEPT @ ${bar.time} entry=${cl} stop=${stop} sd1=${ref}`)
+            return { type: 'SD1_ACCEPT', direction: 'LONG', time: bar.time,
+                     entry: cl.toFixed(2), stop: stop.toFixed(2),
+                     target: tgt ? tgt.toFixed(2) : null,
+                     pts_risk: risk, pts_reward: rwd ? rwd.toFixed(2) : null,
+                     ratio: rwd ? (rwd / risk).toFixed(2) : null,
+                     sd1l: ref.toFixed(2), sd2h: sd2h > 0 ? sd2h.toFixed(2) : null,
+                     window: 'ASIA 19h-02h', phase: scPhase }
+          }
+          sd1BreakBar = null
+        }
+        // SD-1 cassé : Close < SD-1 → mémoriser pour retest sur barre suivante
+        if (sd1l > 0 && cl < sd1l) sd1BreakBar = { ...bar, _sd1l: sd1l }
       }
       return null
     })(),
@@ -1031,6 +1056,28 @@ function buildMessage() {
       if (data[sym] && data[sym].sleeping_camel) data[sym].sleeping_camel.gc_bias = gcBias
     }
     console.log(`  §9+: GC last=${data.GC.last} avwap=${data.GC.avwap||data.GC.ovn_vwap||'?'} → gc_bias=${gcBias}`)
+  }
+
+  // ── GC Sleeping Camel — 30min alert + 10min confirm ─────────────────────────
+  // data.GC.sleeping_camel = signal 10-min (GC.csv)
+  // GC_30min.csv → signal 30-min = ALERT principal
+  // confirmed_10m = true si les deux timeframes sont alignés (même direction)
+  if (data.GC && FILES.GC_30m && existsSync(FILES.GC_30m)) {
+    const rows30 = parseCsv(FILES.GC_30m, false)
+    if (rows30.length) {
+      data[`GC_30m`] = buildPayload('GC', rows30)
+      const sc30 = data['GC_30m'].sleeping_camel
+      const sc10 = data.GC.sleeping_camel
+      if (sc30) {
+        const confirm10 = !!(sc10 && sc10.direction === sc30.direction)
+        sc30.confirmed_10m = confirm10
+        sc30.timeframe = '30min'
+        data.GC.sleeping_camel = sc30   // 30min override → ALERT principal
+        if (sc10 && !confirm10) data.GC.sleeping_camel_10m = sc10  // désaccord → garder pour info
+        console.log(`  [🐪 GC 30m] ${sc30.type} @ ${sc30.time} confirmed_10m=${confirm10}`)
+      }
+      delete data['GC_30m']  // ne pas polluer le payload
+    }
   }
 
   // ── Fallback snapshot pour instruments sans données CSV ─────────────────────

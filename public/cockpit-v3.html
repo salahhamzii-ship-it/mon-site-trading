@@ -657,8 +657,9 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   <div class="card" id="sc-card" style="margin-top:12px;border:1px solid var(--border)">
     <div class="ct" style="letter-spacing:.08em">🐪 SLEEPING CAMEL — ASIA 19H→02H</div>
     <div id="sc-nq" style="margin-bottom:8px"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">NQ — En attente…</span></div>
-    <div id="sc-es"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">ES — En attente…</span></div>
-    <div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em">PHASE 1 · OBSERVATION · STOP 200 PTS · SWING JUSQU'À 16H RTH · AUCUN ORDRE AUTOMATIQUE</div>
+    <div id="sc-es" style="margin-bottom:8px"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">ES — En attente…</span></div>
+    <div id="sc-gc"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">GC — En attente…</span></div>
+    <div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em">PHASE 1 · OBSERVATION · NQ/ES STOP 200 PTS · GC STOP NATUREL · SWING 16H RTH · AUCUN ORDRE AUTO</div>
   </div>
 
   <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center">
@@ -1365,6 +1366,7 @@ function renderAvwapPanel(d){
   renderAVwapInst('es',es);
   renderSleepingCamel('nq',nq);
   renderSleepingCamel('es',es);
+  renderSleepingCamel('gc',d.GC||d.gc);
   // §9
   const par9=nq&&nq.par9;
   const b=document.getElementById('par9-banner');
@@ -1442,10 +1444,21 @@ function renderSleepingCamel(sym,data){
   const phase=sc.phase||'';
   const phaseLabel={'OVN_SLEEP':'💤 OVN — SLEEP','REVEIL_IB':'⏰ REVEIL — IB','RTH_ACTIF':'✅ RTH — ACTIF','EXPIRE':'⛔ EXPIRE'}[phase]||phase;
   const phaseCol={'OVN_SLEEP':'var(--muted)','REVEIL_IB':'var(--amber)','RTH_ACTIF':'var(--green)','EXPIRE':'var(--red)'}[phase]||'var(--muted)';
+  // type label : LBF=SD-2 | LAF=SD+2 | SD1_ACCEPT=SD-1 Accept
+  const typeLabel=sc.type==='SD1_ACCEPT'?'SD-1 ACCEPT':sc.type==='LBF'?`LBF SD${isLong?'-2':'+2'}`:`LAF SD${isLong?'-2':'+2'}`;
+  // stop label : fixed vs natural
+  const stopLabel=sc.pts_risk===200?`−200 pts · IB buffer`:`−${sc.pts_risk} pts · bar low`;
+  // confirmed_10m chip (GC only)
+  const confirm10 = sc.confirmed_10m;
+  const confirm10html = confirm10===true
+    ? `<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(76,175,130,.12);border:1px solid rgba(76,175,130,.3);color:var(--green)">✅ 10min CONFIRMÉ</span>`
+    : confirm10===false
+    ? `<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;border:1px solid var(--amber);color:var(--amber)">⏳ 10min EN ATTENTE</span>`
+    : '';
   document.getElementById('sc-card').style.borderColor=phase==='EXPIRE'?'var(--border)':isLong?'rgba(76,175,130,.4)':'rgba(224,92,92,.4)';
   el.innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${col};letter-spacing:.06em">${ico} ${label} · ${sc.type} SD${isLong?'-2':'+2'} · ${sc.time}</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${col};letter-spacing:.06em">${ico} ${label} · ${typeLabel} · ${sc.time}</span>
       <span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:${isLong?'rgba(76,175,130,.12)':'rgba(224,92,92,.12)'};border:1px solid ${isLong?'rgba(76,175,130,.3)':'rgba(224,92,92,.3)'};color:${col}">${sc.window}</span>
       ${phase?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;border:1px solid ${phaseCol};color:${phaseCol}">${phaseLabel}</span>`:''}
       ${sc.gc_bias?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;${
@@ -1453,10 +1466,11 @@ function renderSleepingCamel(sym,data){
         sc.gc_bias==='SHORT'?'background:rgba(224,92,92,.10);border:1px solid rgba(224,92,92,.3);color:var(--red)':
         'border:1px solid var(--border);color:var(--muted)'
       }">⚡ GC ${sc.gc_bias}</span>`:''}
+      ${confirm10html}
     </div>
     <div style="font-family:var(--mono);font-size:11px;line-height:2;display:grid;grid-template-columns:80px 1fr 1fr;gap:0 8px">
       <span style="color:var(--muted)">Entrée</span><span style="color:${col};font-weight:600">${f(sc.entry)}</span><span></span>
-      <span style="color:var(--muted)">Stop</span><span style="color:var(--red);font-weight:600">${f(sc.stop)}</span><span style="color:var(--muted);font-size:10px">−${sc.pts_risk} pts · IB buffer</span>
+      <span style="color:var(--muted)">Stop</span><span style="color:var(--red);font-weight:600">${f(sc.stop)}</span><span style="color:var(--muted);font-size:10px">${stopLabel}</span>
       <span style="color:var(--muted)">Cible</span><span style="color:var(--gold);font-weight:600">${f(sc.target)}</span><span style="color:var(--muted);font-size:10px">SD${isLong?'+2':'-2'} ${sc.pts_reward?'+'+sc.pts_reward+' pts':''}</span>
       <span style="color:var(--muted)">Ratio</span><span style="color:${(parseFloat(sc.ratio)||0)>=1.5?'var(--green)':'var(--amber)'};font-weight:600">1 : ${sc.ratio||'?'}</span><span></span>
     </div>`;
