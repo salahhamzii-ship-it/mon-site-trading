@@ -353,6 +353,22 @@ function parseCsv(filepath, diag = false) {
     return -1
   }
 
+  // findFrom : comme find() mais cherche uniquement à partir de startIdx
+  // Utilisé pour SD+1/SD-1 après la colonne VWAP — évite les colonnes EDGE ZONES
+  // qui partagent les mêmes noms mais ne sont pas les bandes AVWAP
+  function findFrom(startIdx, ...names) {
+    for (const n of names) {
+      const nc = n.replace(/ /g, '').toLowerCase()
+      for (let i = startIdx; i < hdrs.length; i++) {
+        if (hdrs[i] === n.toLowerCase() || hdrs[i].replace(/ /g, '') === nc) return i
+      }
+      for (let i = startIdx; i < hdrs.length; i++) {
+        if (hdrs[i].replace(/ /g, '').includes(nc)) return i
+      }
+    }
+    return -1
+  }
+
   let idx_date = find('date')
   let idx_time = find('time', 'heure', 'date/time', 'datetime', 'timestamp', 'dateheure')
   let idx_open = find('open', 'ouverture', 'ouvr')
@@ -361,8 +377,12 @@ function parseCsv(filepath, diag = false) {
   let idx_last = find('last', 'close', 'clôture', 'cloture', 'dernier')
   let idx_vol  = find('volume', 'totalvolume', 'total volume')
   let idx_vwap = find('vwap', 'vwap(daily)', 'dailyvwap', 'vwap daily')
-  let idx_sp1  = find('sd+1', 'sd +1', 'vwap sd+1', '+1sd', 'upper1', 'upper band 1', 'upperband1', 'bande+1', 'bande +1')
-  let idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd', 'lower1', 'lower band 1', 'lowerband1', 'bande-1', 'bande -1')
+  // SD+1/SD-1 : chercher APRES la colonne VWAP si elle existe
+  // NQ_auto.csv a des colonnes EDGE ZONES (SD+1/SD-1 en double) AVANT le VWAP
+  // La colonne VWAP est à col 18 ; les vraies bandes AVWAP sont à 19/20
+  const _sdStart = idx_vwap >= 0 ? idx_vwap + 1 : 0
+  let idx_sp1  = findFrom(_sdStart, 'sd+1', 'sd +1', 'vwap sd+1', '+1sd', 'upper1', 'upper band 1', 'upperband1', 'bande+1', 'bande +1')
+  let idx_sm1  = findFrom(_sdStart, 'sd-1', 'sd -1', 'vwap sd-1', '-1sd', 'lower1', 'lower band 1', 'lowerband1', 'bande-1', 'bande -1')
   let idx_sp2  = find('sd+2', 'sd +2', 'vwap sd+2', '+2sd', 'upper2', 'upper band 2', 'upperband2', 'bande+2', 'bande +2')
   let idx_sm2  = find('sd-2', 'sd -2', 'vwap sd-2', '-2sd', 'lower2', 'lower band 2', 'lowerband2', 'bande-2', 'bande -2')
   // Fix: termes précis uniquement — pas de 'val', 'vah', 'poc' seuls (risque collision)
@@ -391,12 +411,14 @@ function parseCsv(filepath, diag = false) {
   if (idx_bid < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 9)  idx_bid = 8
   if (idx_ask < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 10) idx_ask = 9
 
-  // VWAP/SD positional fallback
-  if (idx_vwap < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 15) idx_vwap = 14
-  if (idx_sp1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 16) idx_sp1  = 15
-  if (idx_sm1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 17) idx_sm1  = 16
-  if (idx_sp2  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 18) idx_sp2  = 17
-  if (idx_sm2  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 19) idx_sm2  = 18
+  // VWAP/SD positional fallback — format NQ_auto.csv Sierra Chart :
+  // col 18 = VWAP | col 19 = SD+1 | col 20 = SD-1 | col 21 = SD+2 | col 22 = SD-2
+  // (cols 15-16 = EDGE ZONES SD+1/SD-1, différente étude — ignorées ici)
+  if (idx_vwap < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 19) idx_vwap = 18
+  if (idx_sp1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 20) idx_sp1  = 19
+  if (idx_sm1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 21) idx_sm1  = 20
+  if (idx_sp2  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 22) idx_sp2  = 21
+  if (idx_sm2  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 23) idx_sm2  = 22
 
   if (diag) {
     console.log(`  [DIAG] date=${idx_date} time=${idx_time} O=${idx_open} H=${idx_high} L=${idx_low} C=${idx_last}`)
