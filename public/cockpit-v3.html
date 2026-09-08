@@ -653,6 +653,9 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
     </div>
   </div>
 
+  <!-- ── SETUP ACTIF R13 / SLEEPING CAMEL ── -->
+  <div id="setup-actif-card" style="display:none;margin-top:12px;padding:12px 14px;border-radius:4px;border:1px solid var(--border);background:var(--surface)"></div>
+
   <!-- 🐪 SLEEPING CAMEL -->
   <div class="card" id="sc-card" style="margin-top:12px;border:1px solid var(--border)">
     <div class="ct" style="letter-spacing:.08em">🐪 SLEEPING CAMEL — ASIA 19H→02H</div>
@@ -1364,6 +1367,7 @@ function renderAvwapPanel(d){
   checkAvwapAlerts(d);
   renderAVwapInst('nq',nq);
   renderAVwapInst('es',es);
+  renderSetupActif(nq,es);
   renderSleepingCamel('nq',nq);
   renderSleepingCamel('es',es);
   renderSleepingCamel('gc',d.GC||d.gc);
@@ -1418,13 +1422,67 @@ function renderAVwapInst(sym,data){
     <div class="sdg">
       <span class="sl">SD+3</span><span class="sv s3u">${sd3h}</span><span class="sd"></span>
       <span class="sl">SD+2</span><span class="sv s2u">${sd2h}</span><span class="sd" style="color:var(--red)">${laf?'⚠ LAF R37':''}</span>
-      <span class="sl">SD+1</span><span class="sv s1u">${sd1h}</span><span class="sd"></span>
+      <span class="sl">SD+1</span><span class="sv s1u">${sd1h}</span><span class="sd" style="color:var(--amber)">${(parseFloat(data.sd1h||'0')>0&&parseFloat(data.sd1h||'0')<parseFloat(data.vwap||'0'))?'⚠ CROISÉ':''}</span>
       <div class="sep"></div>
       <span class="sl">AVWAP 👑</span><span class="sv svw">${avwap}</span><span class="sd"></span>
       <div class="sep"></div>
       <span class="sl">SD-1</span><span class="sv s1d">${sd1l}</span><span class="sd"></span>
-      <span class="sl">SD-2</span><span class="sv s2d">${sd2l}</span><span class="sd" style="color:var(--green)">${lbf?'⚠ LBF R36':''}</span>
+      <span class="sl">SD-2</span><span class="sv s2d">${sd2l}</span><span class="sd" style="color:${lbf?'var(--green)':parseFloat(data.sd2l||'0')>parseFloat(data.vwap||'0')?'var(--amber)':''}">
+        ${lbf?'⚠ LBF R36':parseFloat(data.sd2l||'0')>parseFloat(data.vwap||'0')?'⚠ CROISÉ':''}</span>
       <span class="sl">SD-3</span><span class="sv s3d">${sd3l}</span><span class="sd"></span>
+    </div>`;
+}
+function renderSetupActif(nq,es){
+  const card=document.getElementById('setup-actif-card');
+  // Cherche excess_r13 ou sleeping_camel sur NQ ou ES (NQ prioritaire)
+  const ex = (nq&&nq.excess_r13) || (es&&es.excess_r13);
+  const sc = (nq&&nq.sleeping_camel) || (es&&es.sleeping_camel);
+  const sig = ex || sc;
+  if(!sig){card.style.display='none';return;}
+  card.style.display='block';
+  const isLong=sig.direction==='LONG';
+  const col=isLong?'var(--green)':'var(--red)';
+  const ico=isLong?'▲':'▼';
+  const f=v=>{const n=parseFloat(v||'0');return n>0?n.toFixed(2):'—';};
+  // Prix courant NQ
+  const curNQ=parseFloat((nq&&(nq.last||nq.settle))||'0');
+  const curES=parseFloat((es&&(es.last||es.settle))||'0');
+  const entry=parseFloat(sig.entry||'0');
+  const stop=parseFloat(sig.stop||'0');
+  const tgt=parseFloat(sig.target||'0');
+  const risk=parseFloat(sig.pts_risk||'0');
+  // P&L flottant NQ
+  let pnl=null, pnlPct=null;
+  if(entry>0&&curNQ>0){
+    pnl=isLong?(curNQ-entry).toFixed(2):(entry-curNQ).toFixed(2);
+    pnlPct=risk>0?((parseFloat(pnl)/risk)*100).toFixed(1):null;
+  }
+  const pnlNum=parseFloat(pnl||'0');
+  const pnlCol=pnlNum>0?'var(--green)':pnlNum<0?'var(--red)':'var(--muted)';
+  // Distance cible
+  const distTgt=tgt>0&&curNQ>0?(isLong?(tgt-curNQ):(curNQ-tgt)).toFixed(2):null;
+  // §9 aligné ?
+  const par9NQ=nq&&nq.par9, par9ES=es&&es.par9;
+  const par9Aligned=(isLong&&par9NQ==='above'&&par9ES==='above')||((!isLong)&&par9NQ==='below'&&par9ES==='below');
+  // Type label
+  const typeLabel=sig.type?({'EXCESS_HIGH':'R13 EXCESS HIGH','EXCESS_LOW':'R13 EXCESS LOW','LBF':'🐪 LBF SD-2','LAF':'🐪 LAF SD+2','SD1_ACCEPT':'🐪 SD-1 ACCEPT'}[sig.type]||sig.type):'SETUP';
+  // Stop label
+  const stopLabel=sig.stop_type==='FIXED_200'||sig.pts_risk===200?'FIXED 200 · institutionnel':`${sig.pts_risk} pts · naturel`;
+
+  card.style.borderColor=isLong?'rgba(76,175,130,.5)':'rgba(224,92,92,.5)';
+  card.style.background=isLong?'rgba(76,175,130,.04)':'rgba(224,92,92,.04)';
+  card.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <span style="font-family:var(--mono);font-size:12px;font-weight:700;color:${col};letter-spacing:.08em">${ico} SETUP ACTIF · ${typeLabel}</span>
+      ${par9Aligned?`<span style="font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:2px;background:rgba(212,144,58,.12);border:1px solid rgba(212,144,58,.3);color:var(--amber)">§9 ALIGNÉ</span>`:'<span style="font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:2px;border:1px solid var(--border);color:var(--muted)">§9 DIVERGENT</span>'}
+      ${sig.excess_bar?`<span style="font-family:var(--mono);font-size:9px;color:var(--muted)">${sig.excess_bar} → rejet ${sig.reject_bar}</span>`:''}
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;line-height:2.2;display:grid;grid-template-columns:100px 1fr 1fr;gap:0 12px">
+      <span style="color:var(--muted)">Entrée</span><span style="color:${col};font-weight:600">${f(sig.entry)}</span><span style="color:var(--muted);font-size:10px">close barre rejet</span>
+      <span style="color:var(--muted)">Stop</span><span style="color:var(--red);font-weight:600">${f(sig.stop)}</span><span style="color:var(--muted);font-size:10px">${stopLabel}</span>
+      <span style="color:var(--muted)">Cible</span><span style="color:var(--gold);font-weight:600">${f(sig.target)}</span><span style="color:var(--muted);font-size:10px">${distTgt?distTgt+' pts restants':''}</span>
+      <span style="color:var(--muted)">Prix NQ</span><span style="color:${col};font-weight:600">${curNQ>0?curNQ.toFixed(2):'—'}</span><span></span>
+      <span style="color:var(--muted)">P&L flottant</span><span style="color:${pnlCol};font-weight:700;font-size:13px">${pnl?pnl+' pts':' — '}</span><span style="color:${pnlCol};font-size:10px">${pnlPct?pnlPct+'% du risque':''}</span>
     </div>`;
 }
 function renderSleepingCamel(sym,data){
