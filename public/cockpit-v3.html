@@ -1474,6 +1474,33 @@ function renderSleepingCamel(sym,data){
       <span style="color:var(--muted)">Cible</span><span style="color:var(--gold);font-weight:600">${f(sc.target)}</span><span style="color:var(--muted);font-size:10px">SD${isLong?'+2':'-2'} ${sc.pts_reward?'+'+sc.pts_reward+' pts':''}</span>
       <span style="color:var(--muted)">Ratio</span><span style="color:${(parseFloat(sc.ratio)||0)>=1.5?'var(--green)':'var(--amber)'};font-weight:600">1 : ${sc.ratio||'?'}</span><span></span>
     </div>`;
+  // ── Excess R13 — block additionnel ─────────────────────────────────────────
+  const ex=data.excess_r13;
+  if(ex){
+    const exLong=ex.direction==='LONG';
+    const exCol=exLong?'var(--green)':'var(--red)';
+    const exIco=exLong?'🟢':'🔴';
+    const exF=v=>{const n=parseFloat(v||'0');return n>0?n.toFixed(2):'—';};
+    const exStopLabel=ex.stop_type==='FIXED_200'
+      ? `${exLong?'−':'+'}<b>200 pts</b> · institutionnel`
+      : `${exLong?'−':'+'} ${ex.pts_risk} pts · naturel`;
+    const exRatioColor=(parseFloat(ex.ratio)||0)>=1?'var(--green)':'var(--amber)';
+    el.innerHTML+=`
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${exCol};letter-spacing:.06em">${exIco} R13 EXCESS ${ex.type==='EXCESS_HIGH'?'HIGH':'LOW'} · ${label}</span>
+        <span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;border:1px solid ${exCol};color:${exCol};opacity:.8">${ex.excess_bar} → rejet ${ex.reject_bar}</span>
+        <span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:rgba(255,165,0,.08);border:1px solid rgba(255,165,0,.3);color:var(--amber)">OVN · Annonce pre-London</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;line-height:2;display:grid;grid-template-columns:80px 1fr 1fr;gap:0 8px">
+        <span style="color:var(--muted)">Excess H/L</span><span style="color:${exCol};font-weight:600">${ex.type==='EXCESS_HIGH'?exF(ex.excess_high):exF(ex.excess_low)}</span><span></span>
+        <span style="color:var(--muted)">Entrée</span><span style="color:${exCol};font-weight:600">${exF(ex.entry)}</span><span style="color:var(--muted);font-size:10px">close rejet</span>
+        <span style="color:var(--muted)">Stop</span><span style="color:var(--red);font-weight:600">${exF(ex.stop)}</span><span style="color:var(--muted);font-size:10px">${exStopLabel}</span>
+        <span style="color:var(--muted)">Cible</span><span style="color:var(--gold);font-weight:600">${exF(ex.target)}</span><span style="color:var(--muted);font-size:10px">SD${exLong?'+2':'-2'} ${ex.pts_reward?ex.pts_reward+' pts':''}</span>
+        <span style="color:var(--muted)">Ratio</span><span style="color:${exRatioColor};font-weight:600">1 : ${ex.ratio||'?'}</span><span style="color:var(--muted);font-size:9px">${ex.stop_type==='FIXED_200'?'(OTF → ratio secondaire)':''}</span>
+      </div>
+    </div>`;
+  }
 }
 setInterval(fetchAvwap,30000);fetchAvwap();
 

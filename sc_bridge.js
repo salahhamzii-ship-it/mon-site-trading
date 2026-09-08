@@ -929,6 +929,75 @@ function buildPayload(instr, allRows, extraSources = {}) {
       }
       return null
     })(),
+    // ── EXCESS R13 — Règle 13 Dalton-Salah ───────────────────────────────────────
+    // Stop NQ/ES : Entry ± 200 pts (stop institutionnel — absorbe le stop-hunt retail)
+    // Stop GC/CL : High/Low barre excess + 1 tick (naturel)
+    // Premier excess chronologique OVN/Asia → priorité (setup annoncé avant London)
+    excess_r13: (() => {
+      const useFixed = instr === 'NQ' || instr === 'ES'
+      // "Nettement" : clôture doit être en dessous du High excess d'au moins minRej pts
+      const minRej   = instr === 'NQ' ? 10 : instr === 'ES' ? 3 : instr === 'GC' ? 2 : 0.20
+
+      const SC_START = t2m('18:00')
+      const pool = [...barsAsia].sort((a, b) => {
+        const ma = t2m(a.time), mb = t2m(b.time)
+        return (ma >= SC_START ? ma : ma + 1440) - (mb >= SC_START ? mb : mb + 1440)
+      })
+
+      for (let i = 1; i + 1 < pool.length; i++) {
+        const prev = pool[i - 1], exc = pool[i], rej = pool[i + 1]
+
+        const prevHi = parseFloat(prev.high  || ''), prevLo = parseFloat(prev.low  || '')
+        const excHi  = parseFloat(exc.high   || ''), excLo  = parseFloat(exc.low   || '')
+        const rejHi  = parseFloat(rej.high   || ''), rejLo  = parseFloat(rej.low   || '')
+        const rejCl  = parseFloat(rej.close  || '')
+
+        if ([prevHi, prevLo, excHi, excLo, rejHi, rejLo, rejCl].some(isNaN)) continue
+
+        // ── Excess HIGH → SHORT ─────────────────────────────────────────────────
+        // excHi > prevHi (nouveau high local) | rejHi < excHi (Lower High) | rejCl < excHi - minRej
+        if (excHi > prevHi && rejHi < excHi && rejCl < excHi - minRej) {
+          const entry = rejCl
+          const risk  = useFixed ? 200 : parseFloat((excHi - entry + 0.25).toFixed(2))
+          const stop  = useFixed ? parseFloat((entry + risk).toFixed(2))
+                                 : parseFloat((excHi + 0.25).toFixed(2))
+          const bSd2l = parseFloat(exc.sd2l || '') || parseFloat(ovnSd2l || '0')
+          const tgt   = bSd2l > 0 ? bSd2l : null
+          const rwd   = tgt ? parseFloat((entry - tgt).toFixed(2)) : null
+          const ratio = (rwd && risk) ? (rwd / risk).toFixed(2) : null
+          console.log(`  [R13] ${instr} EXCESS HIGH ${exc.time} H=${excHi} → rejet ${rej.time} entry=${entry} stop=${stop} risk=${risk} tgt=${tgt}`)
+          return { type: 'EXCESS_HIGH', direction: 'SHORT',
+                   excess_bar: exc.time, excess_high: excHi.toFixed(2),
+                   reject_bar: rej.time,
+                   entry: entry.toFixed(2), stop: stop.toFixed(2),
+                   pts_risk: risk, pts_reward: rwd ? rwd.toFixed(2) : null,
+                   ratio, target: tgt ? tgt.toFixed(2) : null,
+                   stop_type: useFixed ? 'FIXED_200' : 'NATURAL' }
+        }
+
+        // ── Excess LOW → LONG ──────────────────────────────────────────────────
+        // excLo < prevLo (nouveau low local) | rejLo > excLo (Higher Low) | rejCl > excLo + minRej
+        if (excLo < prevLo && rejLo > excLo && rejCl > excLo + minRej) {
+          const entry = rejCl
+          const risk  = useFixed ? 200 : parseFloat((entry - excLo + 0.25).toFixed(2))
+          const stop  = useFixed ? parseFloat((entry - risk).toFixed(2))
+                                 : parseFloat((excLo - 0.25).toFixed(2))
+          const bSd2h = parseFloat(exc.sd2h || '') || parseFloat(ovnSd2h || '0')
+          const tgt   = bSd2h > 0 ? bSd2h : null
+          const rwd   = tgt ? parseFloat((tgt - entry).toFixed(2)) : null
+          const ratio = (rwd && risk) ? (rwd / risk).toFixed(2) : null
+          console.log(`  [R13] ${instr} EXCESS LOW ${exc.time} L=${excLo} → rejet ${rej.time} entry=${entry} stop=${stop} risk=${risk} tgt=${tgt}`)
+          return { type: 'EXCESS_LOW', direction: 'LONG',
+                   excess_bar: exc.time, excess_low: excLo.toFixed(2),
+                   reject_bar: rej.time,
+                   entry: entry.toFixed(2), stop: stop.toFixed(2),
+                   pts_risk: risk, pts_reward: rwd ? rwd.toFixed(2) : null,
+                   ratio, target: tgt ? tgt.toFixed(2) : null,
+                   stop_type: useFixed ? 'FIXED_200' : 'NATURAL' }
+        }
+      }
+      return null
+    })(),
     bars_today:  [...barsTodayFinal].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_j1:     [...barsJ1Final].sort((a, b) => t2m(a.time) - t2m(b.time)).map(barDict),
     bars_asia:   barsAsia.map(barDict),
