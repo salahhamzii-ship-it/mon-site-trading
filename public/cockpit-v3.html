@@ -1448,6 +1448,11 @@ function renderSleepingCamel(sym,data){
       <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${col};letter-spacing:.06em">${ico} ${label} · ${sc.type} SD${isLong?'-2':'+2'} · ${sc.time}</span>
       <span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;background:${isLong?'rgba(76,175,130,.12)':'rgba(224,92,92,.12)'};border:1px solid ${isLong?'rgba(76,175,130,.3)':'rgba(224,92,92,.3)'};color:${col}">${sc.window}</span>
       ${phase?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;border:1px solid ${phaseCol};color:${phaseCol}">${phaseLabel}</span>`:''}
+      ${sc.gc_bias?`<span style="font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px;${
+        sc.gc_bias==='LONG'?'background:rgba(76,175,130,.10);border:1px solid rgba(76,175,130,.3);color:var(--green)':
+        sc.gc_bias==='SHORT'?'background:rgba(224,92,92,.10);border:1px solid rgba(224,92,92,.3);color:var(--red)':
+        'border:1px solid var(--border);color:var(--muted)'
+      }">⚡ GC ${sc.gc_bias}</span>`:''}
     </div>
     <div style="font-family:var(--mono);font-size:11px;line-height:2;display:grid;grid-template-columns:80px 1fr 1fr;gap:0 8px">
       <span style="color:var(--muted)">Entrée</span><span style="color:${col};font-weight:600">${f(sc.entry)}</span><span></span>

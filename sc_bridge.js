@@ -1022,6 +1022,17 @@ function buildMessage() {
     console.log(`  §9: NQ=${data.NQ.avwap_side} ES=${data.ES.avwap_side} → ${par9}`)
   }
 
+  // ── §9+ : GC macro filter — direction OVN pour Sleeping Camel ───────────────
+  if (data.GC && data.GC.avwap_side) {
+    const gcBias = data.GC.avwap_side === 'above' ? 'LONG'
+                 : data.GC.avwap_side === 'below' ? 'SHORT'
+                 : 'NEUTRAL'
+    for (const sym of ['NQ', 'ES']) {
+      if (data[sym] && data[sym].sleeping_camel) data[sym].sleeping_camel.gc_bias = gcBias
+    }
+    console.log(`  §9+: GC last=${data.GC.last} avwap=${data.GC.avwap||data.GC.ovn_vwap||'?'} → gc_bias=${gcBias}`)
+  }
+
   // ── Fallback snapshot pour instruments sans données CSV ─────────────────────
   const snap = loadSnapshot()
   for (const instr of ['NQ', 'ES', 'GC', 'CL']) {
