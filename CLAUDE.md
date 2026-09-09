@@ -1549,3 +1549,59 @@ Balancement +/- 30 pts pendant 15h. SD±2 ne dépassent pas 30 pts de l'AVWAP �
 
 **En une phrase** : Le 30min IB dit QUI prend le contrôle. Le 19m30s RTH dit QUAND le contrôle s'épuise. Le 78min OVN dit QUI arrive avec quel inventaire. Trois lentilles, une décision.
 
+---
+
+## PARTIE 24 — MOTHER CANDLE (LA MADRI) — RÈGLE OVN
+
+### Définition
+La **Mother Candle (MC)** est une barre 30min dont le **body** (Open→Close uniquement, mèches exclues) contient toutes les barres suivantes.
+
+**Body MC = min(Open, Close) → max(Open, Close)**
+Les mèches (wicks) ne comptent pas — seul le body est la référence.
+
+### Mécanique RTH → OVN
+
+| Étape | Action |
+| :--- | :--- |
+| 1. RTH J-1 | Identifier la Mother Candle (body Open→Close) |
+| 2. OVN 18h | Observer : prix reste inside ou sort du body ? |
+| 3. Première barre qui **ferme hors body MC** | Direction OVN confirmée → entrée possible |
+| 4. Stop | Retour dans le body MC |
+| 5. Cible | Structure suivante (SD-2, VAL, Single Prints, POC) |
+
+### Confirmation London
+- London (~02h00–06h00 ET) = cassure la plus fréquente du body MC
+- Si London casse **sous le body bas MC** → P4 activé → inventaire baissier OVN → SHORT OVN
+- Si London casse **au-dessus du body haut MC** → P3 activé → inventaire haussier OVN → LONG OVN
+- Body non cassé avant RTH → contexte neutre → attendre IB
+
+### Lien avec ALN Pattern
+| Cassure London | ALN | Biais RTH |
+| :--- | :--- | :--- |
+| Sous body bas MC | P4 | Baissier (65% counter-auction) |
+| Au-dessus body haut MC | P3 | Haussier (80.8% IB confirmation) |
+
+### Lien avec Règle 2
+> Un vendeur de nuit (OVN sous MC) = acheteur potentiel du jour.
+> Si la vente OVN est déjà faite avant RTH → ne pas reshort en RTH (Règle 2).
+
+### Cas documenté — Sep 8→9, 2026
+- **MC Sep 8** : Bar A RTH — body identifié pendant la session
+- **OVN Sep 8→9** : prix grinde dans le body, puis sort sous le bas
+- **London ~06h00** : première barre fermant sous le body → SHORT OVN confirmé
+- **Cible atteinte** : Single Prints Sept3 (29 377.75)
+- **RTH Sep 9** : vente déjà faite → Règle 2 → SPECTATEUR correct
+
+### Mother Candle PM intraday
+Le même mécanisme s'applique en intraday :
+- Bar D Sep 9 (11:00) = MC body [29 390.50 → 29 528.75]
+- Barres E à J : toutes inside le body D
+- Cassure du body D → direction PM confirmée
+- Breakout haussier : Close > 29 528.75
+- Breakout baissier : Close < 29 390.50
+
+### Règle clé
+> **Tant que le prix reste dans le body MC → range, pas de trade directionnel.**
+> La cassure du body (barre qui FERME hors body) = signal.
+> La mèche hors body = piège (Règle 13 / LAF / LBF potentiel).
+
