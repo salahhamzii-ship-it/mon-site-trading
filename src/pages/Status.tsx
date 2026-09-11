@@ -201,9 +201,6 @@ export default function Status() {
 
   const instruments: InstrumentStatus[] = [
     parseInstrument('nq', 'NQ — Nasdaq E-mini', data?.NQ),
-    parseInstrument('es', 'ES — S&P E-mini',    data?.ES),
-    parseInstrument('gc', 'GC — Gold',           data?.GC),
-    parseInstrument('cl', 'CL — Crude Oil',      data?.CL),
   ]
 
   const bridgeUp = !error && !!data

@@ -71,9 +71,6 @@ export function Header() {
 
   const instruments = [
     { sym: 'NQ', price: nq, settle: nqSettle, accent: '#c9a84c', accentGlow: '0 0 14px rgba(201,168,76,0.7)', flash: flashNq },
-    { sym: 'ES', price: es, settle: esSettle, accent: null,       accentGlow: 'none', flash: flashEs },
-    { sym: 'GC', price: gc, settle: gcSettle, accent: null,       accentGlow: 'none', flash: flashGc },
-    { sym: 'CL', price: cl, settle: clSettle, accent: null,       accentGlow: 'none', flash: flashCl },
   ]
 
   return (
