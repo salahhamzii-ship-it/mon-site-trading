@@ -926,6 +926,20 @@ function buildMessage() {
     console.log(`  ${instr}: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}`)
   }
 
+  // ── Re-scan si fichier manquant ─────────────────────────────────────────────
+  const missing = [['ES', FILES.ES], ['GC', FILES.GC], ['CL', FILES.CL]]
+    .filter(([instr]) => !data[instr])
+  if (missing.length) {
+    autoDiscoverFiles()
+    for (const [instr, oldPath] of missing) {
+      if (FILES[instr] === oldPath) continue // chemin inchangé, inutile de réessayer
+      const rows = parseCsv(FILES[instr])
+      if (!rows.length) continue
+      data[instr] = buildPayload(instr, rows)
+      console.log(`  ${instr}: re-scan → ${FILES[instr]}  last=${data[instr].last}`)
+    }
+  }
+
   // ── §9 : NQ + ES alignés vs AVWAP ───────────────────────────────────────────
   if (data.NQ && data.ES && data.NQ.avwap_side && data.ES.avwap_side) {
     const par9 = data.NQ.avwap_side === data.ES.avwap_side ? data.NQ.avwap_side : 'divergent'
@@ -935,9 +949,17 @@ function buildMessage() {
   }
 
   // ── Fallback snapshot pour instruments sans données CSV ─────────────────────
+  // Plages de prix valides par instrument (rejet des snapshots corrompus)
+  const PRICE_RANGES = { NQ: [8000, 50000], ES: [1500, 20000], GC: [500, 15000], CL: [10, 500] }
   const snap = loadSnapshot()
   for (const instr of ['NQ', 'ES', 'GC', 'CL']) {
     if (!data[instr] && snap[instr]) {
+      const snapPrice = parseFloat(snap[instr].last)
+      const [lo, hi] = PRICE_RANGES[instr] || [0, Infinity]
+      if (!isNaN(snapPrice) && (snapPrice < lo || snapPrice > hi)) {
+        console.log(`  ${instr}: SNAPSHOT REJETÉ — prix ${snapPrice} hors plage [${lo}–${hi}]`)
+        continue
+      }
       data[instr] = { ...snap[instr], _from_snapshot: true }
       const age = snap[instr]._saved_at
         ? Math.round((Date.now() - new Date(snap[instr]._saved_at).getTime()) / 3600000) + 'h'
@@ -946,8 +968,16 @@ function buildMessage() {
     }
   }
 
-  // ── Sauvegarder les données fraîches du jour ─────────────────────────────
-  saveSnapshot(data)
+  // ── Sauvegarder uniquement les données avec prix valide ──────────────────
+  const validData = {}
+  for (const [instr, payload] of Object.entries(data)) {
+    if (!payload) continue
+    const p = parseFloat(payload.last)
+    const [lo, hi] = PRICE_RANGES[instr] || [0, Infinity]
+    if (!isNaN(p) && p >= lo && p <= hi) validData[instr] = payload
+    else console.log(`  ${instr}: prix ${p} invalide — non sauvegardé dans snapshot`)
+  }
+  saveSnapshot(validData)
 
   return JSON.stringify(data)
 }
