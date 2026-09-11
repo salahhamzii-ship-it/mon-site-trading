@@ -420,8 +420,8 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   <div class="sh"><h2>▲ TOP-DOWN DALTON</h2></div>
   <!-- NQ / ES SD levels row -->
   <div class="r2">
-    <div class="card"><div class="ct" style="display:flex;align-items:center;gap:6px">NQ · SD BANDS <span style="font-size:9px;color:var(--muted)">(depuis session)</span></div>
-      <div id="td-nq-sd" style="font-family:var(--mono);font-size:11px;line-height:2"><span style="color:var(--muted)">Chargez session NQ.</span></div></div>
+    <div class="card"><div class="ct" style="display:flex;align-items:center;gap:6px">NQ · SD BANDS <span style="font-size:9px;color:var(--muted)" id="td-nq-sd-lbl">(auto bridge ↻)</span></div>
+      <div id="td-nq-sd" style="font-family:var(--mono);font-size:11px;line-height:2"><span style="color:var(--muted)">En attente bridge...</span></div></div>
     <div class="card"><div class="ct" style="display:flex;align-items:center;gap:6px;color:var(--blue)">ES · SD BANDS <span style="font-size:9px;color:var(--muted)">(depuis session)</span></div>
       <div id="td-es-sd" style="font-family:var(--mono);font-size:11px;line-height:2"><span style="color:var(--muted)">Entrez ES AVWAP + Sigma dans CHARGER SESSION.</span></div></div>
   </div>
@@ -934,6 +934,97 @@ function buildTD(){
 }
 function copyTD(){navigator.clipboard.writeText(document.getElementById('td-out').textContent).then(()=>toast('Copié ✓')).catch(()=>toast('Copie manuelle nécessaire'));}
 
+// ── AUTO-FILL TOP-DOWN depuis bridge ──────────────────
+function autoFillTopDown(data){
+  if(!data)return;
+  const f=n=>parseFloat(n||0)>0?parseFloat(n).toFixed(2):'—';
+  const pf=n=>parseFloat(n||0);
+
+  // NQ prix live
+  const last=pf(data.last||data.settle);
+  if(last>0){
+    const nqEl=document.getElementById('td-nq');
+    if(nqEl)nqEl.value=last;
+  }
+
+  // NQ vs AVWAP
+  const side=data.avwap_side;
+  const nqaEl=document.getElementById('td-nqa');
+  if(nqaEl&&side){
+    const v=side==='above'?'Au-dessus':side==='below'?'En dessous':'Sur';
+    nqaEl.value=v;
+  }
+
+  // SD Bands depuis bridge (bypass manuel AVWAP+Sigma)
+  const avwap=pf(data.vwap);
+  const sd1h=pf(data.sd1h),sd2h=pf(data.sd2h),sd3h=pf(data.ovn_sd3h||data.sd3h);
+  const sd1l=pf(data.sd1l),sd2l=pf(data.sd2l),sd3l=pf(data.ovn_sd3l||data.sd3l);
+  const laf=data.laf_sd2,lbf=data.lbf_sd2;
+
+  if(avwap>0&&sd1h>0){
+    const mkR=(lbl,val,cls,note)=>
+      `<span style="color:var(--muted)">${lbl}</span><span style="color:${cls};font-weight:600;float:right">${val}${note?` <small style="opacity:.6">${note}</small>`:''}</span><br>`;
+    document.getElementById('td-nq-sd').innerHTML=
+      (sd3h?mkR('SD+3 ⚠️ R34 SHORT',f(sd3h),'var(--red)',''):'')+
+      mkR('SD+2 ★★★ '+(laf?'LAF ⚡':'LAF'),f(sd2h),laf?'var(--red)':'var(--amber)','')+
+      mkR('SD+1',f(sd1h),'var(--blue)','')+
+      mkR('👑 AVWAP 18H',f(avwap),'var(--gold)','')+
+      mkR('SD-1',f(sd1l),'var(--blue)','')+
+      mkR('SD-2 ★★★ '+(lbf?'LBF ⚡':'LBF'),f(sd2l),'var(--green)','')+
+      (sd3l?mkR('SD-3',f(sd3l),'var(--muted)',''):'');
+    // Mettre à jour label
+    const lbl=document.getElementById('td-nq-sd-lbl');
+    if(lbl)lbl.textContent='(live bridge 🟢)';
+  }
+
+  // ALN Pattern depuis Asia / London
+  const ah=pf(data.asia_high),al=pf(data.asia_low);
+  const lh=pf(data.lon_high),ll=pf(data.lon_low);
+  if(ah&&al&&lh&&ll){
+    let pat='',prob='';
+    if(lh>ah&&ll<al){pat='P1 (Outside)';prob='Cas H: 71.5% | Cas L: 70.4%';}
+    else if(lh<ah&&ll>al){pat='P2 (Inside)';prob='Rotation probable';}
+    else if(lh>ah&&ll>al){pat='P3 (Partial Up)';prob='80.8% casse London High | IB Bull: 100%';}
+    else if(lh<ah&&ll<al){pat='P4 (Partial Down)';prob='75% casse London Low | IB Bear: 56%';}
+
+    const alnEl=document.getElementById('td-aln');
+    const probEl=document.getElementById('td-prob');
+    if(alnEl&&pat)alnEl.value=pat;
+    if(probEl&&prob)probEl.value=prob;
+
+    // Scénarios
+    const vwap=f(avwap);
+    const longEl=document.getElementById('td-long');
+    const shortEl=document.getElementById('td-short');
+    const ruleEl=document.getElementById('td-rule');
+
+    if(longEl&&!longEl.dataset.locked){
+      if(lbf)longEl.value=`LBF SD-2 ${f(sd2l)} → Higher Low → AVWAP ${vwap}`;
+      else if(pat==='P3 (Partial Up)')longEl.value=`P3 Bull — cassure London High ${f(lh)} → AVWAP ${vwap}`;
+      else if(pat==='P4 (Partial Down)')longEl.value=`P4 Counter Auction — LBF ${f(ll)} → London High ${f(lh)}`;
+      else longEl.value=`LBF SD-2 ${f(sd2l)} + Higher Low → AVWAP ${vwap}`;
+    }
+    if(shortEl&&!shortEl.dataset.locked){
+      if(laf)shortEl.value=`LAF SD+2 ${f(sd2h)} → Lower High → AVWAP ${vwap}`;
+      else if(pat==='P4 (Partial Down)')shortEl.value=`P4 Bear — cassure London Low ${f(ll)} → SD-2 ${f(sd2l)}`;
+      else if(pat==='P3 (Partial Up)')shortEl.value=`NO SHORT (P3) — attendre Excess RTH (R13)`;
+      else shortEl.value=`LAF SD+2 ${f(sd2h)} + Lower High → AVWAP ${vwap}`;
+    }
+    if(ruleEl&&!ruleEl.dataset.locked){
+      const r=[];
+      if(laf)r.push('R37 — LAF SD+2 actif → SHORT prioritaire');
+      if(lbf)r.push('R36 — LBF SD-2 actif → LONG prioritaire');
+      if(pat==='P3 (Partial Up)')r.push('R17 — P3 haussier AM 80.8% — Excess PM = Short (R13)');
+      else if(pat==='P4 (Partial Down)')r.push('R17 — P4 baissier 56% — attendre confirmation IB');
+      else if(pat==='P1 (Outside)')r.push('R17 — P1 Outside — direction cassure London');
+      r.push('R9 — 60% info suffit · R3 — barres 30min minimum');
+      ruleEl.value=r.join('\n');
+    }
+  }
+}
+// Marquer champ comme édité manuellement (désactive l'auto-fill)
+function lockTD(id){const el=document.getElementById(id);if(el)el.dataset.locked='1';}
+
 // ── TRACKER ───────────────────────────────────────────
 function updateTracker(){
   const price=parseFloat(document.getElementById('tp').value)||0;
@@ -1348,6 +1439,7 @@ function renderAvwapPanel(d){
   checkAvwapAlerts(d);
   renderAVwapInst('nq',nq);
   renderAVwapInst('es',es);
+  autoFillTopDown(nq);
   // §9
   const par9=nq&&nq.par9;
   const b=document.getElementById('par9-banner');
