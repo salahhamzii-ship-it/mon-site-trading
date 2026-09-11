@@ -5,13 +5,20 @@ interface InstrumentStatus {
   symbol: string
   lastPrice: string
   lastUpdate: string | null
+  lastCsvDate: string
+  j1Settle: string
   stale: boolean
   ok: boolean
+  fromSnapshot: boolean
 }
 
 interface BridgeInstrument {
   last?: string
   lastUpdate?: string
+  last_csv_date?: string
+  j1_date?: string
+  j1_expected?: string
+  j1_settle?: string
   _from_snapshot?: boolean
   [key: string]: unknown
 }
@@ -27,11 +34,21 @@ interface BridgeData {
 const STALE_MS = 15 * 60 * 1000
 
 function parseInstrument(key: string, label: string, raw?: BridgeInstrument): InstrumentStatus {
-  if (!raw) return { label, symbol: key.toUpperCase(), lastPrice: '—', lastUpdate: null, stale: true, ok: false }
+  if (!raw) return { label, symbol: key.toUpperCase(), lastPrice: '—', lastUpdate: null, lastCsvDate: '—', j1Settle: '—', stale: true, ok: false, fromSnapshot: false }
   const price = raw.last || '—'
   const ts = raw.lastUpdate || null
   const stale = !ts || Date.now() - new Date(ts).getTime() > STALE_MS
-  return { label, symbol: key.toUpperCase(), lastPrice: price, lastUpdate: ts, stale, ok: !!price && price !== '—' }
+  return {
+    label,
+    symbol: key.toUpperCase(),
+    lastPrice: price,
+    lastUpdate: ts,
+    lastCsvDate: raw.last_csv_date || '—',
+    j1Settle: raw.j1_settle || '—',
+    stale,
+    ok: !!price && price !== '—',
+    fromSnapshot: !!raw._from_snapshot,
+  }
 }
 
 function formatAgo(ts: string | null): string {
@@ -98,17 +115,28 @@ function InstrumentRow({ inst, last, alt }: { inst: InstrumentStatus; last: bool
             <RadarDot color="#00ff88" />
           )}
         </div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: hovered ? 'rgba(240,208,112,0.9)' : 'rgba(220,210,180,0.9)', letterSpacing: '0.06em', transition: 'color 0.18s' }}>
-          {inst.label}
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: hovered ? 'rgba(240,208,112,0.9)' : 'rgba(220,210,180,0.9)', letterSpacing: '0.06em', transition: 'color 0.18s' }}>
+            {inst.label}
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(136,153,187,0.45)', marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
+            CSV: <span style={{ color: inst.lastCsvDate === '—' ? 'rgba(255,140,80,0.6)' : 'rgba(136,153,187,0.7)' }}>{inst.lastCsvDate}</span>
+            {inst.fromSnapshot && <span style={{ marginLeft: 8, color: '#ff8c50' }}>⚠ SNAPSHOT</span>}
+          </div>
         </div>
       </div>
-      <div style={{
-        textAlign: 'right', fontSize: 18, fontWeight: 700,
-        color: inst.ok ? '#f0d070' : 'rgba(136,153,187,0.35)',
-        fontFamily: "'JetBrains Mono', monospace",
-        textShadow: inst.ok && !inst.stale ? '0 0 10px rgba(240,208,112,0.3)' : 'none',
-      }}>
-        {inst.lastPrice}
+      <div style={{ textAlign: 'right' }}>
+        <div style={{
+          fontSize: 18, fontWeight: 700,
+          color: inst.ok ? '#f0d070' : 'rgba(136,153,187,0.35)',
+          fontFamily: "'JetBrains Mono', monospace",
+          textShadow: inst.ok && !inst.stale ? '0 0 10px rgba(240,208,112,0.3)' : 'none',
+        }}>
+          {inst.lastPrice}
+        </div>
+        <div style={{ fontSize: 11, color: 'rgba(136,153,187,0.4)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
+          settle: {inst.j1Settle}
+        </div>
       </div>
       <div style={{
         textAlign: 'right', fontSize: 13,
