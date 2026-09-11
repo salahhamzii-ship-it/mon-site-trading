@@ -42,6 +42,103 @@ function formatAgo(ts: string | null): string {
   return `${Math.floor(diff / 3600)}h${Math.floor((diff % 3600) / 60)}min`
 }
 
+function RadarDot({ color }: { color: string }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-block', width: 10, height: 10 }}>
+      <span style={{
+        position: 'absolute', inset: 0, borderRadius: '50%',
+        background: color, color,
+      }} className="radar-ring" />
+      <span style={{
+        position: 'absolute', inset: 2, borderRadius: '50%',
+        background: color,
+        boxShadow: `0 0 6px ${color}`,
+      }} />
+    </span>
+  )
+}
+
+function StaleCross() {
+  return (
+    <span className="stale-pulse" style={{
+      fontSize: 13, color: '#ff8c50',
+      textShadow: '0 0 8px rgba(255,140,80,0.6)',
+      lineHeight: 1,
+    }}>✕</span>
+  )
+}
+
+function InstrumentRow({ inst, last, alt }: { inst: InstrumentStatus; last: boolean; alt: boolean }) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'grid', gridTemplateColumns: '1fr 80px 110px 80px',
+        padding: '13px 18px',
+        borderBottom: last ? 'none' : '1px solid rgba(201,168,76,0.07)',
+        background: hovered
+          ? 'rgba(201,168,76,0.05)'
+          : alt ? 'rgba(201,168,76,0.02)' : 'transparent',
+        alignItems: 'center',
+        transition: 'background 0.18s',
+        cursor: 'default',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ flexShrink: 0 }}>
+          {!inst.ok ? (
+            <span style={{ width: 10, height: 10, display: 'inline-block',
+              background: 'rgba(136,153,187,0.2)', borderRadius: '50%' }} />
+          ) : inst.stale ? (
+            <StaleCross />
+          ) : (
+            <RadarDot color="#00ff88" />
+          )}
+        </div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: hovered ? 'rgba(240,208,112,0.9)' : 'rgba(220,210,180,0.9)', letterSpacing: '0.08em', transition: 'color 0.18s' }}>
+          {inst.label}
+        </div>
+      </div>
+      <div style={{
+        textAlign: 'right', fontSize: 10, fontWeight: 700,
+        color: inst.ok ? '#f0d070' : 'rgba(136,153,187,0.35)',
+        fontFamily: "'JetBrains Mono', monospace",
+        textShadow: inst.ok && !inst.stale ? '0 0 10px rgba(240,208,112,0.3)' : 'none',
+      }}>
+        {inst.lastPrice}
+      </div>
+      <div style={{
+        textAlign: 'right', fontSize: 8,
+        color: inst.stale ? 'rgba(255,140,80,0.7)' : 'rgba(0,255,136,0.7)',
+        fontFamily: "'JetBrains Mono', monospace",
+      }}>
+        {inst.lastUpdate ? `il y a ${formatAgo(inst.lastUpdate)}` : '—'}
+      </div>
+      <div style={{ textAlign: 'center' }}>
+        {!inst.ok ? (
+          <span style={{ fontSize: 7, color: 'rgba(136,153,187,0.3)', letterSpacing: '0.1em' }}>PAS DE CSV</span>
+        ) : inst.stale ? (
+          <span style={{
+            fontSize: 7, padding: '3px 8px', borderRadius: 3,
+            background: 'rgba(255,140,80,0.1)', border: '1px solid rgba(255,140,80,0.35)',
+            color: '#ff8c50', letterSpacing: '0.12em', fontWeight: 700,
+          }} className="stale-pulse">STALE</span>
+        ) : (
+          <span style={{
+            fontSize: 7, padding: '3px 8px', borderRadius: 3,
+            background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)',
+            color: '#00ff88', letterSpacing: '0.12em', fontWeight: 700,
+            textShadow: '0 0 8px rgba(0,255,136,0.4)',
+          }}>LIVE</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Status() {
   const [data, setData] = useState<BridgeData | null>(null)
   const [error, setError] = useState(false)
@@ -151,49 +248,7 @@ export default function Status() {
         </div>
 
         {instruments.map((inst, i) => (
-          <div key={inst.symbol} style={{
-            display: 'grid', gridTemplateColumns: '1fr 80px 110px 80px',
-            padding: '12px 18px',
-            borderBottom: i < instruments.length - 1 ? '1px solid rgba(201,168,76,0.07)' : 'none',
-            background: i % 2 === 0 ? 'transparent' : 'rgba(201,168,76,0.02)',
-            alignItems: 'center',
-          }}>
-            <div>
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(220,210,180,0.9)', letterSpacing: '0.08em' }}>
-                {inst.label}
-              </div>
-            </div>
-            <div style={{
-              textAlign: 'right', fontSize: 10, fontWeight: 700,
-              color: inst.ok ? '#f0d070' : 'rgba(136,153,187,0.35)',
-              fontFamily: "'JetBrains Mono', monospace",
-            }}>
-              {inst.lastPrice}
-            </div>
-            <div style={{
-              textAlign: 'right', fontSize: 8,
-              color: inst.stale ? 'rgba(255,140,80,0.7)' : 'rgba(0,255,136,0.7)',
-            }}>
-              {inst.lastUpdate ? `il y a ${formatAgo(inst.lastUpdate)}` : '—'}
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              {!inst.ok ? (
-                <span style={{ fontSize: 8, color: 'rgba(136,153,187,0.3)', letterSpacing: '0.1em' }}>PAS DE CSV</span>
-              ) : inst.stale ? (
-                <span style={{
-                  fontSize: 7, padding: '2px 7px', borderRadius: 3,
-                  background: 'rgba(255,140,80,0.12)', border: '1px solid rgba(255,140,80,0.3)',
-                  color: '#ff8c50', letterSpacing: '0.1em',
-                }}>STALE</span>
-              ) : (
-                <span style={{
-                  fontSize: 7, padding: '2px 7px', borderRadius: 3,
-                  background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.25)',
-                  color: '#00ff88', letterSpacing: '0.1em',
-                }}>LIVE</span>
-              )}
-            </div>
-          </div>
+          <InstrumentRow key={inst.symbol} inst={inst} last={i === instruments.length - 1} alt={i % 2 !== 0} />
         ))}
       </div>
 

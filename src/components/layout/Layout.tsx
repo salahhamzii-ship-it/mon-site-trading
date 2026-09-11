@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { PageTransition } from './PageTransition'
 import { useApp } from '../../context/AppContext'
 
 export function Layout() {
@@ -36,9 +37,11 @@ export function Layout() {
           position: 'relative',
           zIndex: 1,
         }}>
-          <div className="animate-fade-in" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Outlet />
-          </div>
+          <PageTransition>
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <Outlet />
+            </div>
+          </PageTransition>
         </main>
       </div>
     </div>

@@ -1,9 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useApp } from '../../context/AppContext'
 
 const REFS = { NQ: 30044.75, ES: 7816.90, GC: 4441.32, CL: 81.96 }
 const ORB = "'Orbitron', monospace"
 const JB  = "'JetBrains Mono', monospace"
+
+function useFlash(value: number) {
+  const prev = useRef(value)
+  const [cls, setCls] = useState('')
+  useEffect(() => {
+    if (prev.current === value) return
+    const dir = value > prev.current ? 'flash-up' : 'flash-down'
+    prev.current = value
+    setCls(dir)
+    const t = setTimeout(() => setCls(''), 520)
+    return () => clearTimeout(t)
+  }, [value])
+  return cls
+}
 
 export function Header() {
   useApp()
@@ -12,6 +26,11 @@ export function Header() {
   const [gc, setGc] = useState(4432.0)
   const [cl, setCl] = useState(82.40)
   const [clock, setClock] = useState('')
+
+  const flashNq = useFlash(nq)
+  const flashEs = useFlash(es)
+  const flashGc = useFlash(gc)
+  const flashCl = useFlash(cl)
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -37,10 +56,10 @@ export function Header() {
   }, [])
 
   const instruments = [
-    { sym: 'NQ', price: nq, ref: REFS.NQ, accent: '#c9a84c', accentGlow: '0 0 14px rgba(201,168,76,0.7)' },
-    { sym: 'ES', price: es, ref: REFS.ES, accent: null, accentGlow: 'none' },
-    { sym: 'GC', price: gc, ref: REFS.GC, accent: null, accentGlow: 'none' },
-    { sym: 'CL', price: cl, ref: REFS.CL, accent: null, accentGlow: 'none' },
+    { sym: 'NQ', price: nq, ref: REFS.NQ, accent: '#c9a84c', accentGlow: '0 0 14px rgba(201,168,76,0.7)', flash: flashNq },
+    { sym: 'ES', price: es, ref: REFS.ES, accent: null, accentGlow: 'none', flash: flashEs },
+    { sym: 'GC', price: gc, ref: REFS.GC, accent: null, accentGlow: 'none', flash: flashGc },
+    { sym: 'CL', price: cl, ref: REFS.CL, accent: null, accentGlow: 'none', flash: flashCl },
   ]
 
   return (
@@ -73,12 +92,15 @@ export function Header() {
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
                 color: inst.accent ?? 'rgba(255,255,255,0.35)',
               }}>{inst.sym}</div>
-              <div style={{
+              <div className={inst.flash} style={{
                 fontFamily: JB,
                 fontSize: 16, fontWeight: 700,
                 color: inst.accent ? '#f0d070' : 'rgba(226,232,240,0.9)',
                 textShadow: inst.accentGlow,
                 lineHeight: 1,
+                padding: '1px 3px',
+                borderRadius: 3,
+                transition: 'color 0.15s',
               }}>
                 {inst.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
