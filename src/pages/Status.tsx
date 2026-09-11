@@ -172,6 +172,7 @@ export default function Status() {
   const [error, setError] = useState(false)
   const [lastFetch, setLastFetch] = useState<Date | null>(null)
   const [, setTick] = useState(0)
+  const [showRaw, setShowRaw] = useState(false)
 
   async function fetchData() {
     try {
@@ -200,9 +201,6 @@ export default function Status() {
 
   const instruments: InstrumentStatus[] = [
     parseInstrument('nq', 'NQ — Nasdaq E-mini', data?.NQ),
-    parseInstrument('es', 'ES — S&P E-mini',    data?.ES),
-    parseInstrument('gc', 'GC — Gold',           data?.GC),
-    parseInstrument('cl', 'CL — Crude Oil',      data?.CL),
   ]
 
   const bridgeUp = !error && !!data
@@ -280,6 +278,66 @@ export default function Status() {
         ))}
       </div>
 
+      {/* Diagnostic brut — bouton toggle */}
+      {data && (
+        <div style={{ marginBottom: 28 }}>
+          <button
+            onClick={() => setShowRaw(r => !r)}
+            style={{
+              background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)',
+              color: '#c9a84c', fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, letterSpacing: '0.14em', padding: '8px 18px', borderRadius: 5,
+              cursor: 'pointer', marginBottom: showRaw ? 14 : 0,
+            }}
+          >
+            {showRaw ? '▲ MASQUER DONNÉES BRUTES' : '▼ DONNÉES BRUTES DU BRIDGE'}
+          </button>
+
+          {showRaw && (
+            <div style={{
+              background: 'rgba(10,12,18,0.9)', border: '1px solid rgba(201,168,76,0.15)',
+              borderRadius: 8, padding: '18px 22px', overflowX: 'auto',
+            }}>
+              {(['NQ', 'ES', 'GC', 'CL'] as const).map(sym => {
+                const raw = data[sym] as BridgeInstrument | undefined
+                if (!raw) return (
+                  <div key={sym} style={{ marginBottom: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,140,80,0.8)', letterSpacing: '0.15em', marginBottom: 4 }}>{sym} — ABSENT DU BRIDGE</div>
+                  </div>
+                )
+                const fields: [string, string][] = [
+                  ['last (PRIX AFFICHÉ)', String(raw.last ?? '—')],
+                  ['lastUpdate', String(raw.lastUpdate ?? '—')],
+                  ['last_csv_date', String(raw.last_csv_date ?? '—')],
+                  ['j1_settle', String(raw.j1_settle ?? '—')],
+                  ['_from_snapshot', String(raw._from_snapshot ?? false)],
+                ]
+                const isSnap = !!raw._from_snapshot
+                return (
+                  <div key={sym} style={{ marginBottom: 20 }}>
+                    <div style={{
+                      fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', marginBottom: 6,
+                      color: isSnap ? '#ff8c50' : '#c9a84c',
+                    }}>
+                      {sym}{isSnap ? ' ⚠ SNAPSHOT — PAS DE CSV' : ''}
+                    </div>
+                    {fields.map(([k, v]) => (
+                      <div key={k} style={{ display: 'flex', gap: 12, fontSize: 12, marginBottom: 2 }}>
+                        <span style={{ color: 'rgba(136,153,187,0.45)', width: 200, flexShrink: 0 }}>{k}</span>
+                        <span style={{
+                          color: k.includes('last (') ? '#f0d070' : 'rgba(220,210,180,0.85)',
+                          fontWeight: k.includes('last (') ? 700 : 400,
+                        }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Info footer */}
       <div style={{
         fontSize: 12, color: 'rgba(136,153,187,0.35)', letterSpacing: '0.08em',
@@ -288,9 +346,6 @@ export default function Status() {
         <div>🟢 LIVE = CSV mis à jour il y a moins de 15 min</div>
         <div>🟠 STALE = CSV plus ancien que 15 min (marché fermé ou bridge stoppé)</div>
         <div>PAS DE CSV = instrument non encore configuré dans Sierra Chart</div>
-        <div style={{ marginTop: 10, color: 'rgba(136,153,187,0.22)' }}>
-          PROCHAINS NIVEAUX → ES · GC · CL export (Niveau 3) · Watchdog auto-restart (Niveau 4)
-        </div>
       </div>
 
     </div>
