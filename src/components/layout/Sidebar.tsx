@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 
 const GRAD = {
@@ -20,6 +21,87 @@ const navItems = [
   { to: '/stats',   label: 'THE ARCHIVE',      sub: 'Statistiques',         icon: '▣' },
   { to: '/status',  label: 'BRIDGE STATUS',    sub: 'Monitoring bridge',    icon: '◎' },
 ]
+
+function NavLinkItem({ to, label, sub, icon, end, sidebarOpen }: {
+  to: string; label: string; sub: string; icon: string; end?: boolean; sidebarOpen: boolean
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={({ isActive }) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: sidebarOpen ? '8px 10px' : '8px 0',
+        justifyContent: sidebarOpen ? 'flex-start' : 'center',
+        borderRadius: 4,
+        textDecoration: 'none',
+        position: 'relative',
+        overflow: 'hidden',
+        background: isActive
+          ? 'linear-gradient(90deg, rgba(201,168,76,0.14), rgba(201,168,76,0.03))'
+          : hovered
+          ? 'rgba(201,168,76,0.06)'
+          : 'transparent',
+        border: isActive
+          ? '1px solid rgba(201,168,76,0.32)'
+          : hovered
+          ? '1px solid rgba(201,168,76,0.18)'
+          : '1px solid transparent',
+        borderLeft: isActive
+          ? '3px solid #c9a84c'
+          : hovered
+          ? '3px solid rgba(201,168,76,0.4)'
+          : '3px solid transparent',
+        boxShadow: isActive
+          ? 'inset 0 0 20px rgba(201,168,76,0.05)'
+          : hovered
+          ? 'inset 0 0 12px rgba(201,168,76,0.03)'
+          : 'none',
+        transition: 'all 0.18s cubic-bezier(0.22, 1, 0.36, 1)',
+      })}
+    >
+      {({ isActive }) => (
+        <>
+          <span style={{
+            fontSize: 11,
+            color: isActive ? '#f0d070' : hovered ? '#c9a84c' : 'rgba(136,153,187,0.5)',
+            flexShrink: 0,
+            textAlign: 'center',
+            width: sidebarOpen ? 'auto' : '100%',
+            transition: 'color 0.18s, text-shadow 0.18s',
+            textShadow: isActive ? '0 0 10px rgba(240,208,112,0.6)' : hovered ? '0 0 6px rgba(201,168,76,0.4)' : 'none',
+          }}>{icon}</span>
+          {sidebarOpen && (
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{
+                fontFamily: "'Orbitron', monospace",
+                fontSize: 8, fontWeight: 700,
+                letterSpacing: '0.14em',
+                color: isActive ? '#f0d070' : hovered ? '#c9a84c' : 'rgba(180,170,145,0.7)',
+                transition: 'color 0.18s, text-shadow 0.18s',
+                textShadow: isActive ? '0 0 12px rgba(240,208,112,0.4)' : 'none',
+                whiteSpace: 'nowrap',
+              }}>{label}</div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 7,
+                color: hovered || isActive ? 'rgba(136,153,187,0.6)' : 'rgba(136,153,187,0.35)',
+                marginTop: 1,
+                transition: 'color 0.18s',
+              }}>{sub}</div>
+            </div>
+          )}
+        </>
+      )}
+    </NavLink>
+  )
+}
 
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useApp()
@@ -94,59 +176,10 @@ export function Sidebar() {
       {/* Nav */}
       <nav style={{ flex: 1, padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 1, overflowY: 'auto' }}>
         {navItems.map(({ to, label, sub, icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            style={({ isActive }) => ({
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: sidebarOpen ? '8px 10px' : '8px 0',
-              justifyContent: sidebarOpen ? 'flex-start' : 'center',
-              borderRadius: 4,
-              textDecoration: 'none',
-              background: isActive
-                ? 'linear-gradient(90deg, rgba(201,168,76,0.12), rgba(201,168,76,0.03))'
-                : 'transparent',
-              border: isActive
-                ? '1px solid rgba(201,168,76,0.3)'
-                : '1px solid transparent',
-              borderLeft: isActive ? '2px solid #c9a84c' : '2px solid transparent',
-              transition: 'all 0.15s',
-            })}
-          >
-            {({ isActive }) => (
-              <>
-                <span style={{
-                  fontSize: 11,
-                  color: isActive ? '#c9a84c' : 'rgba(136,153,187,0.5)',
-                  flexShrink: 0,
-                  textAlign: 'center',
-                  width: sidebarOpen ? 'auto' : '100%',
-                  transition: 'color 0.2s',
-                }}>{icon}</span>
-                {sidebarOpen && (
-                  <div>
-                    <div style={{
-                      fontFamily: "'Orbitron', monospace",
-                      fontSize: 8, fontWeight: 700,
-                      letterSpacing: '0.14em',
-                      color: isActive ? '#c9a84c' : 'rgba(180,170,145,0.7)',
-                      transition: 'color 0.2s',
-                      whiteSpace: 'nowrap', overflow: 'hidden',
-                    }}>{label}</div>
-                    <div style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 7,
-                      color: 'rgba(136,153,187,0.4)',
-                      marginTop: 1,
-                    }}>{sub}</div>
-                  </div>
-                )}
-              </>
-            )}
-          </NavLink>
+          <NavLinkItem
+            key={to} to={to} label={label} sub={sub} icon={icon} end={end}
+            sidebarOpen={sidebarOpen}
+          />
         ))}
       </nav>
 
