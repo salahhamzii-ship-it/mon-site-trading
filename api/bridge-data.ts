@@ -3,8 +3,9 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-// URL active du tunnel (mise a jour a chaque nouvelle session cloudflared)
+// Tunnels actifs — cloudflared service Windows (permanent) + ngrok fallback
 const TUNNEL_URLS = [
+  'https://33654683-3a3b-4484-8441-0cda7748d29e.cfargotunnel.com/data',
   'https://hatbox-placidly-crabmeat.ngrok-free.dev/data',
 ]
 
