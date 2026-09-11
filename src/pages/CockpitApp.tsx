@@ -225,6 +225,7 @@ export default function CockpitApp() {
         zIndex: 40,
       }}>
         {INSTRUMENTS.map((inst, i) => {
+          if (inst.sym !== 'NQ100') return null
           const p = prices[i]; const up = p.delta >= 0
           return (
             <div key={inst.sym} style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
