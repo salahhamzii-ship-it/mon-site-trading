@@ -201,7 +201,7 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
 </div>
 <div id="body">
 <nav id="sidebar">
-  <div class="ni active" data-s="session" onclick="nav(this)"><span class="ni-ico">⬇</span>CHARGER SESSION</div>
+  <div class="ni" data-s="session" onclick="nav(this)"><span class="ni-ico">⬇</span>CHARGER SESSION</div>
   <div class="ni" data-s="json" onclick="nav(this)"><span class="ni-ico">📋</span>JSON CLAUDE</div>
   <div class="ni" data-s="csv" onclick="nav(this)"><span class="ni-ico">📊</span>SC CSV</div>
   <div class="ni" data-s="launcher" onclick="nav(this)"><span class="ni-ico">◉</span>SETUP LAUNCHER</div>
@@ -211,12 +211,12 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   <div class="ni" data-s="reglages" onclick="nav(this)"><span class="ni-ico">⚙</span>RÉGLAGES IB/OR</div>
   <div class="ni" data-s="backtest" onclick="nav(this)"><span class="ni-ico">◈</span>BACKTEST SD-2</div>
   <div class="ni" data-s="position" onclick="nav(this)"><span class="ni-ico">⬡</span>POSITION ACTIVE</div>
-  <div class="ni" data-s="avwap" onclick="nav(this)"><span class="ni-ico">⚡</span>AVWAP §9 LIVE</div>
+  <div class="ni active" data-s="avwap" onclick="nav(this)"><span class="ni-ico">⚡</span>AVWAP §9 LIVE</div>
 </nav>
 <main id="main">
 
 <!-- ── SESSION ── -->
-<div class="sec active" id="sec-session">
+<div class="sec" id="sec-session">
   <div class="sh"><h2>⬇ CHARGER SESSION</h2><span id="sd-lbl"></span></div>
   <div class="r2">
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -637,10 +637,10 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
 </div>
 
 <!-- ── AVWAP §9 LIVE ── -->
-<div class="sec" id="sec-avwap">
+<div class="sec active" id="sec-avwap">
   <div class="sh"><h2>⚡ AVWAP §9 LIVE</h2><span id="avwap-ts" style="font-size:10px;color:var(--muted);margin-left:8px">—</span></div>
 
-  <div id="par9-banner" style="display:none"></div>
+  <div id="par9-banner" style="padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:var(--surface);border:1px solid var(--border);color:var(--muted)">NQ — EN ATTENTE BRIDGE…</div>
 
   <div>
     <div class="card" id="avwap-nq-card">
@@ -1348,6 +1348,21 @@ function bridgeFetch(){
       if(sigma){var se=document.getElementById('s-sigma');if(se&&!se.value)se.value=sigma.toFixed(2);}
       _fill('s-vah',nq.vah);_fill('s-val',nq.val);_fill('s-poc',nq.poc);
       _fill('s-j1h',nq.j1_high);_fill('s-j1l',nq.j1_low);_fill('s-settle',nq.j1_settle);
+      _fill('s-ovnh',nq.ovn_high);_fill('s-ovnl',nq.ovn_low);
+      // ALN Pattern auto-detect
+      var ah=parseFloat(nq.asia_high||0),al=parseFloat(nq.asia_low||0);
+      var lh=parseFloat(nq.lon_high||0),ll=parseFloat(nq.lon_low||0);
+      if(ah&&al&&lh&&ll){
+        var aln_el=document.getElementById('s-aln');
+        if(aln_el&&!aln_el.value){
+          var pat='';
+          if(lh>ah&&ll<al)pat='P1 (Outside)';
+          else if(lh<ah&&ll>al)pat='P2 (Inside)';
+          else if(lh>ah&&ll>al)pat='P3 (Partial Up)';
+          else if(lh<ah&&ll<al)pat='P4 (Partial Down)';
+          if(pat)aln_el.value=pat;
+        }
+      }
       // ES fields
       var eavwap=parseFloat(es.ovn_vwap)||0,esd1h=parseFloat(es.ovn_sd1h)||0;
       var esig=esd1h&&eavwap?Math.abs(esd1h-eavwap):0;
@@ -1440,21 +1455,27 @@ function renderAvwapPanel(d){
   renderAVwapInst('nq',nq);
   renderAVwapInst('es',es);
   autoFillTopDown(nq);
-  // §9
-  const par9=nq&&nq.par9;
+  // NQ AVWAP status banner (NQ-only mode)
   const b=document.getElementById('par9-banner');
-  if(par9==='above'){
-    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:rgba(76,175,130,.12);border:1px solid rgba(76,175,130,.3);color:var(--green)';
-    b.textContent='§9 · NQ + ES ALIGNÉS HAUSSIERS ▲ — ABOVE AVWAP';
-  }else if(par9==='below'){
-    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:rgba(224,92,92,.12);border:1px solid rgba(224,92,92,.3);color:var(--red)';
-    b.textContent='§9 · NQ + ES ALIGNÉS BAISSIERS ▼ — BELOW AVWAP';
-  }else if(par9==='divergent'){
-    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:rgba(212,144,58,.12);border:1px solid rgba(212,144,58,.3);color:var(--amber)';
-    b.textContent='§9 · DIVERGENCE NQ ≠ ES — CAUTION — ATTENDRE ALIGNEMENT';
+  const side=nq&&nq.avwap_side;
+  const laf=nq&&nq.laf_sd2, lbf=nq&&nq.lbf_sd2;
+  const aln=nq&&nq.asia_high&&nq.asia_low&&nq.lon_high&&nq.lon_low?(()=>{
+    const ah=parseFloat(nq.asia_high),al=parseFloat(nq.asia_low),lh=parseFloat(nq.lon_high),ll=parseFloat(nq.lon_low);
+    if(lh>ah&&ll<al)return'P1 (Outside) 71.5%';
+    if(lh<ah&&ll>al)return'P2 (Inside) Rotation';
+    if(lh>ah&&ll>al)return'P3 (Partial Up) ▲ 80.8%';
+    if(lh<ah&&ll<al)return'P4 (Partial Down) ▼ 75%';
+    return'—';
+  })():'—';
+  if(side==='above'){
+    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(76,175,130,.12);border:1px solid rgba(76,175,130,.3);color:var(--green)';
+    b.innerHTML='<span>NQ ▲ ABOVE AVWAP 18H'+(laf?' · <span style="color:var(--red)">LAF SD+2 ⚡ SHORT R37</span>':'')+'</span><span style="color:var(--muted);font-size:10px">ALN: '+aln+'</span>';
+  }else if(side==='below'){
+    b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(224,92,92,.12);border:1px solid rgba(224,92,92,.3);color:var(--red)';
+    b.innerHTML='<span>NQ ▼ BELOW AVWAP 18H'+(lbf?' · <span style="color:var(--green)">LBF SD-2 ⚡ LONG R36</span>':'')+'</span><span style="color:var(--muted);font-size:10px">ALN: '+aln+'</span>';
   }else{
     b.style.cssText='padding:10px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.06em;text-align:center;background:var(--surface);border:1px solid var(--border);color:var(--muted)';
-    b.textContent='§9 — EN ATTENTE DE DONNÉES';
+    b.textContent='NQ — EN ATTENTE BRIDGE (sc_bridge.js doit tourner sur le PC Sierra Chart)';
   }
 }
 function renderAVwapInst(sym,data){
