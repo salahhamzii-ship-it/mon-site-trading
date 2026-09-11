@@ -1,15 +1,27 @@
 import { useEffect, useState, useRef } from 'react'
 import { useApp } from '../../context/AppContext'
 
-const REFS = { NQ: 30044.75, ES: 7816.90, GC: 4441.32, CL: 81.96 }
 const ORB = "'Orbitron', monospace"
 const JB  = "'JetBrains Mono', monospace"
+
+const STALE_MS = 15 * 60 * 1000
+
+function toNum(v: string | number | undefined): number {
+  const n = parseFloat(String(v ?? ''))
+  return isNaN(n) ? 0 : n
+}
+
+function fmtPrice(v: number, sym: string): string {
+  const dec = sym === 'CL' ? 2 : sym === 'GC' ? 2 : 2
+  if (v === 0) return '—'
+  return v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
 
 function useFlash(value: number) {
   const prev = useRef(value)
   const [cls, setCls] = useState('')
   useEffect(() => {
-    if (prev.current === value) return
+    if (prev.current === 0 || prev.current === value) { prev.current = value; return }
     const dir = value > prev.current ? 'flash-up' : 'flash-down'
     prev.current = value
     setCls(dir)
@@ -20,27 +32,29 @@ function useFlash(value: number) {
 }
 
 export function Header() {
-  useApp()
-  const [nq, setNq] = useState(30141.0)
-  const [es, setEs] = useState(7831.0)
-  const [gc, setGc] = useState(4432.0)
-  const [cl, setCl] = useState(82.40)
+  const { bridge, bridgeOnline } = useApp()
   const [clock, setClock] = useState('')
+
+  const nq = toNum(bridge.NQ?.last)
+  const es = toNum(bridge.ES?.last)
+  const gc = toNum(bridge.GC?.last)
+  const cl = toNum(bridge.CL?.last)
+
+  const nqSettle = toNum(bridge.NQ?.j1_settle)
+  const esSettle = toNum(bridge.ES?.j1_settle)
+  const gcSettle = toNum(bridge.GC?.j1_settle)
+  const clSettle = toNum(bridge.CL?.j1_settle)
+
+  const nqTs = bridge.NQ?.lastUpdate ?? null
+  const esTs = bridge.ES?.lastUpdate ?? null
+  const nqLive = !!nqTs && Date.now() - new Date(nqTs).getTime() < STALE_MS
+  const esLive = !!esTs && Date.now() - new Date(esTs).getTime() < STALE_MS
+  const anyLive = bridgeOnline && (nqLive || esLive)
 
   const flashNq = useFlash(nq)
   const flashEs = useFlash(es)
   const flashGc = useFlash(gc)
   const flashCl = useFlash(cl)
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setNq(p => +(p + (Math.random() - 0.49) * 3).toFixed(2))
-      setEs(p => +(p + (Math.random() - 0.49) * 0.5).toFixed(2))
-      setGc(p => +(p + (Math.random() - 0.49) * 0.3).toFixed(2))
-      setCl(p => +(p + (Math.random() - 0.505) * 0.05).toFixed(2))
-    }, 900)
-    return () => clearInterval(t)
-  }, [])
 
   useEffect(() => {
     const tick = () =>
@@ -56,10 +70,10 @@ export function Header() {
   }, [])
 
   const instruments = [
-    { sym: 'NQ', price: nq, ref: REFS.NQ, accent: '#c9a84c', accentGlow: '0 0 14px rgba(201,168,76,0.7)', flash: flashNq },
-    { sym: 'ES', price: es, ref: REFS.ES, accent: null, accentGlow: 'none', flash: flashEs },
-    { sym: 'GC', price: gc, ref: REFS.GC, accent: null, accentGlow: 'none', flash: flashGc },
-    { sym: 'CL', price: cl, ref: REFS.CL, accent: null, accentGlow: 'none', flash: flashCl },
+    { sym: 'NQ', price: nq, settle: nqSettle, accent: '#c9a84c', accentGlow: '0 0 14px rgba(201,168,76,0.7)', flash: flashNq },
+    { sym: 'ES', price: es, settle: esSettle, accent: null,       accentGlow: 'none', flash: flashEs },
+    { sym: 'GC', price: gc, settle: gcSettle, accent: null,       accentGlow: 'none', flash: flashGc },
+    { sym: 'CL', price: cl, settle: clSettle, accent: null,       accentGlow: 'none', flash: flashCl },
   ]
 
   return (
@@ -74,12 +88,15 @@ export function Header() {
       position: 'relative',
       zIndex: 10,
     }}>
-      {/* Tickers — 3-row vertical columns */}
+      {/* Tickers */}
       <div style={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>
         {instruments.map((inst) => {
-          const diff = inst.price - inst.ref
-          const pct  = (diff / inst.ref) * 100
+          const hasData = inst.price > 0
+          const hasSettle = inst.settle > 0
+          const diff = hasData && hasSettle ? inst.price - inst.settle : 0
+          const pct  = hasData && hasSettle ? (diff / inst.settle) * 100 : 0
           const up   = diff >= 0
+
           return (
             <div key={inst.sym} style={{
               padding: '0 18px',
@@ -92,64 +109,55 @@ export function Header() {
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
                 color: inst.accent ?? 'rgba(255,255,255,0.35)',
               }}>{inst.sym}</div>
+
               <div className={inst.flash} style={{
                 fontFamily: JB,
                 fontSize: 16, fontWeight: 700,
-                color: inst.accent ? '#f0d070' : 'rgba(226,232,240,0.9)',
-                textShadow: inst.accentGlow,
+                color: !hasData
+                  ? 'rgba(136,153,187,0.3)'
+                  : inst.accent ? '#f0d070' : 'rgba(226,232,240,0.9)',
+                textShadow: hasData ? inst.accentGlow : 'none',
                 lineHeight: 1,
                 padding: '1px 3px',
                 borderRadius: 3,
                 transition: 'color 0.15s',
               }}>
-                {inst.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {fmtPrice(inst.price, inst.sym)}
               </div>
+
               <div style={{
                 fontFamily: JB,
                 fontSize: 10, fontWeight: 600,
-                color: up ? '#00ff88' : '#ff4444',
+                color: !hasData || !hasSettle
+                  ? 'rgba(136,153,187,0.3)'
+                  : up ? '#00ff88' : '#ff4444',
               }}>
-                {up ? '▲' : '▼'} {up ? '+' : ''}{pct.toFixed(2)}%
+                {hasData && hasSettle
+                  ? `${up ? '▲' : '▼'} ${up ? '+' : ''}${pct.toFixed(2)}%`
+                  : 'vs settle —'}
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Badge pills */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 16, flexWrap: 'wrap' }}>
-        <div style={{
-          padding: '4px 10px',
-          background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)',
-          borderRadius: 20, fontSize: 10, fontWeight: 600, color: '#00ff88',
-          fontFamily: JB, whiteSpace: 'nowrap',
-        }}>GEX POSITIF</div>
-        <div style={{
-          padding: '4px 10px',
-          background: 'rgba(30,179,188,0.08)', border: '1px solid rgba(30,179,188,0.2)',
-          borderRadius: 20, fontSize: 10, fontWeight: 600, color: '#1eb3bc',
-          fontFamily: JB, whiteSpace: 'nowrap',
-        }}>CALL 30,600</div>
-        <div style={{
-          padding: '4px 10px',
-          background: 'rgba(255,68,68,0.07)', border: '1px solid rgba(255,68,68,0.2)',
-          borderRadius: 20, fontSize: 10, fontWeight: 600, color: '#ff6b6b',
-          fontFamily: JB, whiteSpace: 'nowrap',
-        }}>PUT 29,600</div>
-      </div>
-
       <div style={{ flex: 1 }} />
 
-      {/* LIVE + clock */}
+      {/* Status + clock */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', flexShrink: 0 }}>
         <div style={{
           width: 7, height: 7, borderRadius: '50%',
-          background: '#00ff88',
+          background: anyLive ? '#00ff88' : bridgeOnline ? '#f0d070' : '#ff4444',
+          boxShadow: anyLive ? '0 0 6px #00ff88' : bridgeOnline ? '0 0 6px #f0d070' : '0 0 6px #ff4444',
           animation: 'dot 1.6s infinite',
-          color: '#00ff88',
           flexShrink: 0,
         }} />
-        <span style={{ fontFamily: JB, fontSize: 11, fontWeight: 600, color: '#00ff88' }}>LIVE RTH</span>
+        <span style={{
+          fontFamily: JB, fontSize: 11, fontWeight: 600,
+          color: anyLive ? '#00ff88' : bridgeOnline ? '#f0d070' : '#ff6b6b',
+        }}>
+          {anyLive ? 'LIVE' : bridgeOnline ? 'STALE' : 'OFFLINE'}
+        </span>
         <span style={{ fontFamily: JB, fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{clock}</span>
       </div>
     </header>
