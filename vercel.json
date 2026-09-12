@@ -15,6 +15,7 @@
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/cockpit", "destination": "/cockpit-v3.html" },
     { "source": "/tracker", "destination": "/tracker.html" },
+    { "source": "/nq-live", "destination": "/nq-live.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
