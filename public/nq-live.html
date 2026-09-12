@@ -440,10 +440,8 @@ body {
       <div class="edit-field">
         <label class="edit-lbl">BANDE ALARME</label>
         <select class="edit-inp" id="ei-alarm-band" style="appearance:auto">
-          <option value="sd2">SD+2 / SD−2</option>
-          <option value="sd1">SD+1 / SD−1</option>
-          <option value="sd3">SD+3 / SD−3</option>
-          <option value="zone12">Zone SD+1↔SD+2 / SD−1↔SD−2</option>
+          <option value="sd2">Zone SD+1↔SD+2 / SD−1↔SD−2 (défaut)</option>
+          <option value="sd3">Zone SD+2↔SD+3 / SD−2↔SD−3</option>
         </select>
       </div>
       <div class="edit-field" style="display:flex;align-items:flex-end">
@@ -946,18 +944,18 @@ function testSiren() {
 
 function getBandLevels(nq) {
   const band = selectedAlarmBand
-  // sd1 : close > SD+1 ou < SD-1
-  if (band === 'sd1') return { hi: parseFloat(nq.sd1h || 0), lo: parseFloat(nq.sd1l || 0) }
-  // sd3 : close > SD+2 ou < SD-2 (approche SD+3)
-  if (band === 'sd3') return { hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0) }
-  // zone12 : close ENTRE SD+1 et SD+2 (avec borne haute)
-  if (band === 'zone12') return {
+  // sd3 : close ENTRE SD+2 et SD+3 (zone extrême bornée)
+  if (band === 'sd3') return {
+    hi: parseFloat(nq.ovn_sd3h || 0), lo: parseFloat(nq.ovn_sd3l || 0),
+    hi2: parseFloat(nq.sd2h || 0), lo2: parseFloat(nq.sd2l || 0),
+    zoneMode: true
+  }
+  // sd2 (défaut) : close ENTRE SD+1 et SD+2 / SD−1 et SD−2 (zone danger bornée)
+  return {
     hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0),
     hi2: parseFloat(nq.sd1h || 0), lo2: parseFloat(nq.sd1l || 0),
     zoneMode: true
   }
-  // sd2 (défaut) : close au-dessus SD+1 ou en-dessous SD-1 (entrée zone danger)
-  return { hi: parseFloat(nq.sd1h || 0), lo: parseFloat(nq.sd1l || 0) }
 }
 
 function checkAlarmZone(last, nq) {
@@ -978,13 +976,6 @@ function checkAlarmZone(last, nq) {
     const inLower = isValidVal(lo2) && isValidVal(lo) && last <= lo2 && last >= lo
     inDanger = inUpper || inLower
     alarmMsg = `🚨 NQ ZONE ${inUpper ? `SD+1↔SD+2 ↑  ${last.toFixed(2)}` : `SD-1↔SD-2 ↓  ${last.toFixed(2)}`}`
-  } else {
-    inDanger = (isValidVal(hi) && last >= hi) || (isValidVal(lo) && last <= lo)
-    const bandName = selectedAlarmBand.toUpperCase()
-    const side = (isValidVal(hi) && last >= hi) ? `SD+1 ↑  ${last.toFixed(2)}` : `SD-1 ↓  ${last.toFixed(2)}`
-    alarmMsg = selectedAlarmBand === 'sd2'
-      ? `🚨 NQ CLOSE AU-DESSUS ${side} (zone SD+1→SD+2)`
-      : `🚨 NQ FRANCHIT ${bandName}  ${side}`
   }
 
   // Clé unique par bougie 30 min (epoch ÷ 1800s)
