@@ -20,6 +20,12 @@ const SNAPSHOT_FILE = IS_WIN
   ? String.raw`C:\SierraChart\CME\Data\sc_snapshot.json`
   : `${UPLOAD_DIR}/sc_snapshot.json`
 
+// Cache J-1 RTH : persiste poc/vah/val/j1_high/settle entre sessions de bridge
+// Résout le cas "CSV démarre 18h → pas de J-1 RTH dans le fichier courant"
+const J1_CACHE_FILE = IS_WIN
+  ? String.raw`C:\SierraChart_CME\Data\j1_cache.json`
+  : `${UPLOAD_DIR}/j1_cache.json`
+
 // Résout le chemin CSV : essaie .csv puis .csv.txt (Sierra Chart peut ajouter .txt)
 function resolveCsv(base) {
   if (!IS_WIN) return base
@@ -890,6 +896,80 @@ function loadSnapshot() {
   }
 }
 
+// ─── J1 CACHE ─────────────────────────────────────────────────────────────────
+// Persiste poc/vah/val/j1_high/j1_settle/j1_low par date pour survivre au reset CSV 18h
+
+const J1_FIELDS = ['j1_high', 'j1_low', 'j1_open', 'j1_settle', 'poc', 'vah', 'val']
+
+function saveJ1Cache(instr, j1Date, payload) {
+  try {
+    let cache = {}
+    try { cache = JSON.parse(readFileSync(J1_CACHE_FILE, 'utf-8')) } catch {}
+    if (!cache[instr]) cache[instr] = {}
+    const entry = { date: j1Date, saved_at: new Date().toISOString() }
+    let valid = 0
+    for (const f of J1_FIELDS) {
+      const v = parseFloat(payload[f])
+      if (!isNaN(v) && v > 100) { entry[f] = String(payload[f]); valid++ }
+    }
+    if (valid < 3) return  // trop peu de valeurs valides — ne pas sauvegarder
+    cache[instr][j1Date] = entry
+    // Garder uniquement les 7 dernières entrées par instrument
+    const dates = Object.keys(cache[instr]).sort()
+    while (dates.length > 7) delete cache[instr][dates.shift()]
+    const dir = J1_CACHE_FILE.replace(/[/\\][^/\\]+$/, '')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(J1_CACHE_FILE, JSON.stringify(cache, null, 2), 'utf-8')
+    console.log(`  [J1-CACHE] Sauvegardé ${instr} j1=${j1Date}  poc=${entry.poc}  vah=${entry.vah}  val=${entry.val}  j1h=${entry.j1_high}  settle=${entry.j1_settle}`)
+  } catch (e) {
+    console.log(`  [J1-CACHE] Erreur save: ${e.message}`)
+  }
+}
+
+function loadJ1Cache(instr, j1Date) {
+  try {
+    if (!existsSync(J1_CACHE_FILE)) return null
+    const cache = JSON.parse(readFileSync(J1_CACHE_FILE, 'utf-8'))
+    const entry = cache?.[instr]?.[j1Date]
+    if (entry && entry.date === j1Date) {
+      console.log(`  [J1-CACHE] Restauré ${instr} j1=${j1Date}  poc=${entry.poc}  vah=${entry.vah}  val=${entry.val}`)
+      return entry
+    }
+  } catch {}
+  return null
+}
+
+// Applique le cache J1 sur le payload après buildPayload :
+// • si J1 valide → sauvegarde dans le cache
+// • si J1 absent → restaure depuis le cache
+function applyJ1Cache(instr, j1Date, payload) {
+  const pocOk = parseFloat(payload.poc) > 100
+  const vahOk = parseFloat(payload.vah) > 100
+  const valOk = parseFloat(payload.val) > 100
+  const j1hOk = parseFloat(payload.j1_high) > 100
+  const hasJ1  = pocOk && vahOk && valOk && j1hOk
+  if (hasJ1) {
+    saveJ1Cache(instr, j1Date, payload)
+  } else {
+    const cached = loadJ1Cache(instr, j1Date)
+    if (cached) {
+      let restored = 0
+      for (const f of J1_FIELDS) {
+        const v = parseFloat(payload[f])
+        const notValid = isNaN(v) || v <= 0
+        if (notValid && cached[f] && parseFloat(cached[f]) > 100) {
+          payload[f] = cached[f]
+          restored++
+        }
+      }
+      if (restored > 0) {
+        payload._j1_from_cache = true
+        console.log(`  [J1-CACHE] ${restored} champs restaurés pour ${instr} j1=${j1Date}`)
+      }
+    }
+  }
+}
+
 function buildMessage() {
   const today = todayStr()
   const j1    = j1Str()
@@ -934,6 +1014,7 @@ function buildMessage() {
       }
 
       data[instr] = buildPayload(instr, mainRows, extraSources)
+      applyJ1Cache(instr, j1, data[instr])
       const bt = data[instr].bars_today
       const bj = data[instr].bars_j1
       console.log(`  NQ: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}  poc=${data[instr].poc}  vah=${data[instr].vah}  val=${data[instr].val}`)
@@ -957,6 +1038,7 @@ function buildMessage() {
     }
 
     data[instr] = buildPayload(instr, rows)
+    applyJ1Cache(instr, j1, data[instr])
     const bt = data[instr].bars_today
     const bj = data[instr].bars_j1
     console.log(`  ${instr}: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}`)

@@ -704,9 +704,16 @@ const DEMO = {
 function effectiveData(bridge) {
   if (bridge && !bridge._demo) {
     const merged = Object.assign({}, bridge)
+    // Priorité 1 : refCache (valeurs bridge déjà vues)
     if (refCache) {
       REF_FIELDS.forEach(k => {
         if (!isValidVal(merged[k]) && isValidVal(refCache[k])) merged[k] = refCache[k]
+      })
+    }
+    // Priorité 2 : manualLevels (saisie manuelle) — s'applique même quand bridge connecté
+    if (manualLevels) {
+      REF_FIELDS.forEach(k => {
+        if (!isValidVal(merged[k]) && isValidVal(manualLevels[k])) merged[k] = manualLevels[k]
       })
     }
     return merged
