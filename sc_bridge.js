@@ -747,14 +747,31 @@ function buildPayload(instr, allRows, extraSources = {}) {
     if (m30J1.length)    barsJ1Final    = m30J1
   }
 
+  // ── SD bruts avant dérivation ─────────────────────────────────────────────
+  let outSd2h = lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h')
+  let outSd2l = lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l')
+  let outSd1h = lastNonempty(todayAll, 'sd1h') || ovnSd1h
+  let outSd1l = lastNonempty(todayAll, 'sd1l') || ovnSd1l
+  let outVwap = ovnVwapFinal
+
+  // Dérivation AVWAP/SD±1 depuis SD±2 si Sierra Chart n'exporte pas ces colonnes
+  // Formule : AVWAP = (SD+2 + SD-2)/2  |  sigma = (SD+2 - SD-2)/4
+  const _n2h = parseFloat(outSd2h), _n2l = parseFloat(outSd2l)
+  if (!isNaN(_n2h) && !isNaN(_n2l) && _n2h > _n2l && _n2h > 100) {
+    const _derVwap = ((_n2h + _n2l) / 2).toFixed(2)
+    const _sigma   = (_n2h - _n2l) / 4
+    if (!outVwap || parseFloat(outVwap) <= 0) outVwap = _derVwap
+    if (!outSd1h) outSd1h = (parseFloat(_derVwap) + _sigma).toFixed(2)
+    if (!outSd1l) outSd1l = (parseFloat(_derVwap) - _sigma).toFixed(2)
+  }
+
   // SD±3 : calcul depuis σ = SD+1 − AVWAP quand absent du CSV
   const _sd3 = (() => {
     const csvSd3h = lastNonempty(allOvn, 'sd3h') || lastNonempty(todayAll, 'sd3h') || lastNonempty(allRows, 'sd3h')
     const csvSd3l = lastNonempty(allOvn, 'sd3l') || lastNonempty(todayAll, 'sd3l') || lastNonempty(allRows, 'sd3l')
     if (csvSd3h && csvSd3l) return { h: csvSd3h, l: csvSd3l }
-    // Calcul : dernière AVWAP + SD+1 live (RTH si dispo, sinon OVN)
-    const vwapN = parseFloat(lastNonempty(todayAll, 'vwap') || ovnVwapFinal)
-    const sd1hN = parseFloat(lastNonempty(todayAll, 'sd1h') || ovnSd1h)
+    const vwapN = parseFloat(outVwap)
+    const sd1hN = parseFloat(outSd1h)
     if (!isNaN(vwapN) && !isNaN(sd1hN) && sd1hN > vwapN && vwapN > 100) {
       const sigma = sd1hN - vwapN
       return { h: (vwapN + 3 * sigma).toFixed(2), l: (vwapN - 3 * sigma).toFixed(2) }
@@ -775,7 +792,7 @@ function buildPayload(instr, allRows, extraSources = {}) {
     poc,
     vah,
     val,
-    ovn_vwap:  ovnVwapFinal,
+    ovn_vwap:  outVwap,
     atr_auto:  atrAuto(allRows, instr),
     asia_high:  asiaHs.length ? Math.max(...asiaHs).toFixed(2) : '',
     asia_low:   asiaLs.length ? Math.min(...asiaLs).toFixed(2) : '',
@@ -797,13 +814,13 @@ function buildPayload(instr, allRows, extraSources = {}) {
     ovn_sd3l:   _sd3.l,
     // ── AVWAP position & signaux ──────────────────────────────────────────────
     // SD live : préférer les barres du jour (RTH migrent les SD) avant de tomber sur OVN
-    vwap:   ovnVwapFinal,
-    sd1h:   lastNonempty(todayAll, 'sd1h') || ovnSd1h,
-    sd1l:   lastNonempty(todayAll, 'sd1l') || ovnSd1l,
-    sd2h:   lastNonempty(todayAll, 'sd2h') || ovnSd2h || lastNonempty(allRows, 'sd2h'),
-    sd2l:   lastNonempty(todayAll, 'sd2l') || ovnSd2l || lastNonempty(allRows, 'sd2l'),
+    vwap:   outVwap,
+    sd1h:   outSd1h,
+    sd1l:   outSd1l,
+    sd2h:   outSd2h,
+    sd2l:   outSd2l,
     avwap_side: (() => {
-      const p = parseFloat(lastVal), v = parseFloat(ovnVwapFinal)
+      const p = parseFloat(lastVal), v = parseFloat(outVwap)
       if (isNaN(p) || isNaN(v) || v === 0) return ''
       return p > v ? 'above' : 'below'
     })(),
