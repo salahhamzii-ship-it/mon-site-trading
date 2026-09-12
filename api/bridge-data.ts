@@ -1,13 +1,12 @@
-// Vercel serverless function — fetch depuis sc_bridge.js (Windows) via cloudflared tunnel
-// sc_bridge.js (Windows) → cloudflared tunnel → GET ici → frontend
+// Vercel serverless function — fetch depuis sc_bridge.js (Windows) via ngrok/cloudflared
+// sc_bridge.js (Windows) → ngrok tunnel → GET ici → frontend
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-// Sources données — VPS direct + tunnels cloudflared/ngrok fallback
+// Sources données — ngrok (priorité) → cloudflared fallback
 const TUNNEL_URLS = [
-  'http://2.29.3.199:8766/data',                                              // VPS direct (priorité)
-  'https://33654683-3a3b-4484-8441-0cda7748d29e.cfargotunnel.com/data',      // cloudflared
-  'https://hatbox-placidly-crabmeat.ngrok-free.dev/data',                    // ngrok fallback
+  'https://hatbox-placidly-crabmeat.ngrok-free.dev/data',                    // ngrok (priorité)
+  'https://33654683-3a3b-4484-8441-0cda7748d29e.cfargotunnel.com/data',      // cloudflared fallback
 ]
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
