@@ -445,6 +445,9 @@ body {
           <option value="sd3">SD+3 / SD−3</option>
         </select>
       </div>
+      <div class="edit-field" style="display:flex;align-items:flex-end">
+        <button class="btn-apply" style="background:#8b0000;border-color:#cc0000;white-space:nowrap" onclick="testSiren()">🔔 TEST SIRÈNE</button>
+      </div>
     </div>
   </div>
 
@@ -842,6 +845,17 @@ function ackAlarm() {
     _alarmAcked = false
     _rearmTimer = null
   }, 30000)
+}
+
+function testSiren() {
+  triggerAlarm('🔔 TEST SIRÈNE — VÉRIFICATION OK')
+  // Auto-stop après 10s si pas d'ACK (mode test uniquement)
+  setTimeout(() => {
+    if (_sirenActive) {
+      _neutralSince = Date.now() - 31000  // simule 31s neutre → ACK possible
+      document.getElementById('alarm-ack-status').textContent = '✅ MODE TEST — cliquez ACK pour couper'
+    }
+  }, 500)
 }
 
 function getBandLevels(nq) {
