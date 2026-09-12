@@ -1,53 +1,45 @@
 @echo off
 :: send_csv.bat — Envoie les CSV Sierra Chart vers le VPS toutes les 15 secondes
-:: Prérequis : aucun (curl est intégré Windows 10+)
-:: Lancement  : double-clic ou Planificateur de tâches Windows
+:: Auto-detection du fichier NQ dans C:\SierraChart_CME\Data\
 
-set VPS=2.29.3.199
+set BRIDGE=localhost
 set PORT=8766
 set SC_DATA=C:\SierraChart_CME\Data
 
-:: Noms des fichiers Sierra Chart — detecte automatiquement
-set NQ_FILE=%SC_DATA%\NQ_auto.csv
-if not exist "%NQ_FILE%" set NQ_FILE=%SC_DATA%\nq 30 mn.txt
-set ES_FILE=%SC_DATA%\ESU26_FUT_CME[M]  30 Min  #17_GraphData.txt
-set GC_FILE=%SC_DATA%\GC.csv.txt
-set CL_FILE=%SC_DATA%\CL.csv.txt
+:: ── Auto-detection NQ : priorité NQ_auto.csv puis scan du dossier ──
+set NQ_FILE=
+if exist "%SC_DATA%\NQ_auto.csv"     set NQ_FILE=%SC_DATA%\NQ_auto.csv
+if exist "%SC_DATA%\NQ_auto.csv.txt" set NQ_FILE=%SC_DATA%\NQ_auto.csv.txt
+if "%NQ_FILE%"=="" (
+  for %%F in ("%SC_DATA%\NQ*.csv" "%SC_DATA%\NQ*.txt" "%SC_DATA%\nq*.txt" "%SC_DATA%\nq*.csv") do (
+    if "%NQ_FILE%"=="" set NQ_FILE=%%F
+  )
+)
 
-echo SC Bridge sender demarré vers %VPS%:%PORT%
-echo Envoi toutes les 15 secondes...
-echo Fermer cette fenetre pour arrêter.
-echo.
+:: ── Auto-detection ES ──
+set ES_FILE=
+if exist "%SC_DATA%\ES_auto.csv"     set ES_FILE=%SC_DATA%\ES_auto.csv
+if exist "%SC_DATA%\ES_auto.csv.txt" set ES_FILE=%SC_DATA%\ES_auto.csv.txt
+if "%ES_FILE%"=="" (
+  for %%F in ("%SC_DATA%\ES*.csv" "%SC_DATA%\ES*.txt" "%SC_DATA%\es*.txt") do (
+    if "%ES_FILE%"=="" set ES_FILE=%%F
+  )
+)
 
 :loop
-:: Envoi NQ
-if exist "%NQ_FILE%" (
-    curl -s -X POST -H "Content-Type: text/plain" --data-binary "@%NQ_FILE%" http://%VPS%:%PORT%/upload/NQ >nul 2>&1
-    echo [%TIME%] NQ envoye
-) else (
-    echo [%TIME%] NQ introuvable: %NQ_FILE%
+:: ── Envoi NQ ──
+if not "%NQ_FILE%"=="" (
+  if exist "%NQ_FILE%" (
+    curl -s -X POST -H "Content-Type: text/plain" --data-binary "@%NQ_FILE%" http://%BRIDGE%:%PORT%/upload/NQ >nul 2>&1
+  )
 )
 
-:: Envoi ES
-if exist "%ES_FILE%" (
-    curl -s -X POST -H "Content-Type: text/plain" --data-binary "@%ES_FILE%" http://%VPS%:%PORT%/upload/ES >nul 2>&1
-    echo [%TIME%] ES envoye
-) else (
-    echo [%TIME%] ES introuvable: %ES_FILE%
+:: ── Envoi ES ──
+if not "%ES_FILE%"=="" (
+  if exist "%ES_FILE%" (
+    curl -s -X POST -H "Content-Type: text/plain" --data-binary "@%ES_FILE%" http://%BRIDGE%:%PORT%/upload/ES >nul 2>&1
+  )
 )
 
-:: Envoi GC (optionnel)
-if exist "%GC_FILE%" (
-    curl -s -X POST -H "Content-Type: text/plain" --data-binary "@%GC_FILE%" http://%VPS%:%PORT%/upload/GC >nul 2>&1
-    echo [%TIME%] GC envoye
-)
-
-:: Envoi CL (optionnel)
-if exist "%CL_FILE%" (
-    curl -s -X POST -H "Content-Type: text/plain" --data-binary "@%CL_FILE%" http://%VPS%:%PORT%/upload/CL >nul 2>&1
-    echo [%TIME%] CL envoye
-)
-
-echo.
 timeout /t 15 /nobreak >nul
 goto loop
