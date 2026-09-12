@@ -945,14 +945,18 @@ function testSiren() {
 
 function getBandLevels(nq) {
   const band = selectedAlarmBand
+  // sd1 : close > SD+1 ou < SD-1
   if (band === 'sd1') return { hi: parseFloat(nq.sd1h || 0), lo: parseFloat(nq.sd1l || 0) }
-  if (band === 'sd3') return { hi: parseFloat(nq.ovn_sd3h || 0), lo: parseFloat(nq.ovn_sd3l || 0) }
+  // sd3 : close > SD+2 ou < SD-2 (approche SD+3)
+  if (band === 'sd3') return { hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0) }
+  // zone12 : close ENTRE SD+1 et SD+2 (avec borne haute)
   if (band === 'zone12') return {
     hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0),
     hi2: parseFloat(nq.sd1h || 0), lo2: parseFloat(nq.sd1l || 0),
     zoneMode: true
   }
-  return { hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0) }
+  // sd2 (défaut) : close au-dessus SD+1 ou en-dessous SD-1 (entrée zone danger)
+  return { hi: parseFloat(nq.sd1h || 0), lo: parseFloat(nq.sd1l || 0) }
 }
 
 function checkAlarmZone(last, nq) {
@@ -976,7 +980,10 @@ function checkAlarmZone(last, nq) {
   } else {
     inDanger = (isValidVal(hi) && last >= hi) || (isValidVal(lo) && last <= lo)
     const bandName = selectedAlarmBand.toUpperCase()
-    alarmMsg = `🚨 NQ FRANCHIT ${(isValidVal(hi) && last >= hi) ? `${bandName}+ ↑  ${last.toFixed(2)}` : `${bandName}− ↓  ${last.toFixed(2)}`}`
+    const side = (isValidVal(hi) && last >= hi) ? `SD+1 ↑  ${last.toFixed(2)}` : `SD-1 ↓  ${last.toFixed(2)}`
+    alarmMsg = selectedAlarmBand === 'sd2'
+      ? `🚨 NQ CLOSE AU-DESSUS ${side} (zone SD+1→SD+2)`
+      : `🚨 NQ FRANCHIT ${bandName}  ${side}`
   }
 
   if (inDanger) {
