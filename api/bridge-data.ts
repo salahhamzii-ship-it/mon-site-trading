@@ -3,10 +3,11 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
-// Tunnels actifs — cloudflared service Windows (permanent) + ngrok fallback
+// Sources données — VPS direct + tunnels cloudflared/ngrok fallback
 const TUNNEL_URLS = [
-  'https://33654683-3a3b-4484-8441-0cda7748d29e.cfargotunnel.com/data',
-  'https://hatbox-placidly-crabmeat.ngrok-free.dev/data',
+  'http://2.29.3.199:8766/data',                                              // VPS direct (priorité)
+  'https://33654683-3a3b-4484-8441-0cda7748d29e.cfargotunnel.com/data',      // cloudflared
+  'https://hatbox-placidly-crabmeat.ngrok-free.dev/data',                    // ngrok fallback
 ]
 
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
