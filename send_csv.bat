@@ -7,8 +7,9 @@ set VPS=2.29.3.199
 set PORT=8766
 set SC_DATA=C:\SierraChart_CME\Data
 
-:: Noms des fichiers Sierra Chart (adapter si différents)
+:: Noms des fichiers Sierra Chart — detecte automatiquement
 set NQ_FILE=%SC_DATA%\NQ_auto.csv
+if not exist "%NQ_FILE%" set NQ_FILE=%SC_DATA%\nq 30 mn.txt
 set ES_FILE=%SC_DATA%\ESU26_FUT_CME[M]  30 Min  #17_GraphData.txt
 set GC_FILE=%SC_DATA%\GC.csv.txt
 set CL_FILE=%SC_DATA%\CL.csv.txt
