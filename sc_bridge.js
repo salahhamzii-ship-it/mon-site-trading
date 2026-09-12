@@ -1015,7 +1015,7 @@ const httpServer = createServer((req, res) => {
       IS_WIN ? String.raw`C:\Users\${process.env.USERNAME || 'USER'}\Desktop\sc-bridge\suivi_sd_nq.html` : '',
       IS_WIN ? String.raw`C:\Users\${process.env.USERPROFILE?.split('\\').pop() || 'USER'}\Desktop\sc-bridge\suivi_sd_nq.html` : '',
       // Chemin relatif au process (fonctionne si lancé depuis le dossier sc-bridge)
-      new URL('../suivi_sd_nq.html', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'),
+      new URL('./suivi_sd_nq.html', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'),
       '/home/user/mon-site-trading/suivi_sd_nq.html',
     ]
     let html = null
