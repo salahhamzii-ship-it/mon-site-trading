@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NQ SD Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+/* ── TOKENS ── */
+:root {
+  --bg:        #070c12;
+  --bg-p:      #0c1620;
+  --bg-row:    #101d28;
+  --br:        #1a2d3f;
+  --br2:       #24405a;
+  --txt:       #7a94aa;
+  --txt2:      #4a6478;
+  --hi:        #d4e8f5;
+  --gold:      #f0c040;
+  --goldd:     rgba(240,192,64,.12);
+  --sd3h:      #e03030;
+  --sd2h:      #cc5820;
+  --sd1h:      #b08020;
+  --sd1l:      #28a870;
+  --sd2l:      #18c050;
+  --sd3l:      #08d838;
+  --green:     #18c050;
+  --red:       #e03030;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg:        #eef3f8;
+  --bg-p:      #ffffff;
+  --bg-row:    #f4f8fc;
+  --br:        #ccdae6;
+  --br2:       #b0c8da;
+  --txt:       #4a6478;
+  --txt2:      #8aa0b2;
+  --hi:        #0a1e30;
+  --gold:      #c07800;
+  --goldd:     rgba(192,120,0,.10);
+  --sd3h:      #cc2020;
+  --sd2h:      #aa4010;
+  --sd1h:      #906010;
+  --sd1l:      #186040;
+  --sd2l:      #0a9030;
+  --sd3l:      #047820;
+  --green:     #0a9030;
+  --red:       #cc2020;
+}}
+:root[data-theme="dark"] {
+  --bg:        #070c12;
+  --bg-p:      #0c1620;
+  --bg-row:    #101d28;
+  --br:        #1a2d3f;
+  --br2:       #24405a;
+  --txt:       #7a94aa;
+  --txt2:      #4a6478;
+  --hi:        #d4e8f5;
+  --gold:      #f0c040;
+  --goldd:     rgba(240,192,64,.12);
+  --sd3h:      #e03030;
+  --sd2h:      #cc5820;
+  --sd1h:      #b08020;
+  --sd1l:      #28a870;
+  --sd2l:      #18c050;
+  --sd3l:      #08d838;
+  --green:     #18c050;
+  --red:       #e03030;
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--txt);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 0;
+}
+.mono { font-family: 'JetBrains Mono', 'Courier New', monospace; font-variant-numeric: tabular-nums; }
+
+/* ── SHELL ── */
+#shell {
+  display: grid;
+  grid-template-rows: 44px auto 1fr;
+  height: 100vh;
+}
+
+/* ── EDIT DRAWER ── */
+#edit-drawer {
+  display: none;
+  background: var(--bg-p);
+  border-bottom: 2px solid var(--gold);
+  padding: 14px 20px 12px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+#edit-drawer.open { display: block; }
+.edit-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+.edit-section { margin-bottom: 12px; }
+.edit-sec-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  letter-spacing: .16em;
+  color: var(--txt2);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px 12px;
+}
+.edit-field { display: flex; flex-direction: column; gap: 2px; }
+.edit-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  letter-spacing: .10em;
+  color: var(--txt2);
+}
+.edit-inp {
+  background: var(--bg);
+  border: 1px solid var(--br2);
+  border-radius: 2px;
+  color: var(--hi);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 4px 7px;
+  width: 100%;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.edit-inp:focus { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(240,192,64,.2); }
+.edit-inp::-webkit-inner-spin-button, .edit-inp::-webkit-outer-spin-button { -webkit-appearance: none; }
+.edit-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.btn-apply {
+  background: var(--gold); color: #060a0e;
+  border: none; border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: .14em;
+  padding: 6px 20px; cursor: pointer;
+}
+.btn-apply:hover { opacity: .88; }
+.btn-cancel {
+  background: none;
+  border: 1px solid var(--br2); border-radius: 2px;
+  color: var(--txt);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: .10em;
+  padding: 6px 14px; cursor: pointer;
+}
+.btn-cancel:hover { border-color: var(--txt); }
+.btn-reset {
+  background: none;
+  border: 1px solid rgba(224,48,48,.4); border-radius: 2px;
+  color: var(--red);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: .10em;
+  padding: 6px 14px; cursor: pointer;
+  margin-left: auto;
+}
+.btn-reset:hover { border-color: var(--red); }
+
+/* ── HEADER EDIT BUTTON ── */
+#btn-edit {
+  background: none;
+  border: 1px solid var(--br2); border-radius: 2px;
+  color: var(--txt);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: .10em;
+  padding: 4px 11px; cursor: pointer;
+  transition: border-color .12s, color .12s;
+}
+#btn-edit:hover, #btn-edit.active { border-color: var(--gold); color: var(--gold); }
+
+/* ── PRICE INPUT ── */
+#price-input {
+  display: none;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--gold);
+  color: var(--hi);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 24px; font-weight: 700;
+  width: 160px; outline: none;
+  appearance: textfield; -moz-appearance: textfield;
+}
+#price-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+#price-input.active { display: block; }
+#p-last { cursor: text; }
+#p-last:hover { opacity: .75; }
+#p-last::after { content: ' ✎'; font-size: 12px; opacity: .3; vertical-align: middle; }
+
+/* ── ALN PATTERN SELECTOR ── */
+#aln-row {
+  display: flex;
+  gap: 5px;
+  padding: 6px 18px 10px;
+}
+.aln-btn {
+  flex: 1;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px; font-weight: 700; letter-spacing: .09em;
+  padding: 5px 2px;
+  border-radius: 2px;
+  border: 1px solid var(--br);
+  background: var(--bg-row);
+  color: var(--txt2);
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+  line-height: 1.35;
+}
+.aln-btn:hover { border-color: var(--br2); color: var(--txt); }
+.aln-p1.active { background: rgba(240,192,64,.15); color: var(--gold); border-color: rgba(240,192,64,.5); }
+.aln-p2.active { background: rgba(74,120,160,.15); color: #6ab8e0; border-color: rgba(74,120,160,.5); }
+.aln-p3.active { background: rgba(24,192,80,.12); color: var(--green); border-color: rgba(24,192,80,.4); }
+.aln-p4.active { background: rgba(224,48,48,.10); color: var(--red); border-color: rgba(224,48,48,.35); }
+
+/* ── HEADER ── */
+#hdr {
+  background: var(--bg-p);
+  border-bottom: 1px solid var(--br);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  gap: 16px;
+}
+#hdr-l { display: flex; align-items: center; gap: 16px; }
+#hdr-r { display: flex; align-items: center; gap: 14px; }
+
+#logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  color: var(--hi);
+}
+#logo em { color: var(--gold); font-style: normal; }
+
+#mkt-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+.mkt-open { background: rgba(24,192,80,.12); color: var(--green); border: 1px solid rgba(24,192,80,.25); }
+.mkt-closed { background: rgba(224,48,48,.08); color: var(--red); border: 1px solid rgba(224,48,48,.20); }
+
+#clock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--hi);
+  letter-spacing: .06em;
+}
+
+#bst {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--txt2);
+  letter-spacing: .05em;
+}
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.d-ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.d-warn { background: var(--gold); animation: blink .9s step-end infinite; }
+.d-err  { background: var(--red); }
+@keyframes blink { 50% { opacity: .15 } }
+
+#demo-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  background: rgba(120,80,200,.12);
+  color: #a06ee0;
+  border: 1px solid rgba(120,80,200,.25);
+  display: none;
+}
+#demo-tag.on { display: block; }
+
+/* ── BODY GRID ── */
+#main {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  overflow: hidden;
+  gap: 1px;
+  background: var(--br);
+}
+.pane {
+  background: var(--bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── SECTION LABEL ── */
+.sec-lbl {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--bg-p);
+  border-bottom: 1px solid var(--br);
+  padding: 9px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--txt2);
+}
+
+/* ── SD RULER ── */
+#ruler-wrap { padding: 14px 18px 8px; position: relative; }
+
+/* vertical spine */
+#ruler-wrap::before {
+  content: '';
+  position: absolute;
+  left: 68px; top: 14px; bottom: 0;
+  width: 1px;
+  background: var(--br2);
+}
+
+.band {
+  display: grid;
+  grid-template-columns: 46px 8px 90px 1fr;
+  align-items: center;
+  gap: 0 8px;
+  padding: 4px 0;
+}
+.band-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-align: right;
+}
+.band-tick { width: 8px; height: 1px; }
+.band-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+.band-dist {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--txt2);
+}
+
+/* colour per band */
+.b-sd3h .band-lbl, .b-sd3h .band-val { color: var(--sd3h); }
+.b-sd3h .band-tick { background: var(--sd3h); opacity: .7; }
+.b-sd2h .band-lbl, .b-sd2h .band-val { color: var(--sd2h); }
+.b-sd2h .band-tick { background: var(--sd2h); opacity: .7; }
+.b-sd1h .band-lbl, .b-sd1h .band-val { color: var(--sd1h); }
+.b-sd1h .band-tick { background: var(--sd1h); opacity: .65; }
+.b-avwp .band-lbl, .b-avwp .band-val { color: var(--gold); font-weight: 700; }
+.b-avwp .band-tick { background: var(--gold); height: 2px; }
+.b-sd1l .band-lbl, .b-sd1l .band-val { color: var(--sd1l); }
+.b-sd1l .band-tick { background: var(--sd1l); opacity: .65; }
+.b-sd2l .band-lbl, .b-sd2l .band-val { color: var(--sd2l); }
+.b-sd2l .band-tick { background: var(--sd2l); opacity: .7; }
+.b-sd3l .band-lbl, .b-sd3l .band-val { color: var(--sd3l); }
+.b-sd3l .band-tick { background: var(--sd3l); opacity: .7; }
+
+/* price pin */
+#price-pin {
+  display: grid;
+  grid-template-columns: 46px 8px 1fr;
+  align-items: center;
+  gap: 0 8px;
+  padding: 8px 0;
+  margin: 2px 0;
+  border-top: 1px solid var(--goldd);
+  border-bottom: 1px solid var(--goldd);
+  background: linear-gradient(90deg, transparent, var(--goldd) 100%);
+}
+#price-pin .band-lbl { color: var(--gold); font-size: 8px; letter-spacing: .1em; }
+#price-pin .band-tick { background: var(--gold); height: 2px; opacity: 1; }
+#price-inner { display: flex; align-items: baseline; gap: 10px; }
+#p-last {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--hi);
+  letter-spacing: .02em;
+}
+#p-chg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+}
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.nil { color: var(--txt2); }
+
+/* signals row */
+#sigs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 18px 4px;
+}
+.sig {
+  flex: 1;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  padding: 5px 0;
+  border-radius: 2px;
+  border: 1px solid var(--br);
+  background: var(--bg-row);
+  color: var(--txt2);
+  transition: background .15s, color .15s, border-color .15s;
+}
+.sig-side {
+  flex: 1.5;
+  font-size: 9px;
+}
+.sig-laf { background: rgba(224,48,48,.1); color: var(--red); border-color: rgba(224,48,48,.35); }
+.sig-lbf { background: rgba(24,192,80,.1); color: var(--green); border-color: rgba(24,192,80,.35); }
+.sig-above { background: rgba(24,192,80,.08); color: var(--green); border-color: rgba(24,192,80,.25); }
+.sig-below { background: rgba(224,48,48,.08); color: var(--red); border-color: rgba(224,48,48,.20); }
+
+#upd {
+  padding: 4px 18px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--txt2);
+  letter-spacing: .04em;
+}
+
+/* ── RIGHT PANEL ── */
+#p-right { padding: 0; }
+.ref-sec { padding: 0 20px 12px; }
+.ref-sec + .ref-sec { border-top: 1px solid var(--br); padding-top: 10px; }
+.ref-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--txt2);
+  padding: 10px 0 6px;
+}
+.ref-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 70px;
+  align-items: center;
+  padding: 3.5px 0;
+  border-bottom: 1px solid var(--br);
+  gap: 4px;
+}
+.ref-row:last-child { border-bottom: none; }
+.ref-lbl { font-size: 11px; color: var(--txt); }
+.ref-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--hi);
+  text-align: right;
+}
+.ref-dist {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-align: right;
+}
+
+/* ── ALERT BAR ── */
+#alert-bar {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 90;
+  background: #0a0204;
+  border-top: 1px solid var(--red);
+  padding: 10px 20px;
+  align-items: center;
+  gap: 14px;
+}
+#alert-bar.on { display: flex; }
+#alert-txt {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: .06em;
+  flex: 1;
+}
+#alert-ok {
+  background: none;
+  border: 1px solid var(--red);
+  color: var(--red);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 3px 14px;
+  cursor: pointer;
+  border-radius: 2px;
+  letter-spacing: .1em;
+}
+#alert-ok:hover { background: rgba(224,48,48,.1); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  #main { grid-template-columns: 1fr; }
+  body { overflow: auto; }
+  #shell { height: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .d-warn { animation: none; } }
+</style>
+
+<div id="shell">
+
+<!-- HEADER -->
+<header id="hdr">
+  <div id="hdr-l">
+    <div id="logo"><em>NQ</em> · SD LIVE</div>
+    <div id="mkt-pill" class="mkt-closed">FERMÉ</div>
+    <div id="demo-tag">DÉMO</div>
+  </div>
+  <div id="hdr-r">
+    <button id="btn-edit" onclick="toggleEditor()">⚙ NIVEAUX</button>
+    <div id="clock" class="mono">--:--:-- ET</div>
+    <div id="bst">
+      <span class="dot d-warn" id="bdot"></span>
+      <span id="blbl">connexion...</span>
+    </div>
+  </div>
+</header>
+
+<!-- EDIT DRAWER -->
+<div id="edit-drawer">
+  <div class="edit-title">⚙ ÉDITER LES NIVEAUX</div>
+
+  <div class="edit-section">
+    <div class="edit-sec-lbl">AVWAP 18H · BANDES SD</div>
+    <div class="edit-grid">
+      <div class="edit-field"><label class="edit-lbl">AVWAP 18H 👑</label><input class="edit-inp" id="ei-vwap" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">SD+1</label><input class="edit-inp" id="ei-sd1h" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">SD−1</label><input class="edit-inp" id="ei-sd1l" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">SD+2</label><input class="edit-inp" id="ei-sd2h" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">SD−2</label><input class="edit-inp" id="ei-sd2l" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">SD+3 (auto ou manuel)</label><input class="edit-inp" id="ei-sd3h" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">SD−3 (auto ou manuel)</label><input class="edit-inp" id="ei-sd3l" type="number" step="0.25"></div>
+    </div>
+  </div>
+
+  <div class="edit-section">
+    <div class="edit-sec-lbl">J−1 RTH</div>
+    <div class="edit-grid">
+      <div class="edit-field"><label class="edit-lbl">VAH</label><input class="edit-inp" id="ei-vah" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">POC</label><input class="edit-inp" id="ei-poc" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">VAL</label><input class="edit-inp" id="ei-val" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">High J−1</label><input class="edit-inp" id="ei-j1h" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">Settle</label><input class="edit-inp" id="ei-j1s" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">Low J−1</label><input class="edit-inp" id="ei-j1l" type="number" step="0.25"></div>
+    </div>
+  </div>
+
+  <div class="edit-section">
+    <div class="edit-sec-lbl">OVN · ASIE · LONDRES</div>
+    <div class="edit-grid">
+      <div class="edit-field"><label class="edit-lbl">OVN High</label><input class="edit-inp" id="ei-ovnh" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">OVN Low</label><input class="edit-inp" id="ei-ovnl" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">Asia High</label><input class="edit-inp" id="ei-ash" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">Asia Low</label><input class="edit-inp" id="ei-asl" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">London High</label><input class="edit-inp" id="ei-lnh" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">London Low</label><input class="edit-inp" id="ei-lnl" type="number" step="0.25"></div>
+    </div>
+  </div>
+
+  <div class="edit-section">
+    <div class="edit-sec-lbl">🔗 CONNEXION BRIDGE SC — IP LOCAL (optionnel)</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--txt2);margin-bottom:8px;line-height:1.6">
+      Entrez l'IP de votre PC Sierra Chart pour données LIVE.<br>
+      Exemple : <span style="color:var(--gold)">http://192.168.1.50:8766/data</span><br>
+      <span style="color:var(--txt2);font-size:8px">Si bloqué par le navigateur : Paramètres → Contenu mixte → Autoriser pour cette page.</span>
+    </div>
+    <div class="edit-grid" style="grid-template-columns:1fr auto;gap:8px">
+      <div class="edit-field">
+        <label class="edit-lbl">URL BRIDGE (http://IP:8766/data)</label>
+        <input class="edit-inp" id="ei-bridge" type="text" placeholder="http://192.168.x.x:8766/data">
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn-apply" style="white-space:nowrap" onclick="testBridge()">TESTER</button>
+      </div>
+    </div>
+    <div id="bridge-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--txt2);margin-top:6px;height:16px"></div>
+  </div>
+
+  <div class="edit-actions">
+    <button class="btn-apply" onclick="applyEditor()">✓ APPLIQUER</button>
+    <button class="btn-cancel" onclick="toggleEditor()">ANNULER</button>
+    <button class="btn-reset" onclick="resetLevels()">RESET DÉMO</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT : SD RULER -->
+  <div class="pane" id="p-left">
+    <div class="sec-lbl">BANDES SD · AVWAP 18H</div>
+    <div id="ruler-wrap">
+
+      <div class="band b-sd3h">
+        <span class="band-lbl">SD+3</span><span class="band-tick"></span>
+        <span class="band-val mono" id="v-sd3h">—</span>
+        <span class="band-dist" id="d-sd3h"></span>
+      </div>
+      <div class="band b-sd2h">
+        <span class="band-lbl">SD+2</span><span class="band-tick"></span>
+        <span class="band-val mono" id="v-sd2h">—</span>
+        <span class="band-dist" id="d-sd2h"></span>
+      </div>
+      <div class="band b-sd1h">
+        <span class="band-lbl">SD+1</span><span class="band-tick"></span>
+        <span class="band-val mono" id="v-sd1h">—</span>
+        <span class="band-dist" id="d-sd1h"></span>
+      </div>
+
+      <div id="price-pin">
+        <span class="band-lbl" style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.1em;color:var(--gold);text-align:right">▶ NQ</span>
+        <span class="band-tick" style="background:var(--gold);height:2px;opacity:1"></span>
+        <div id="price-inner">
+          <span id="p-last" class="mono" title="Cliquer pour saisir le prix">—</span>
+          <input id="price-input" type="number" step="0.25" placeholder="prix…">
+          <span id="p-chg" class="nil">—</span>
+        </div>
+      </div>
+
+      <div class="band b-avwp">
+        <span class="band-lbl">AVWAP</span><span class="band-tick"></span>
+        <span class="band-val mono" id="v-avwp">—</span>
+        <span class="band-dist" id="d-avwp"></span>
+      </div>
+      <div class="band b-sd1l">
+        <span class="band-lbl">SD−1</span><span class="band-tick"></span>
+        <span class="band-val mono" id="v-sd1l">—</span>
+        <span class="band-dist" id="d-sd1l"></span>
+      </div>
+      <div class="band b-sd2l">
+        <span class="band-lbl">SD−2</span><span class="band-tick"></span>
+        <span class="band-val mono" id="v-sd2l">—</span>
+        <span class="band-dist" id="d-sd2l"></span>
+      </div>
+      <div class="band b-sd3l">
+        <span class="band-lbl">SD−3</span><span class="band-tick"></span>
+        <span class="band-val mono" id="v-sd3l">—</span>
+        <span class="band-dist" id="d-sd3l"></span>
+      </div>
+
+    </div><!-- /ruler-wrap -->
+
+    <div id="sigs">
+      <div class="sig sig-side" id="sig-side">— AVWAP</div>
+      <div class="sig" id="sig-laf">LAF SD+2</div>
+      <div class="sig" id="sig-lbf">LBF SD−2</div>
+    </div>
+    <div id="aln-row">
+      <button class="aln-btn aln-p1" onclick="setALN('P1')">P1<br><span style="font-size:7px;font-weight:400;opacity:.75">ENGULF</span></button>
+      <button class="aln-btn aln-p2" onclick="setALN('P2')">P2<br><span style="font-size:7px;font-weight:400;opacity:.75">INSIDE</span></button>
+      <button class="aln-btn aln-p3" onclick="setALN('P3')">P3<br><span style="font-size:7px;font-weight:400;opacity:.75">▲ PART</span></button>
+      <button class="aln-btn aln-p4" onclick="setALN('P4')">P4<br><span style="font-size:7px;font-weight:400;opacity:.75">▼ PART</span></button>
+    </div>
+    <div id="upd">SC update : —</div>
+  </div><!-- /p-left -->
+
+  <!-- RIGHT : REFERENCE LEVELS -->
+  <div class="pane" id="p-right">
+    <div class="sec-lbl">NIVEAUX DE RÉFÉRENCE</div>
+
+    <div class="ref-sec">
+      <div class="ref-title">J−1 RTH</div>
+      <div class="ref-row"><span class="ref-lbl">VAH</span>     <span class="ref-val mono" id="v-vah">—</span>    <span class="ref-dist" id="d-vah"></span></div>
+      <div class="ref-row"><span class="ref-lbl">POC</span>     <span class="ref-val mono" id="v-poc">—</span>    <span class="ref-dist" id="d-poc"></span></div>
+      <div class="ref-row"><span class="ref-lbl">VAL</span>     <span class="ref-val mono" id="v-val">—</span>    <span class="ref-dist" id="d-val"></span></div>
+      <div class="ref-row"><span class="ref-lbl">High J−1</span><span class="ref-val mono" id="v-j1h">—</span>   <span class="ref-dist" id="d-j1h"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Settle</span>  <span class="ref-val mono" id="v-j1s">—</span>   <span class="ref-dist" id="d-j1s"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Low J−1</span> <span class="ref-val mono" id="v-j1l">—</span>   <span class="ref-dist" id="d-j1l"></span></div>
+    </div>
+
+    <div class="ref-sec">
+      <div class="ref-title">OVN (18H → 09H30)</div>
+      <div class="ref-row"><span class="ref-lbl">High OVN</span><span class="ref-val mono" id="v-ovnh">—</span><span class="ref-dist" id="d-ovnh"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Low OVN</span> <span class="ref-val mono" id="v-ovnl">—</span><span class="ref-dist" id="d-ovnl"></span></div>
+    </div>
+
+    <div class="ref-sec">
+      <div class="ref-title">ALN — ASIE / LONDRES</div>
+      <div class="ref-row"><span class="ref-lbl">Asie High</span>  <span class="ref-val mono" id="v-ash">—</span><span class="ref-dist" id="d-ash"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Asie Low</span>   <span class="ref-val mono" id="v-asl">—</span><span class="ref-dist" id="d-asl"></span></div>
+      <div class="ref-row"><span class="ref-lbl">London High</span><span class="ref-val mono" id="v-lnh">—</span><span class="ref-dist" id="d-lnh"></span></div>
+      <div class="ref-row"><span class="ref-lbl">London Low</span> <span class="ref-val mono" id="v-lnl">—</span><span class="ref-dist" id="d-lnl"></span></div>
+    </div>
+
+  </div><!-- /p-right -->
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ALERT BAR -->
+<div id="alert-bar">
+  <div id="alert-txt">⚠ ALERTE NQ</div>
+  <button id="alert-ok" onclick="document.getElementById('alert-bar').classList.remove('on')">OK</button>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────
+const LS_KEY        = 'nq_levels_v2'
+const LS_ALN        = 'nq_aln_v1'
+const LS_BRIDGE     = 'nq_bridge_url_v1'
+const POLL          = 3000   // 3s — synchro avec REFRESH_S=3 du bridge
+
+function defaultBridge() {
+  const h = window.location.hostname
+  if (!h || h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8766/data'
+  // IP locale → bridge direct (servi par sc_bridge.js)
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return window.location.origin + '/data'
+  // Vercel / domaine public → proxy API
+  return window.location.origin + '/api/bridge-data'
+}
+
+function getBridgeUrl() {
+  try {
+    const saved = localStorage.getItem(LS_BRIDGE)
+    if (saved && saved.startsWith('http')) return saved
+  } catch(e) {}
+  return defaultBridge()
+}
+
+let BRIDGE = getBridgeUrl()
+
+// ── DEMO (données réelles CSV 11/09/2026) ────────────
+const DEMO = {
+  last:       29389.25,
+  vwap:       29372.05,
+  sd1h:       29492.81, sd1l: 29251.29,
+  sd2h:       29613.56, sd2l: 29130.54,
+  ovn_sd3h:   29734.33, ovn_sd3l: 29009.77,
+  vah:        29476.25, poc: 29415.00, val: 29366.00,
+  j1_high:    29500.25, j1_settle: 29389.25, j1_low: 29040.50,
+  ovn_high:   29500.25, ovn_low: 29040.50,
+  asia_high:  29242.75, asia_low:  29040.50,
+  lon_high:   29500.25, lon_low:   29204.00,
+  avwap_side: 'below',
+  laf_sd2:    false,
+  lbf_sd2:    false,
+  lastUpdate: '2026-09-11T16:00:00',
+  _demo:      true
+}
+
+// ── STATE ────────────────────────────────────────────
+let prevLast = null, miss = 0, demo = false
+let manualLevels = null, currentALN = null
+
+// ── STORAGE ──────────────────────────────────────────
+function saveLevels(lvl) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(lvl)) } catch(e) {}
+}
+function loadLevels() {
+  try {
+    const s = localStorage.getItem(LS_KEY)
+    if (s) manualLevels = JSON.parse(s)
+  } catch(e) {}
+}
+function effectiveData(bridge) {
+  if (bridge && !bridge._demo) return bridge
+  return manualLevels || DEMO
+}
+
+// ── EDITOR ───────────────────────────────────────────
+function toggleEditor() {
+  const d  = document.getElementById('edit-drawer')
+  const btn = document.getElementById('btn-edit')
+  const open = d.classList.toggle('open')
+  btn.classList.toggle('active', open)
+  if (open) {
+    const L = manualLevels || DEMO
+    const map = {
+      vwap: L.vwap, sd1h: L.sd1h, sd1l: L.sd1l,
+      sd2h: L.sd2h, sd2l: L.sd2l,
+      sd3h: L.ovn_sd3h, sd3l: L.ovn_sd3l,
+      vah: L.vah, poc: L.poc, val: L.val,
+      j1h: L.j1_high, j1s: L.j1_settle, j1l: L.j1_low,
+      ovnh: L.ovn_high, ovnl: L.ovn_low,
+      ash: L.asia_high, asl: L.asia_low,
+      lnh: L.lon_high,  lnl: L.lon_low
+    }
+    Object.entries(map).forEach(([k, v]) => {
+      const el = document.getElementById('ei-' + k)
+      if (el && v != null) el.value = v
+    })
+    const bInp = document.getElementById('ei-bridge')
+    if (bInp) bInp.value = BRIDGE || ''
+    const bStatus = document.getElementById('bridge-status')
+    if (bStatus) bStatus.textContent = ''
+    document.getElementById('ei-vwap').focus()
+  }
+}
+
+function applyEditor() {
+  const g = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) || 0 : 0 }
+  const vwap = g('ei-vwap'), sd1h = g('ei-sd1h')
+  const sigma = sd1h > 0 && vwap > 0 ? sd1h - vwap : 120
+  const sd3h_auto = vwap + 3 * sigma
+  const sd3l_auto = vwap - 3 * sigma
+  const sd3h = g('ei-sd3h') || sd3h_auto
+  const sd3l = g('ei-sd3l') || sd3l_auto
+  const currentPrice = parseFloat(document.getElementById('p-last').textContent.replace(/[^0-9.]/g,''))
+  const last = currentPrice > 10000 ? currentPrice : (manualLevels || DEMO).last
+  manualLevels = {
+    last, vwap,
+    sd1h: g('ei-sd1h'), sd1l: g('ei-sd1l'),
+    sd2h: g('ei-sd2h'), sd2l: g('ei-sd2l'),
+    ovn_sd3h: sd3h, ovn_sd3l: sd3l,
+    vah: g('ei-vah'), poc: g('ei-poc'), val: g('ei-val'),
+    j1_high: g('ei-j1h'), j1_settle: g('ei-j1s'), j1_low: g('ei-j1l'),
+    ovn_high: g('ei-ovnh'), ovn_low: g('ei-ovnl'),
+    asia_high: g('ei-ash'), asia_low: g('ei-asl'),
+    lon_high: g('ei-lnh'), lon_low: g('ei-lnl'),
+    avwap_side: last >= vwap ? 'above' : 'below',
+    laf_sd2: false, lbf_sd2: false,
+    lastUpdate: new Date().toISOString(),
+    _demo: true
+  }
+  saveLevels(manualLevels)
+  // save bridge URL if changed
+  const bInp = document.getElementById('ei-bridge')
+  if (bInp && bInp.value.trim().startsWith('http')) {
+    const burl = bInp.value.trim()
+    try { localStorage.setItem(LS_BRIDGE, burl) } catch(e) {}
+    BRIDGE = burl
+  }
+  document.getElementById('edit-drawer').classList.remove('open')
+  document.getElementById('btn-edit').classList.remove('active')
+  render(manualLevels)
+}
+
+function resetLevels() {
+  manualLevels = null
+  try { localStorage.removeItem(LS_KEY) } catch(e) {}
+  document.getElementById('edit-drawer').classList.remove('open')
+  document.getElementById('btn-edit').classList.remove('active')
+  render(DEMO)
+}
+
+// ── ALN PATTERN ──────────────────────────────────────
+function setALN(p) {
+  currentALN = currentALN === p ? null : p
+  document.querySelectorAll('.aln-btn').forEach(b => b.classList.remove('active'))
+  if (currentALN) {
+    const b = document.querySelector('.aln-' + currentALN.toLowerCase())
+    if (b) b.classList.add('active')
+    try { localStorage.setItem(LS_ALN, currentALN) } catch(e) {}
+  } else {
+    try { localStorage.removeItem(LS_ALN) } catch(e) {}
+  }
+}
+
+// ── PRICE EDIT ────────────────────────────────────────
+function initPriceEdit() {
+  const span = document.getElementById('p-last')
+  const inp  = document.getElementById('price-input')
+  span.addEventListener('click', () => {
+    const cur = parseFloat(span.textContent.replace(/[^0-9.]/g,''))
+    inp.value = cur > 0 ? cur : ''
+    span.style.display = 'none'
+    inp.classList.add('active')
+    inp.focus(); inp.select()
+  })
+  const commit = () => {
+    const v = parseFloat(inp.value)
+    inp.classList.remove('active')
+    span.style.display = ''
+    if (!isNaN(v) && v > 10000) {
+      const base = manualLevels || DEMO
+      manualLevels = { ...base, last: v,
+        avwap_side: v >= base.vwap ? 'above' : 'below',
+        lastUpdate: new Date().toISOString(), _demo: true }
+      saveLevels(manualLevels)
+      render(manualLevels)
+    }
+  }
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); commit() }
+    if (e.key === 'Escape') { inp.classList.remove('active'); span.style.display = '' }
+  })
+  inp.addEventListener('blur', commit)
+}
+
+// ── CLOCK ────────────────────────────────────────────
+function nyNow() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+}
+function isOpen() {
+  const d = nyNow(), dow = d.getDay(), m = d.getHours() * 60 + d.getMinutes()
+  if (dow === 6) return false
+  if (dow === 0) return m >= 1080
+  if (dow === 5) return m < 960
+  return true
+}
+function tickClock() {
+  const t = nyNow()
+  const p = n => String(n).padStart(2, '0')
+  document.getElementById('clock').textContent =
+    p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds()) + ' ET'
+  const mp = document.getElementById('mkt-pill')
+  const o  = isOpen()
+  mp.textContent = o ? 'OUVERT' : 'FERMÉ'
+  mp.className   = 'mkt-pill ' + (o ? 'mkt-open' : 'mkt-closed')
+}
+setInterval(tickClock, 1000); tickClock()
+
+// ── FORMAT ───────────────────────────────────────────
+function fmt(v) {
+  const f = parseFloat(v)
+  return (isNaN(f) || f === 0) ? '—' : f.toFixed(2)
+}
+function dist(last, lvl) {
+  if (!last || !lvl || isNaN(last) || isNaN(lvl)) return ''
+  const d = Math.round(last - lvl)
+  const s = d >= 0 ? '+' : ''
+  const c = d >= 0 ? 'var(--sd2l)' : 'var(--sd2h)'
+  return `<span style="color:${c}">${s}${d}</span>`
+}
+
+// ── RENDER ───────────────────────────────────────────
+function render(nq) {
+  const last = parseFloat(nq.last)
+
+  // price
+  document.getElementById('p-last').textContent = fmt(last)
+  const chgEl = document.getElementById('p-chg')
+  if (prevLast !== null) {
+    const d = last - prevLast
+    chgEl.textContent = (d >= 0 ? '+' : '') + d.toFixed(2)
+    chgEl.className   = d > 0 ? 'pos' : d < 0 ? 'neg' : 'nil'
+  } else { chgEl.textContent = '—'; chgEl.className = 'nil' }
+
+  // SD bands
+  ;[
+    ['sd3h', nq.ovn_sd3h], ['sd2h', nq.sd2h], ['sd1h', nq.sd1h],
+    ['avwp', nq.vwap],
+    ['sd1l', nq.sd1l],     ['sd2l', nq.sd2l], ['sd3l', nq.ovn_sd3l],
+  ].forEach(([k, v]) => {
+    const ve = document.getElementById('v-' + k)
+    const de = document.getElementById('d-' + k)
+    if (ve) ve.textContent = fmt(v)
+    if (de) de.innerHTML   = dist(last, parseFloat(v))
+  })
+
+  // AVWAP side
+  const ss = document.getElementById('sig-side')
+  if (nq.avwap_side === 'above') {
+    ss.textContent = '▲ DESSUS AVWAP'; ss.className = 'sig sig-side sig-above'
+  } else if (nq.avwap_side === 'below') {
+    ss.textContent = '▼ DESSOUS AVWAP'; ss.className = 'sig sig-side sig-below'
+  } else {
+    ss.textContent = '— AVWAP'; ss.className = 'sig sig-side'
+  }
+
+  // LAF / LBF
+  const sl = document.getElementById('sig-laf')
+  const sb = document.getElementById('sig-lbf')
+  sl.className = 'sig' + (nq.laf_sd2 ? ' sig-laf' : '')
+  sb.className = 'sig' + (nq.lbf_sd2 ? ' sig-lbf' : '')
+
+  // ref levels
+  ;[
+    ['vah', nq.vah], ['poc', nq.poc], ['val', nq.val],
+    ['j1h', nq.j1_high], ['j1s', nq.j1_settle], ['j1l', nq.j1_low],
+    ['ovnh', nq.ovn_high], ['ovnl', nq.ovn_low],
+    ['ash', nq.asia_high], ['asl', nq.asia_low],
+    ['lnh', nq.lon_high],  ['lnl', nq.lon_low],
+  ].forEach(([k, v]) => {
+    const ve = document.getElementById('v-' + k)
+    const de = document.getElementById('d-' + k)
+    if (ve) ve.textContent = fmt(v)
+    if (de) de.innerHTML   = dist(last, parseFloat(v))
+  })
+
+  // update time
+  const ts = nq.lastUpdate
+    ? new Date(nq.lastUpdate).toLocaleTimeString('fr-FR')
+    : (nq._demo ? 'mode DÉMO' : '—')
+  document.getElementById('upd').textContent = 'SC update : ' + ts
+
+  prevLast = last
+}
+
+// ── TEST BRIDGE ───────────────────────────────────────
+async function testBridge() {
+  const inp    = document.getElementById('ei-bridge')
+  const status = document.getElementById('bridge-status')
+  const url    = (inp ? inp.value.trim() : '') || BRIDGE
+  if (!url) { status.textContent = '⚠ Entrer une URL'; status.style.color = 'var(--gold)'; return }
+  status.textContent = '⏳ Connexion...'; status.style.color = 'var(--txt2)'
+  try {
+    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    const d = await r.json()
+    const last = (d.NQ || d).last
+    status.textContent = '✓ BRIDGE OK' + (last ? ' — NQ last: ' + parseFloat(last).toFixed(2) : '')
+    status.style.color = 'var(--green)'
+    try { localStorage.setItem(LS_BRIDGE, url) } catch(e) {}
+    BRIDGE = url
+  } catch(e) {
+    status.textContent = '✗ ' + e.message + ' — vérifier IP ou autoriser contenu mixte'
+    status.style.color = 'var(--red)'
+  }
+}
+
+// ── BRIDGE STATUS ─────────────────────────────────────
+function setStatus(state) {
+  const dot = document.getElementById('bdot')
+  const lbl = document.getElementById('blbl')
+  const tag = document.getElementById('demo-tag')
+  if (state === 'ok') {
+    dot.className = 'dot d-ok'; lbl.textContent = 'BRIDGE OK'
+    lbl.style.color = ''; tag.classList.remove('on')
+    miss = 0; demo = false
+  } else if (state === 'wait') {
+    dot.className = 'dot d-warn'; lbl.textContent = '...'
+  } else {
+    dot.className = 'dot d-err'; lbl.textContent = 'OFFLINE'
+    lbl.style.color = 'var(--red)'
+    miss++
+    if (miss >= 2 && !demo) {
+      demo = true; tag.classList.add('on')
+      render(manualLevels || DEMO)
+    }
+  }
+}
+
+// ── POLL ─────────────────────────────────────────────
+async function poll() {
+  setStatus('wait')
+  try {
+    const r = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    const d = await r.json()
+    setStatus('ok')
+    render(effectiveData(d.NQ || d))
+  } catch {
+    setStatus('err')
+  }
+}
+
+// ── BOOT ─────────────────────────────────────────────
+loadLevels()
+const initData = manualLevels || DEMO
+render(initData)
+document.getElementById('demo-tag').classList.add('on')
+setStatus('err')
+initPriceEdit()
+try {
+  const savedALN = localStorage.getItem(LS_ALN)
+  if (savedALN) setALN(savedALN)
+} catch(e) {}
+poll()
+setInterval(poll, POLL)
+</script>
+</html>
