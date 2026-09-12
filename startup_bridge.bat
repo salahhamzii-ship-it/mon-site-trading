@@ -22,6 +22,10 @@ if not exist node_modules\ws (
     echo [INSTALL] npm install ws...
     npm install ws --save --prefix . >nul 2>&1
 )
+if not exist node_modules\@ngrok (
+    echo [INSTALL] npm install @ngrok/ngrok ^(tunnel auto^)...
+    npm install @ngrok/ngrok --save --prefix . >nul 2>&1
+)
 
 :: Tuer anciennes instances Node uniquement (pas cloudflared = service Windows)
 taskkill /F /IM node.exe >nul 2>&1

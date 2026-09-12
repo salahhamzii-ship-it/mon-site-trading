@@ -1158,3 +1158,45 @@ console.log()
 
 LAST_MSG = buildMessage()
 setInterval(refreshAndBroadcast, REFRESH_S * 1000)
+
+// ─── TUNNEL NGROK AUTOMATIQUE ─────────────────────────────────────────────────
+// Lit l'authtoken depuis le fichier de config ngrok existant (pas d'action requise)
+function readNgrokAuthtoken() {
+  const USERNAME = process.env.USERNAME || process.env.USER || 'USER'
+  const candidates = [
+    `C:\\Users\\${USERNAME}\\.config\\ngrok\\ngrok.yml`,
+    `C:\\Users\\${USERNAME}\\AppData\\Roaming\\ngrok\\ngrok.yml`,
+    `${process.env.HOME || ''}/.config/ngrok/ngrok.yml`,
+  ]
+  for (const p of candidates) {
+    try {
+      const c = readFileSync(p, 'utf8')
+      const m = c.match(/authtoken:\s*(.+)/)
+      if (m) { console.log(`  [NGROK] Authtoken lu: ${p}`); return m[1].trim() }
+    } catch {}
+  }
+  return null
+}
+
+async function startNgrokTunnel() {
+  console.log('\n[NGROK] Demarrage tunnel...')
+  try {
+    const { default: ngrok } = await import('@ngrok/ngrok')
+    const opts = {
+      addr: HTTP_PORT,
+      domain: 'hatbox-placidly-crabmeat.ngrok-free.dev',
+    }
+    const authtoken = readNgrokAuthtoken()
+    if (authtoken) opts.authtoken = authtoken
+    const listener = await ngrok.forward(opts)
+    console.log(`  [NGROK] TUNNEL ACTIF: ${listener.url()}`)
+    console.log(`  [NGROK] Cockpit Vercel peut maintenant atteindre le bridge`)
+  } catch (err) {
+    console.warn(`  [NGROK] Tunnel non disponible: ${err.message}`)
+    console.warn(`  [NGROK] Bridge HTTP uniquement sur localhost:${HTTP_PORT}`)
+    console.warn(`  [NGROK] Pour activer: npm install @ngrok/ngrok puis relancer`)
+  }
+}
+
+// Lancer le tunnel de façon non bloquante
+startNgrokTunnel().catch(() => {})
