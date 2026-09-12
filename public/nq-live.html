@@ -486,38 +486,60 @@ body {
 }
 
 /* ── ALERT BAR ── */
+@keyframes alarm-pulse {
+  0%,100% { background: #0a0204; }
+  50%      { background: #2a0404; }
+}
+@keyframes alarm-txt-blink {
+  0%,100% { opacity: 1; }
+  45%     { opacity: 1; }
+  50%     { opacity: .15; }
+  55%     { opacity: 1; }
+}
 #alert-bar {
   display: none;
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 90;
   background: #0a0204;
-  border-top: 1px solid var(--red);
-  padding: 10px 20px;
+  border-top: 2px solid var(--red);
+  padding: 12px 20px;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
-#alert-bar.on { display: flex; }
+#alert-bar.on    { display: flex; }
+#alert-bar.alarm { animation: alarm-pulse .8s ease-in-out infinite; border-top-width: 3px; }
 #alert-txt {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--red);
   letter-spacing: .06em;
   flex: 1;
 }
+#alert-bar.alarm #alert-txt { animation: alarm-txt-blink 1.2s linear infinite; }
 #alert-ok {
-  background: none;
-  border: 1px solid var(--red);
-  color: var(--red);
+  background: var(--red);
+  border: 2px solid var(--red);
+  color: #fff;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  padding: 3px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 24px;
   cursor: pointer;
-  border-radius: 2px;
-  letter-spacing: .1em;
+  border-radius: 3px;
+  letter-spacing: .12em;
+  min-width: 180px;
+  text-align: center;
 }
-#alert-ok:hover { background: rgba(224,48,48,.1); }
+#alert-ok:hover { background: #c01e1e; }
+#alert-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--txt2);
+  letter-spacing: .06em;
+  margin-top: 3px;
+}
 
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
@@ -720,8 +742,11 @@ body {
 
 <!-- ALERT BAR -->
 <div id="alert-bar">
-  <div id="alert-txt">⚠ ALERTE NQ</div>
-  <button id="alert-ok" onclick="document.getElementById('alert-bar').classList.remove('on')">OK</button>
+  <div style="flex:1">
+    <div id="alert-txt">⚠ ALERTE NQ</div>
+    <div id="alert-sub">ACTIF 18H00–06H00 NY · PRIX EN ZONE SD</div>
+  </div>
+  <button id="alert-ok" onclick="ackAlarm()">✋ ACQUITTER L'ALERTE</button>
 </div>
 
 <script>
@@ -999,6 +1024,9 @@ function dist(last, lvl) {
 function render(nq) {
   const last = parseFloat(nq.last)
 
+  // Alarme SD — fenêtre NY 18H–06H
+  checkAlarmZone(last, parseFloat(nq.sd2h || 0), parseFloat(nq.sd2l || 0))
+
   // price
   document.getElementById('p-last').textContent = fmt(last)
   const chgEl = document.getElementById('p-chg')
@@ -1057,6 +1085,114 @@ function render(nq) {
   document.getElementById('upd').textContent = 'SC update : ' + ts
 
   prevLast = last
+}
+
+// ── ALARM ENGINE ─────────────────────────────────────
+let _alarmActive = false
+let _alarmAcked  = false
+let _rearmTimer  = null
+let _audioCtx    = null
+let _sirenNodes  = null
+
+function getNYHour() {
+  try {
+    const s = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', hour: 'numeric', hour12: false
+    }).format(new Date())
+    return parseInt(s, 10)
+  } catch(e) { return new Date().getUTCHours() }  // fallback UTC
+}
+
+function isAlertWindow() {
+  const h = getNYHour()
+  return h >= 18 || h < 6
+}
+
+function startSiren() {
+  if (_sirenNodes) return
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    const ctx = _audioCtx
+    if (ctx.state === 'suspended') ctx.resume()
+
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.65, ctx.currentTime)
+    gain.connect(ctx.destination)
+
+    const osc = ctx.createOscillator()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(780, ctx.currentTime)
+    osc.connect(gain)
+
+    // LFO — balayage sirène ±320 Hz, période 2s
+    const lfo = ctx.createOscillator()
+    lfo.type = 'sine'
+    lfo.frequency.setValueAtTime(0.5, ctx.currentTime)
+    const lfoGain = ctx.createGain()
+    lfoGain.gain.setValueAtTime(320, ctx.currentTime)
+    lfo.connect(lfoGain)
+    lfoGain.connect(osc.frequency)
+
+    osc.start(); lfo.start()
+    _sirenNodes = { osc, gain, lfo, lfoGain }
+  } catch(e) { console.warn('[ALARM] AudioContext error:', e.message) }
+}
+
+function stopSiren() {
+  if (!_sirenNodes) return
+  try { _sirenNodes.osc.stop(); _sirenNodes.lfo.stop(); _sirenNodes.gain.disconnect() } catch(e) {}
+  _sirenNodes = null
+}
+
+function triggerAlarm(msg) {
+  _alarmActive = true
+  const bar = document.getElementById('alert-bar')
+  const txt = document.getElementById('alert-txt')
+  bar.classList.add('on', 'alarm')
+  txt.textContent = msg
+  startSiren()
+}
+
+function ackAlarm() {
+  _alarmActive = false
+  _alarmAcked  = true
+  stopSiren()
+  const bar = document.getElementById('alert-bar')
+  bar.classList.remove('on', 'alarm')
+  if (_rearmTimer) clearTimeout(_rearmTimer)
+  _rearmTimer = null
+}
+
+function checkAlarmZone(last, sd2h, sd2l) {
+  if (!isAlertWindow()) {
+    // Hors fenêtre 18H–06H : silence + reset acquittement
+    if (_alarmActive) { stopSiren(); _alarmActive = false; document.getElementById('alert-bar').classList.remove('on','alarm') }
+    _alarmAcked = false
+    if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
+    return
+  }
+
+  const inDanger = (sd2h > 0 && last >= sd2h) || (sd2l > 0 && last <= sd2l)
+
+  if (inDanger) {
+    if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
+    if (!_alarmAcked) {
+      const side = (sd2h > 0 && last >= sd2h)
+        ? `SD+2 ↑  ${last.toFixed(2)}`
+        : `SD−2 ↓  ${last.toFixed(2)}`
+      triggerAlarm(`🚨 NQ ${side}`)
+    }
+  } else {
+    // Prix revenu entre les bandes
+    if (_alarmActive) {
+      stopSiren(); _alarmActive = false
+      document.getElementById('alert-bar').classList.remove('on','alarm')
+    }
+    // Réarmement : 30s hors danger déverrouille l'acquittement
+    if (_alarmAcked && !_rearmTimer) {
+      _rearmTimer = setTimeout(() => { _alarmAcked = false; _rearmTimer = null }, 30000)
+    }
+  }
 }
 
 // ── TEST BRIDGE ───────────────────────────────────────
