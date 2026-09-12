@@ -3,66 +3,44 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 
 <style>
-/* ── TOKENS ── */
+/* ── DESIGN TOKENS ── */
 :root {
-  --bg:        #070c12;
-  --bg-p:      #0c1620;
-  --bg-row:    #101d28;
-  --br:        #1a2d3f;
-  --br2:       #24405a;
-  --txt:       #7a94aa;
-  --txt2:      #4a6478;
-  --hi:        #d4e8f5;
-  --gold:      #f0c040;
-  --goldd:     rgba(240,192,64,.12);
-  --sd3h:      #e03030;
-  --sd2h:      #cc5820;
-  --sd1h:      #b08020;
-  --sd1l:      #28a870;
-  --sd2l:      #18c050;
-  --sd3l:      #08d838;
-  --green:     #18c050;
-  --red:       #e03030;
+  --bg:      #070c12;
+  --bg-p:    #0c1620;
+  --bg-row:  #101d28;
+  --br:      #1a2d3f;
+  --br2:     #24405a;
+  --txt:     #7a94aa;
+  --txt2:    #4a6478;
+  --hi:      #d4e8f5;
+  --gold:    #f0c040;
+  --goldd:   rgba(240,192,64,.12);
+  --sd3h:    #e03030;
+  --sd2h:    #cc5820;
+  --sd1h:    #b08020;
+  --sd1l:    #28a870;
+  --sd2l:    #18c050;
+  --sd3l:    #08d838;
+  --green:   #18c050;
+  --red:     #e03030;
 }
 @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
-  --bg:        #eef3f8;
-  --bg-p:      #ffffff;
-  --bg-row:    #f4f8fc;
-  --br:        #ccdae6;
-  --br2:       #b0c8da;
-  --txt:       #4a6478;
-  --txt2:      #8aa0b2;
-  --hi:        #0a1e30;
-  --gold:      #c07800;
-  --goldd:     rgba(192,120,0,.10);
-  --sd3h:      #cc2020;
-  --sd2h:      #aa4010;
-  --sd1h:      #906010;
-  --sd1l:      #186040;
-  --sd2l:      #0a9030;
-  --sd3l:      #047820;
-  --green:     #0a9030;
-  --red:       #cc2020;
+  --bg:      #eef3f8; --bg-p:  #ffffff; --bg-row: #f4f8fc;
+  --br:      #ccdae6; --br2:   #b0c8da;
+  --txt:     #4a6478; --txt2:  #8aa0b2; --hi:     #0a1e30;
+  --gold:    #c07800; --goldd: rgba(192,120,0,.10);
+  --sd3h:    #cc2020; --sd2h:  #aa4010; --sd1h:   #906010;
+  --sd1l:    #186040; --sd2l:  #0a9030; --sd3l:   #047820;
+  --green:   #0a9030; --red:   #cc2020;
 }}
 :root[data-theme="dark"] {
-  --bg:        #070c12;
-  --bg-p:      #0c1620;
-  --bg-row:    #101d28;
-  --br:        #1a2d3f;
-  --br2:       #24405a;
-  --txt:       #7a94aa;
-  --txt2:      #4a6478;
-  --hi:        #d4e8f5;
-  --gold:      #f0c040;
-  --goldd:     rgba(240,192,64,.12);
-  --sd3h:      #e03030;
-  --sd2h:      #cc5820;
-  --sd1h:      #b08020;
-  --sd1l:      #28a870;
-  --sd2l:      #18c050;
-  --sd3l:      #08d838;
-  --green:     #18c050;
-  --red:       #e03030;
+  --bg:      #070c12; --bg-p:  #0c1620; --bg-row: #101d28;
+  --br:      #1a2d3f; --br2:   #24405a;
+  --txt:     #7a94aa; --txt2:  #4a6478; --hi:     #d4e8f5;
+  --gold:    #f0c040; --goldd: rgba(240,192,64,.12);
+  --sd3h:    #e03030; --sd2h:  #cc5820; --sd1h:   #b08020;
+  --sd1l:    #28a870; --sd2l:  #18c050; --sd3l:   #08d838;
+  --green:   #18c050; --red:   #e03030;
 }
 
 /* ── RESET ── */
@@ -74,156 +52,15 @@ body {
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.45;
-  padding: 0;
 }
 .mono { font-family: 'JetBrains Mono', 'Courier New', monospace; font-variant-numeric: tabular-nums; }
 
-/* ── SHELL ── */
+/* ── SHELL LAYOUT ── */
 #shell {
   display: grid;
   grid-template-rows: 44px auto 1fr;
   height: 100vh;
 }
-
-/* ── EDIT DRAWER ── */
-#edit-drawer {
-  display: none;
-  background: var(--bg-p);
-  border-bottom: 2px solid var(--gold);
-  padding: 14px 20px 12px;
-  overflow-y: auto;
-  max-height: 60vh;
-}
-#edit-drawer.open { display: block; }
-.edit-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 10px;
-}
-.edit-section { margin-bottom: 12px; }
-.edit-sec-lbl {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 8px;
-  letter-spacing: .16em;
-  color: var(--txt2);
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.edit-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 6px 12px;
-}
-.edit-field { display: flex; flex-direction: column; gap: 2px; }
-.edit-lbl {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 8.5px;
-  letter-spacing: .10em;
-  color: var(--txt2);
-}
-.edit-inp {
-  background: var(--bg);
-  border: 1px solid var(--br2);
-  border-radius: 2px;
-  color: var(--hi);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  padding: 4px 7px;
-  width: 100%;
-  outline: none;
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-.edit-inp:focus { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(240,192,64,.2); }
-.edit-inp::-webkit-inner-spin-button, .edit-inp::-webkit-outer-spin-button { -webkit-appearance: none; }
-.edit-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-.btn-apply {
-  background: var(--gold); color: #060a0e;
-  border: none; border-radius: 2px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px; font-weight: 700; letter-spacing: .14em;
-  padding: 6px 20px; cursor: pointer;
-}
-.btn-apply:hover { opacity: .88; }
-.btn-cancel {
-  background: none;
-  border: 1px solid var(--br2); border-radius: 2px;
-  color: var(--txt);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px; letter-spacing: .10em;
-  padding: 6px 14px; cursor: pointer;
-}
-.btn-cancel:hover { border-color: var(--txt); }
-.btn-reset {
-  background: none;
-  border: 1px solid rgba(224,48,48,.4); border-radius: 2px;
-  color: var(--red);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px; letter-spacing: .10em;
-  padding: 6px 14px; cursor: pointer;
-  margin-left: auto;
-}
-.btn-reset:hover { border-color: var(--red); }
-
-/* ── HEADER EDIT BUTTON ── */
-#btn-edit {
-  background: none;
-  border: 1px solid var(--br2); border-radius: 2px;
-  color: var(--txt);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px; letter-spacing: .10em;
-  padding: 4px 11px; cursor: pointer;
-  transition: border-color .12s, color .12s;
-}
-#btn-edit:hover, #btn-edit.active { border-color: var(--gold); color: var(--gold); }
-
-/* ── PRICE INPUT ── */
-#price-input {
-  display: none;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid var(--gold);
-  color: var(--hi);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 24px; font-weight: 700;
-  width: 160px; outline: none;
-  appearance: textfield; -moz-appearance: textfield;
-}
-#price-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-#price-input.active { display: block; }
-#p-last { cursor: text; }
-#p-last:hover { opacity: .75; }
-#p-last::after { content: ' ✎'; font-size: 12px; opacity: .3; vertical-align: middle; }
-
-/* ── ALN PATTERN SELECTOR ── */
-#aln-row {
-  display: flex;
-  gap: 5px;
-  padding: 6px 18px 10px;
-}
-.aln-btn {
-  flex: 1;
-  text-align: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 8.5px; font-weight: 700; letter-spacing: .09em;
-  padding: 5px 2px;
-  border-radius: 2px;
-  border: 1px solid var(--br);
-  background: var(--bg-row);
-  color: var(--txt2);
-  cursor: pointer;
-  transition: background .12s, color .12s, border-color .12s;
-  line-height: 1.35;
-}
-.aln-btn:hover { border-color: var(--br2); color: var(--txt); }
-.aln-p1.active { background: rgba(240,192,64,.15); color: var(--gold); border-color: rgba(240,192,64,.5); }
-.aln-p2.active { background: rgba(74,120,160,.15); color: #6ab8e0; border-color: rgba(74,120,160,.5); }
-.aln-p3.active { background: rgba(24,192,80,.12); color: var(--green); border-color: rgba(24,192,80,.4); }
-.aln-p4.active { background: rgba(224,48,48,.10); color: var(--red); border-color: rgba(224,48,48,.35); }
 
 /* ── HEADER ── */
 #hdr {
@@ -237,135 +74,161 @@ body {
 }
 #hdr-l { display: flex; align-items: center; gap: 16px; }
 #hdr-r { display: flex; align-items: center; gap: 14px; }
-
 #logo {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .2em;
-  color: var(--hi);
+  font-size: 11px; font-weight: 700; letter-spacing: .2em; color: var(--hi);
 }
 #logo em { color: var(--gold); font-style: normal; }
-
 #mkt-pill {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .14em;
-  padding: 2px 8px;
-  border-radius: 2px;
+  font-size: 9px; font-weight: 700; letter-spacing: .14em;
+  padding: 2px 8px; border-radius: 2px;
 }
-.mkt-open { background: rgba(24,192,80,.12); color: var(--green); border: 1px solid rgba(24,192,80,.25); }
-.mkt-closed { background: rgba(224,48,48,.08); color: var(--red); border: 1px solid rgba(224,48,48,.20); }
-
+.mkt-open   { background: rgba(24,192,80,.12); color: var(--green); border: 1px solid rgba(24,192,80,.25); }
+.mkt-closed { background: rgba(224,48,48,.08); color: var(--red);   border: 1px solid rgba(224,48,48,.20); }
 #clock {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--hi);
-  letter-spacing: .06em;
+  font-size: 14px; font-weight: 500; color: var(--hi); letter-spacing: .06em;
 }
-
 #bst {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: flex; align-items: center; gap: 6px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--txt2);
-  letter-spacing: .05em;
+  font-size: 10px; color: var(--txt2); letter-spacing: .05em;
 }
-.dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
+.dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .d-ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
 .d-warn { background: var(--gold); animation: blink .9s step-end infinite; }
 .d-err  { background: var(--red); }
 @keyframes blink { 50% { opacity: .15 } }
-
 #demo-tag {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: .18em;
-  padding: 2px 7px;
-  border-radius: 2px;
-  background: rgba(120,80,200,.12);
-  color: #a06ee0;
-  border: 1px solid rgba(120,80,200,.25);
-  display: none;
+  font-size: 8px; font-weight: 700; letter-spacing: .18em;
+  padding: 2px 7px; border-radius: 2px;
+  background: rgba(120,80,200,.12); color: #a06ee0;
+  border: 1px solid rgba(120,80,200,.25); display: none;
 }
 #demo-tag.on { display: block; }
+#btn-edit {
+  background: none; border: 1px solid var(--br2); border-radius: 2px;
+  color: var(--txt);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: .10em;
+  padding: 4px 11px; cursor: pointer;
+  transition: border-color .12s, color .12s;
+}
+#btn-edit:hover, #btn-edit.active { border-color: var(--gold); color: var(--gold); }
 
-/* ── BODY GRID ── */
+/* ── EDIT DRAWER ── */
+#edit-drawer {
+  display: none;
+  background: var(--bg-p);
+  border-bottom: 2px solid var(--gold);
+  padding: 14px 20px 12px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+#edit-drawer.open { display: block; }
+.edit-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 10px;
+}
+.edit-section { margin-bottom: 12px; }
+.edit-sec-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: .16em; color: var(--txt2);
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px 12px;
+}
+.edit-field { display: flex; flex-direction: column; gap: 2px; }
+.edit-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: .10em; color: var(--txt2); }
+.edit-inp {
+  background: var(--bg); border: 1px solid var(--br2); border-radius: 2px;
+  color: var(--hi); font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; padding: 4px 7px; width: 100%; outline: none;
+  appearance: textfield; -moz-appearance: textfield;
+}
+.edit-inp:focus { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(240,192,64,.2); }
+.edit-inp::-webkit-inner-spin-button, .edit-inp::-webkit-outer-spin-button { -webkit-appearance: none; }
+.edit-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.btn-apply {
+  background: var(--gold); color: #060a0e;
+  border: none; border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: .14em;
+  padding: 6px 20px; cursor: pointer;
+}
+.btn-apply:hover { opacity: .88; }
+.btn-cancel {
+  background: none; border: 1px solid var(--br2); border-radius: 2px;
+  color: var(--txt); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: .10em; padding: 6px 14px; cursor: pointer;
+}
+.btn-cancel:hover { border-color: var(--txt); }
+.btn-reset {
+  background: none; border: 1px solid rgba(224,48,48,.4); border-radius: 2px;
+  color: var(--red); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: .10em; padding: 6px 14px; cursor: pointer;
+  margin-left: auto;
+}
+.btn-reset:hover { border-color: var(--red); }
+
+/* ── PRICE INPUT (click-to-edit) ── */
+#price-input {
+  display: none;
+  background: transparent; border: none;
+  border-bottom: 2px solid var(--gold);
+  color: var(--hi); font-family: 'JetBrains Mono', monospace;
+  font-size: 24px; font-weight: 700;
+  width: 160px; outline: none;
+  appearance: textfield; -moz-appearance: textfield;
+}
+#price-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+#price-input.active { display: block; }
+#p-last { cursor: text; }
+#p-last:hover { opacity: .75; }
+#p-last::after { content: ' ✎'; font-size: 12px; opacity: .3; vertical-align: middle; }
+
+/* ── MAIN LAYOUT ── */
 #main {
   display: grid;
   grid-template-columns: 320px 1fr;
-  overflow: hidden;
-  gap: 1px;
+  overflow: hidden; gap: 1px;
   background: var(--br);
 }
-.pane {
-  background: var(--bg);
-  overflow-y: auto;
-  overflow-x: hidden;
-}
+.pane { background: var(--bg); overflow-y: auto; overflow-x: hidden; }
 
 /* ── SECTION LABEL ── */
 .sec-lbl {
   position: sticky; top: 0; z-index: 2;
-  background: var(--bg-p);
-  border-bottom: 1px solid var(--br);
+  background: var(--bg-p); border-bottom: 1px solid var(--br);
   padding: 9px 18px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 8.5px;
-  font-weight: 600;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--txt2);
+  font-size: 8.5px; font-weight: 600; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--txt2);
 }
 
-/* ── SD RULER ── */
+/* ── SD RULER (left panel) ── */
 #ruler-wrap { padding: 14px 18px 8px; position: relative; }
-
-/* vertical spine */
 #ruler-wrap::before {
   content: '';
-  position: absolute;
-  left: 68px; top: 14px; bottom: 0;
-  width: 1px;
-  background: var(--br2);
+  position: absolute; left: 68px; top: 14px; bottom: 0;
+  width: 1px; background: var(--br2);
 }
-
 .band {
   display: grid;
   grid-template-columns: 46px 8px 90px 1fr;
-  align-items: center;
-  gap: 0 8px;
-  padding: 4px 0;
+  align-items: center; gap: 0 8px; padding: 4px 0;
 }
-.band-lbl {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-align: right;
-}
+.band-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: .06em; text-align: right; }
 .band-tick { width: 8px; height: 1px; }
-.band-val {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 500;
-}
-.band-dist {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--txt2);
-}
+.band-val  { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; }
+.band-dist { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--txt2); }
 
-/* colour per band */
 .b-sd3h .band-lbl, .b-sd3h .band-val { color: var(--sd3h); }
 .b-sd3h .band-tick { background: var(--sd3h); opacity: .7; }
 .b-sd2h .band-lbl, .b-sd2h .band-val { color: var(--sd2h); }
@@ -385,10 +248,8 @@ body {
 #price-pin {
   display: grid;
   grid-template-columns: 46px 8px 1fr;
-  align-items: center;
-  gap: 0 8px;
-  padding: 8px 0;
-  margin: 2px 0;
+  align-items: center; gap: 0 8px;
+  padding: 8px 0; margin: 2px 0;
   border-top: 1px solid var(--goldd);
   border-bottom: 1px solid var(--goldd);
   background: linear-gradient(90deg, transparent, var(--goldd) 100%);
@@ -398,55 +259,49 @@ body {
 #price-inner { display: flex; align-items: baseline; gap: 10px; }
 #p-last {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--hi);
-  letter-spacing: .02em;
+  font-size: 24px; font-weight: 700; color: var(--hi); letter-spacing: .02em;
 }
-#p-chg {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 500;
-}
+#p-chg { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
 .pos { color: var(--green); }
 .neg { color: var(--red); }
 .nil { color: var(--txt2); }
 
-/* signals row */
+/* signals / ALN */
 #sigs {
-  display: flex;
-  gap: 8px;
-  padding: 10px 18px 4px;
+  display: flex; gap: 8px; padding: 10px 18px 4px;
 }
 .sig {
-  flex: 1;
-  text-align: center;
+  flex: 1; text-align: center;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .12em;
-  padding: 5px 0;
-  border-radius: 2px;
-  border: 1px solid var(--br);
-  background: var(--bg-row);
-  color: var(--txt2);
+  font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  padding: 5px 0; border-radius: 2px;
+  border: 1px solid var(--br); background: var(--bg-row); color: var(--txt2);
   transition: background .15s, color .15s, border-color .15s;
 }
-.sig-side {
-  flex: 1.5;
-  font-size: 9px;
+.sig-side   { flex: 1.5; }
+.sig-laf    { background: rgba(224,48,48,.1);  color: var(--red);   border-color: rgba(224,48,48,.35); }
+.sig-lbf    { background: rgba(24,192,80,.1);  color: var(--green); border-color: rgba(24,192,80,.35); }
+.sig-above  { background: rgba(24,192,80,.08); color: var(--green); border-color: rgba(24,192,80,.25); }
+.sig-below  { background: rgba(224,48,48,.08); color: var(--red);   border-color: rgba(224,48,48,.20); }
+#aln-row { display: flex; gap: 5px; padding: 6px 18px 10px; }
+.aln-btn {
+  flex: 1; text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px; font-weight: 700; letter-spacing: .09em;
+  padding: 5px 2px; border-radius: 2px;
+  border: 1px solid var(--br); background: var(--bg-row); color: var(--txt2);
+  cursor: pointer; line-height: 1.35;
+  transition: background .12s, color .12s, border-color .12s;
 }
-.sig-laf { background: rgba(224,48,48,.1); color: var(--red); border-color: rgba(224,48,48,.35); }
-.sig-lbf { background: rgba(24,192,80,.1); color: var(--green); border-color: rgba(24,192,80,.35); }
-.sig-above { background: rgba(24,192,80,.08); color: var(--green); border-color: rgba(24,192,80,.25); }
-.sig-below { background: rgba(224,48,48,.08); color: var(--red); border-color: rgba(224,48,48,.20); }
-
+.aln-btn:hover { border-color: var(--br2); color: var(--txt); }
+.aln-p1.active { background: rgba(240,192,64,.15);  color: var(--gold);  border-color: rgba(240,192,64,.5); }
+.aln-p2.active { background: rgba(74,120,160,.15);  color: #6ab8e0;      border-color: rgba(74,120,160,.5); }
+.aln-p3.active { background: rgba(24,192,80,.12);   color: var(--green); border-color: rgba(24,192,80,.4); }
+.aln-p4.active { background: rgba(224,48,48,.10);   color: var(--red);   border-color: rgba(224,48,48,.35); }
 #upd {
   padding: 4px 18px 14px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  color: var(--txt2);
-  letter-spacing: .04em;
+  font-size: 9px; color: var(--txt2); letter-spacing: .04em;
 }
 
 /* ── RIGHT PANEL ── */
@@ -455,99 +310,92 @@ body {
 .ref-sec + .ref-sec { border-top: 1px solid var(--br); padding-top: 10px; }
 .ref-title {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--txt2);
-  padding: 10px 0 6px;
+  font-size: 8.5px; font-weight: 700; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--txt2); padding: 10px 0 6px;
 }
 .ref-row {
-  display: grid;
-  grid-template-columns: 96px 1fr 70px;
-  align-items: center;
-  padding: 3.5px 0;
-  border-bottom: 1px solid var(--br);
-  gap: 4px;
+  display: grid; grid-template-columns: 96px 1fr 70px;
+  align-items: center; padding: 3.5px 0;
+  border-bottom: 1px solid var(--br); gap: 4px;
 }
 .ref-row:last-child { border-bottom: none; }
 .ref-lbl { font-size: 11px; color: var(--txt); }
-.ref-val {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--hi);
-  text-align: right;
+.ref-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; color: var(--hi); text-align: right; }
+.ref-dist { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-align: right; }
+
+/* ── VERROU 4 — OVERLAY ACK CENTRÉ ── */
+@keyframes alarm-bg-pulse {
+  0%,100% { background: rgba(10,2,4,.92); }
+  50%     { background: rgba(30,4,4,.96); }
 }
-.ref-dist {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  text-align: right;
+@keyframes alarm-txt-flash {
+  0%,100% { opacity: 1; }
+  48%     { opacity: 1; }
+  50%     { opacity: .1; }
+  52%     { opacity: 1; }
+}
+@keyframes btn-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(200,0,0,.6), 0 0 40px rgba(200,0,0,.3); }
+  50%     { box-shadow: 0 0 0 18px rgba(200,0,0,0), 0 0 60px rgba(200,0,0,.5); }
 }
 
-/* ── ALERT BAR ── */
-@keyframes alarm-pulse {
-  0%,100% { background: #0a0204; }
-  50%      { background: #2a0404; }
-}
-@keyframes alarm-txt-blink {
-  0%,100% { opacity: 1; }
-  45%     { opacity: 1; }
-  50%     { opacity: .15; }
-  55%     { opacity: 1; }
-}
-#alert-bar {
+#alarm-overlay {
   display: none;
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 90;
-  background: #0a0204;
-  border-top: 2px solid var(--red);
-  padding: 12px 20px;
-  align-items: center;
-  gap: 16px;
+  position: fixed; inset: 0; z-index: 9999;
+  align-items: center; justify-content: center; flex-direction: column;
+  gap: 28px;
+  animation: alarm-bg-pulse .8s ease-in-out infinite;
 }
-#alert-bar.on    { display: flex; }
-#alert-bar.alarm { animation: alarm-pulse .8s ease-in-out infinite; border-top-width: 3px; }
-#alert-txt {
+#alarm-overlay.on { display: flex; }
+
+#alarm-msg {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--red);
-  letter-spacing: .06em;
-  flex: 1;
+  font-size: clamp(18px, 4vw, 28px);
+  font-weight: 900; letter-spacing: .08em;
+  color: #ff4444;
+  text-align: center; line-height: 1.3;
+  animation: alarm-txt-flash 1.2s linear infinite;
 }
-#alert-bar.alarm #alert-txt { animation: alarm-txt-blink 1.2s linear infinite; }
-#alert-ok {
-  background: var(--red);
-  border: 2px solid var(--red);
-  color: #fff;
+
+#alarm-sub {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 8px 24px;
-  cursor: pointer;
-  border-radius: 3px;
-  letter-spacing: .12em;
-  min-width: 180px;
+  font-size: clamp(11px, 2vw, 14px);
+  color: #cc6666; letter-spacing: .06em;
   text-align: center;
 }
-#alert-ok:hover { background: #c01e1e; }
-#alert-sub {
+
+#alarm-ack-btn {
+  background: #bb0000;
+  color: #fff;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 8px;
-  color: var(--txt2);
-  letter-spacing: .06em;
-  margin-top: 3px;
+  font-size: clamp(16px, 3vw, 24px);
+  font-weight: 900; letter-spacing: .15em; text-transform: uppercase;
+  padding: clamp(18px,3vh,32px) clamp(40px,8vw,80px);
+  border: 3px solid #ff3333; border-radius: 6px;
+  cursor: pointer; min-width: min(400px, 85vw);
+  text-align: center;
+  transition: background .1s, border-color .1s;
+  animation: btn-pulse 1.4s ease-in-out infinite;
+}
+#alarm-ack-btn:hover { background: #990000; border-color: #ff6666; }
+#alarm-ack-btn:active { background: #770000; transform: scale(.97); }
+
+#alarm-ack-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: #aa5555; letter-spacing: .06em;
+  text-align: center; min-height: 18px;
 }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
   #main { grid-template-columns: 1fr; }
-  body { overflow: auto; }
+  body  { overflow: auto; }
   #shell { height: auto; }
 }
-@media (prefers-reduced-motion: reduce) { .d-warn { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .d-warn { animation: none; }
+  #alarm-ack-btn { animation: none; }
+}
 </style>
 
 <div id="shell">
@@ -564,25 +412,39 @@ body {
     <div id="clock" class="mono">--:--:-- ET</div>
     <div id="bst">
       <span class="dot d-warn" id="bdot"></span>
-      <span id="blbl">connexion...</span>
+      <span id="blbl">connexion…</span>
     </div>
   </div>
 </header>
 
 <!-- EDIT DRAWER -->
 <div id="edit-drawer">
-  <div class="edit-title">⚙ ÉDITER LES NIVEAUX</div>
+  <div class="edit-title">⚙ ÉDITER LES NIVEAUX — PERSISTANCE 16H AUTOMATIQUE</div>
 
   <div class="edit-section">
-    <div class="edit-sec-lbl">AVWAP 18H · BANDES SD</div>
+    <div class="edit-sec-lbl">AVWAP 18H 👑 · BANDES SD</div>
     <div class="edit-grid">
       <div class="edit-field"><label class="edit-lbl">AVWAP 18H 👑</label><input class="edit-inp" id="ei-vwap" type="number" step="0.25"></div>
       <div class="edit-field"><label class="edit-lbl">SD+1</label><input class="edit-inp" id="ei-sd1h" type="number" step="0.25"></div>
       <div class="edit-field"><label class="edit-lbl">SD−1</label><input class="edit-inp" id="ei-sd1l" type="number" step="0.25"></div>
       <div class="edit-field"><label class="edit-lbl">SD+2</label><input class="edit-inp" id="ei-sd2h" type="number" step="0.25"></div>
       <div class="edit-field"><label class="edit-lbl">SD−2</label><input class="edit-inp" id="ei-sd2l" type="number" step="0.25"></div>
-      <div class="edit-field"><label class="edit-lbl">SD+3 (auto ou manuel)</label><input class="edit-inp" id="ei-sd3h" type="number" step="0.25"></div>
-      <div class="edit-field"><label class="edit-lbl">SD−3 (auto ou manuel)</label><input class="edit-inp" id="ei-sd3l" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">SD+3 (auto si vide)</label><input class="edit-inp" id="ei-sd3h" type="number" step="0.25"></div>
+      <div class="edit-field"><label class="edit-lbl">SD−3 (auto si vide)</label><input class="edit-inp" id="ei-sd3l" type="number" step="0.25"></div>
+    </div>
+  </div>
+
+  <div class="edit-section">
+    <div class="edit-sec-lbl">ALARME — BANDE SURVEILLÉE (sentinelle nuit 18H–06H)</div>
+    <div class="edit-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+      <div class="edit-field">
+        <label class="edit-lbl">BANDE ALARME</label>
+        <select class="edit-inp" id="ei-alarm-band" style="appearance:auto">
+          <option value="sd2">SD+2 / SD−2</option>
+          <option value="sd1">SD+1 / SD−1</option>
+          <option value="sd3">SD+3 / SD−3</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -611,11 +473,9 @@ body {
   </div>
 
   <div class="edit-section">
-    <div class="edit-sec-lbl">🔗 CONNEXION BRIDGE SC — IP LOCAL (optionnel)</div>
+    <div class="edit-sec-lbl">🔗 CONNEXION BRIDGE SC — IP LOCAL</div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--txt2);margin-bottom:8px;line-height:1.6">
-      Entrez l'IP de votre PC Sierra Chart pour données LIVE.<br>
-      Exemple : <span style="color:var(--gold)">http://192.168.1.50:8766/data</span><br>
-      <span style="color:var(--txt2);font-size:8px">Si bloqué par le navigateur : Paramètres → Contenu mixte → Autoriser pour cette page.</span>
+      Exemple : <span style="color:var(--gold)">http://192.168.1.50:8766/data</span>
     </div>
     <div class="edit-grid" style="grid-template-columns:1fr auto;gap:8px">
       <div class="edit-field">
@@ -626,11 +486,11 @@ body {
         <button class="btn-apply" style="white-space:nowrap" onclick="testBridge()">TESTER</button>
       </div>
     </div>
-    <div id="bridge-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--txt2);margin-top:6px;height:16px"></div>
+    <div id="bridge-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--txt2);margin-top:6px;min-height:16px"></div>
   </div>
 
   <div class="edit-actions">
-    <button class="btn-apply" onclick="applyEditor()">✓ APPLIQUER</button>
+    <button class="btn-apply" onclick="applyEditor()">✓ APPLIQUER &amp; SAUVEGARDER</button>
     <button class="btn-cancel" onclick="toggleEditor()">ANNULER</button>
     <button class="btn-reset" onclick="resetLevels()">RESET DÉMO</button>
   </div>
@@ -664,7 +524,7 @@ body {
         <span class="band-lbl" style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.1em;color:var(--gold);text-align:right">▶ NQ</span>
         <span class="band-tick" style="background:var(--gold);height:2px;opacity:1"></span>
         <div id="price-inner">
-          <span id="p-last" class="mono" title="Cliquer pour saisir le prix">—</span>
+          <span id="p-last" class="mono" title="Cliquer pour saisir le prix manuellement">—</span>
           <input id="price-input" type="number" step="0.25" placeholder="prix…">
           <span id="p-chg" class="nil">—</span>
         </div>
@@ -691,7 +551,7 @@ body {
         <span class="band-dist" id="d-sd3l"></span>
       </div>
 
-    </div><!-- /ruler-wrap -->
+    </div>
 
     <div id="sigs">
       <div class="sig sig-side" id="sig-side">— AVWAP</div>
@@ -705,7 +565,7 @@ body {
       <button class="aln-btn aln-p4" onclick="setALN('P4')">P4<br><span style="font-size:7px;font-weight:400;opacity:.75">▼ PART</span></button>
     </div>
     <div id="upd">SC update : —</div>
-  </div><!-- /p-left -->
+  </div>
 
   <!-- RIGHT : REFERENCE LEVELS -->
   <div class="pane" id="p-right">
@@ -713,12 +573,12 @@ body {
 
     <div class="ref-sec">
       <div class="ref-title">J−1 RTH</div>
-      <div class="ref-row"><span class="ref-lbl">VAH</span>     <span class="ref-val mono" id="v-vah">—</span>    <span class="ref-dist" id="d-vah"></span></div>
-      <div class="ref-row"><span class="ref-lbl">POC</span>     <span class="ref-val mono" id="v-poc">—</span>    <span class="ref-dist" id="d-poc"></span></div>
-      <div class="ref-row"><span class="ref-lbl">VAL</span>     <span class="ref-val mono" id="v-val">—</span>    <span class="ref-dist" id="d-val"></span></div>
-      <div class="ref-row"><span class="ref-lbl">High J−1</span><span class="ref-val mono" id="v-j1h">—</span>   <span class="ref-dist" id="d-j1h"></span></div>
-      <div class="ref-row"><span class="ref-lbl">Settle</span>  <span class="ref-val mono" id="v-j1s">—</span>   <span class="ref-dist" id="d-j1s"></span></div>
-      <div class="ref-row"><span class="ref-lbl">Low J−1</span> <span class="ref-val mono" id="v-j1l">—</span>   <span class="ref-dist" id="d-j1l"></span></div>
+      <div class="ref-row"><span class="ref-lbl">VAH</span>     <span class="ref-val mono" id="v-vah">—</span><span class="ref-dist" id="d-vah"></span></div>
+      <div class="ref-row"><span class="ref-lbl">POC</span>     <span class="ref-val mono" id="v-poc">—</span><span class="ref-dist" id="d-poc"></span></div>
+      <div class="ref-row"><span class="ref-lbl">VAL</span>     <span class="ref-val mono" id="v-val">—</span><span class="ref-dist" id="d-val"></span></div>
+      <div class="ref-row"><span class="ref-lbl">High J−1</span><span class="ref-val mono" id="v-j1h">—</span><span class="ref-dist" id="d-j1h"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Settle</span>  <span class="ref-val mono" id="v-j1s">—</span><span class="ref-dist" id="d-j1s"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Low J−1</span> <span class="ref-val mono" id="v-j1l">—</span><span class="ref-dist" id="d-j1l"></span></div>
     </div>
 
     <div class="ref-sec">
@@ -735,92 +595,53 @@ body {
       <div class="ref-row"><span class="ref-lbl">London Low</span> <span class="ref-val mono" id="v-lnl">—</span><span class="ref-dist" id="d-lnl"></span></div>
     </div>
 
-  </div><!-- /p-right -->
-
-</div><!-- /main -->
-</div><!-- /shell -->
-
-<!-- ALERT BAR -->
-<div id="alert-bar">
-  <div style="flex:1">
-    <div id="alert-txt">⚠ ALERTE NQ</div>
-    <div id="alert-sub">ACTIF 18H00–06H00 NY · PRIX EN ZONE SD</div>
   </div>
-  <button id="alert-ok" onclick="ackAlarm()">✋ ACQUITTER L'ALERTE</button>
+
+</div>
+</div>
+
+<!-- VERROU 4 — OVERLAY ALARME CENTRÉ : le seul moyen d'arrêter la sirène -->
+<div id="alarm-overlay">
+  <div id="alarm-msg">🚨 NQ — ALERTE BANDE SD</div>
+  <div id="alarm-sub">SENTINELLE ACTIVE · 18H00–06H00 NY</div>
+  <button id="alarm-ack-btn" onclick="ackAlarm()">
+    ✋ ACQUITTER L'ALERTE
+  </button>
+  <div id="alarm-ack-status"></div>
 </div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────
-const LS_KEY        = 'nq_levels_v2'
-const LS_ALN        = 'nq_aln_v1'
-const LS_BRIDGE     = 'nq_bridge_url_v1'
-const LS_REF        = 'nq_reflev_v1'   // cache niveaux J-1/OVN/ALN depuis bridge
-const POLL          = 3000   // 3s — synchro avec REFRESH_S=3 du bridge
+// ════════════════════════════════════════════════════════════════
+// VERROU 1 — VALIDATION ISFINITE STRICTE + GEL ANTI-NaN
+// Chaque métrique doit passer isFinite() ET être > 0.
+// Si corrompu → gel sur _lastGood (localStorage), aucune rupture.
+// ════════════════════════════════════════════════════════════════
+const NQ_MIN = 8000
+const NQ_MAX = 50000
 
-function defaultBridge() {
-  const h = window.location.hostname
-  if (!h || h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8766/data'
-  // IP locale → bridge direct (servi par sc_bridge.js)
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return window.location.origin + '/data'
-  // Vercel / domaine public → proxy API
-  return window.location.origin + '/api/bridge-data'
+function isValidVal(v) {
+  const n = parseFloat(v)
+  return isFinite(n) && n > NQ_MIN && n < NQ_MAX
 }
 
-function getBridgeUrl() {
-  try {
-    const saved = localStorage.getItem(LS_BRIDGE)
-    if (saved && saved.startsWith('http')) return saved
-  } catch(e) {}
-  return defaultBridge()
-}
-
-let BRIDGE = getBridgeUrl()
-
-// ── DEMO (données réelles CSV 11/09/2026) ────────────
-const DEMO = {
-  last:       29389.25,
-  vwap:       29372.05,
-  sd1h:       29492.81, sd1l: 29251.29,
-  sd2h:       29613.56, sd2l: 29130.54,
-  ovn_sd3h:   29734.33, ovn_sd3l: 29009.77,
-  vah:        29476.25, poc: 29415.00, val: 29366.00,
-  j1_high:    29500.25, j1_settle: 29389.25, j1_low: 29040.50,
-  ovn_high:   29500.25, ovn_low: 29040.50,
-  asia_high:  29242.75, asia_low:  29040.50,
-  lon_high:   29500.25, lon_low:   29204.00,
-  avwap_side: 'below',
-  laf_sd2:    false,
-  lbf_sd2:    false,
-  lastUpdate: '2026-09-11T16:00:00',
-  _demo:      true
-}
-
-// ── STATE ────────────────────────────────────────────
-let prevLast = null, miss = 0, demo = false
-let manualLevels = null, currentALN = null
-let _lastGood = null   // dernier payload validé — gel d'affichage si données corrompues
-
-// ── VALIDATION GÉOMÉTRIQUE ───────────────────────────
-const NQ_RANGE = [8000, 50000]
 function isValidPayload(nq) {
   if (!nq || typeof nq !== 'object') return false
-  const chk = [parseFloat(nq.last), parseFloat(nq.vwap), parseFloat(nq.sd2h), parseFloat(nq.sd2l)]
-  return chk.every(v => !isNaN(v) && v >= NQ_RANGE[0] && v <= NQ_RANGE[1])
+  // Seules last + vwap + sd2h + sd2l sont obligatoires — les autres sont best-effort
+  return isValidVal(nq.last) && isValidVal(nq.vwap) &&
+         isValidVal(nq.sd2h) && isValidVal(nq.sd2l)
 }
 
-// ── STORAGE ──────────────────────────────────────────
-function saveLevels(lvl) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(lvl)) } catch(e) {}
-}
-function loadLevels() {
-  try {
-    const s = localStorage.getItem(LS_KEY)
-    if (s) manualLevels = JSON.parse(s)
-  } catch(e) {}
-}
-// ── REFERENCE LEVELS CACHE ──────────────────────────
-// Persist J-1/OVN/ALN levels from bridge across OVN
-// (bridge can't compute them at 2AM — use last valid values)
+// ════════════════════════════════════════════════════════════════
+// VERROU 2 — PERSISTANCE MANUELLE 16H : jamais effacé
+// Clé dédiée LS_LEVELS. Seul resetLevels() peut vider.
+// ════════════════════════════════════════════════════════════════
+const LS_LEVELS  = 'nq_levels_v3'
+const LS_REF     = 'nq_reflev_v2'
+const LS_ALN     = 'nq_aln_v1'
+const LS_BRIDGE  = 'nq_bridge_url_v1'
+const LS_ALARM   = 'nq_alarm_band_v1'
+const POLL_MS    = 3000
+
 const REF_FIELDS = [
   'vah','poc','val',
   'j1_high','j1_settle','j1_low',
@@ -828,7 +649,26 @@ const REF_FIELDS = [
   'asia_high','asia_low',
   'lon_high','lon_low'
 ]
-let refCache = null
+
+let manualLevels = null
+let refCache     = null
+
+function saveLevels(lvl) {
+  try { localStorage.setItem(LS_LEVELS, JSON.stringify(lvl)) } catch(e) {}
+}
+function loadLevels() {
+  try {
+    const s = localStorage.getItem(LS_LEVELS)
+    if (s) manualLevels = JSON.parse(s)
+  } catch(e) {}
+}
+
+function saveAlarmBand(band) {
+  try { localStorage.setItem(LS_ALARM, band) } catch(e) {}
+}
+function loadAlarmBand() {
+  try { return localStorage.getItem(LS_ALARM) || 'sd2' } catch(e) { return 'sd2' }
+}
 
 function loadRefCache() {
   try {
@@ -836,37 +676,415 @@ function loadRefCache() {
     if (s) refCache = JSON.parse(s)
   } catch(e) {}
 }
-
 function cacheRefLevels(bridge) {
   if (!bridge || bridge._demo) return
-  const hasValid = REF_FIELDS.some(k => parseFloat(bridge[k]) > 0)
+  const hasValid = REF_FIELDS.some(k => isValidVal(bridge[k]))
   if (!hasValid) return
   const snap = {}
-  REF_FIELDS.forEach(k => { if (parseFloat(bridge[k]) > 0) snap[k] = bridge[k] })
+  REF_FIELDS.forEach(k => { if (isValidVal(bridge[k])) snap[k] = bridge[k] })
   refCache = Object.assign({}, refCache || {}, snap)
   try { localStorage.setItem(LS_REF, JSON.stringify(refCache)) } catch(e) {}
 }
 
+// Données de démonstration (CSV 11/09/2026)
+const DEMO = {
+  last: 29389.25, vwap: 29372.05,
+  sd1h: 29492.81, sd1l: 29251.29,
+  sd2h: 29613.56, sd2l: 29130.54,
+  ovn_sd3h: 29734.33, ovn_sd3l: 29009.77,
+  vah: 29476.25, poc: 29415.00, val: 29366.00,
+  j1_high: 29500.25, j1_settle: 29389.25, j1_low: 29040.50,
+  ovn_high: 29500.25, ovn_low: 29040.50,
+  asia_high: 29242.75, asia_low: 29040.50,
+  lon_high: 29500.25, lon_low: 29204.00,
+  avwap_side: 'below', laf_sd2: false, lbf_sd2: false,
+  lastUpdate: '2026-09-11T16:00:00', _demo: true
+}
+
 function effectiveData(bridge) {
   if (bridge && !bridge._demo) {
-    // Merge: bridge live data + refCache for any missing ref fields
+    const merged = Object.assign({}, bridge)
     if (refCache) {
-      const merged = Object.assign({}, bridge)
       REF_FIELDS.forEach(k => {
-        if (!(parseFloat(merged[k]) > 0) && parseFloat(refCache[k]) > 0) {
-          merged[k] = refCache[k]
-        }
+        if (!isValidVal(merged[k]) && isValidVal(refCache[k])) merged[k] = refCache[k]
       })
-      return merged
     }
-    return bridge
+    return merged
   }
   return manualLevels || DEMO
 }
 
-// ── EDITOR ───────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// VERROU 3 — FENÊTRE DE TIR : UNIQUEMENT 18H–06H NY
+// Utilise Intl.DateTimeFormat avec America/New_York.
+// Hors fenêtre : alarme muette, reset complet.
+// ════════════════════════════════════════════════════════════════
+function getNYHour() {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric', hour12: false
+    }).formatToParts(new Date())
+    const h = parts.find(p => p.type === 'hour')
+    return parseInt(h ? h.value : '12', 10)
+  } catch(e) {
+    return new Date().getUTCHours()
+  }
+}
+
+function isNightWindow() {
+  const h = getNYHour()
+  return h >= 18 || h < 6
+}
+
+// ════════════════════════════════════════════════════════════════
+// VERROU 4 — SIRÈNE À MÉMOIRE FORCÉE + ACK PHYSIQUE UNIQUE
+// - Déclenché : sirène en boucle infinie jusqu'à ACK physique.
+// - Prix qui revient en zone neutre : SIRÈNE CONTINUE.
+// - ACK physique : ne coupe que si prix neutre depuis >= 30s.
+// - Réarmement automatique : 30s après ACK + prix neutre.
+// ════════════════════════════════════════════════════════════════
+let _sirenActive    = false  // sirène en cours
+let _alarmAcked     = false  // l'utilisateur a cliqué ACK
+let _audioCtx       = null
+let _sirenNodes     = null
+let _neutralSince   = null   // timestamp du retour en zone neutre
+let _rearmTimer     = null   // timer pour réarmer après 30s
+
+let selectedAlarmBand = loadAlarmBand()
+
+function startSiren() {
+  if (_sirenNodes) return
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    if (_audioCtx.state === 'suspended') _audioCtx.resume()
+    const ctx = _audioCtx
+
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.68, ctx.currentTime)
+    gain.connect(ctx.destination)
+
+    const osc = ctx.createOscillator()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(780, ctx.currentTime)
+    osc.connect(gain)
+
+    const lfo = ctx.createOscillator()
+    lfo.type = 'sine'
+    lfo.frequency.setValueAtTime(0.5, ctx.currentTime)
+    const lfoGain = ctx.createGain()
+    lfoGain.gain.setValueAtTime(320, ctx.currentTime)
+    lfo.connect(lfoGain)
+    lfoGain.connect(osc.frequency)
+
+    osc.start(); lfo.start()
+    _sirenNodes = { osc, gain, lfo, lfoGain }
+  } catch(e) { console.warn('[SIREN]', e.message) }
+}
+
+function stopSiren() {
+  if (!_sirenNodes) return
+  try { _sirenNodes.osc.stop(); _sirenNodes.lfo.stop(); _sirenNodes.gain.disconnect() } catch(e) {}
+  _sirenNodes = null
+}
+
+function showAlarmOverlay(msg) {
+  const ov = document.getElementById('alarm-overlay')
+  document.getElementById('alarm-msg').textContent = msg
+  document.getElementById('alarm-ack-status').textContent = ''
+  ov.classList.add('on')
+}
+
+function hideAlarmOverlay() {
+  document.getElementById('alarm-overlay').classList.remove('on')
+}
+
+function triggerAlarm(msg) {
+  _sirenActive = true
+  showAlarmOverlay(msg)
+  startSiren()
+}
+
+function ackAlarm() {
+  // Vérifier que le prix est neutre depuis >= 30s
+  const now = Date.now()
+  const statusEl = document.getElementById('alarm-ack-status')
+
+  if (_neutralSince === null) {
+    // Prix toujours en zone de danger
+    statusEl.textContent = '⛔ PRIX TOUJOURS EN ZONE — IMPOSSIBLE D\'ACQUITTER'
+    return
+  }
+  const neutralMs = now - _neutralSince
+  if (neutralMs < 30000) {
+    const restant = Math.ceil((30000 - neutralMs) / 1000)
+    statusEl.textContent = `⏳ ATTENDRE ENCORE ${restant}s EN ZONE NEUTRE`
+    return
+  }
+
+  // Condition remplie — couper la sirène et réinitialiser
+  _sirenActive  = false
+  _alarmAcked   = true
+  _neutralSince = null
+  stopSiren()
+  hideAlarmOverlay()
+
+  // Réarmement : 30s après ACK si prix reste neutre
+  if (_rearmTimer) clearTimeout(_rearmTimer)
+  _rearmTimer = setTimeout(() => {
+    _alarmAcked = false
+    _rearmTimer = null
+  }, 30000)
+}
+
+function getBandLevels(nq) {
+  const band = selectedAlarmBand
+  if (band === 'sd1') return { hi: parseFloat(nq.sd1h || 0), lo: parseFloat(nq.sd1l || 0) }
+  if (band === 'sd3') return { hi: parseFloat(nq.ovn_sd3h || 0), lo: parseFloat(nq.ovn_sd3l || 0) }
+  return { hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0) }
+}
+
+function checkAlarmZone(last, nq) {
+  if (!isNightWindow()) {
+    // Hors fenêtre 18H–06H : silence total + reset
+    if (_sirenActive) { stopSiren(); _sirenActive = false }
+    if (_rearmTimer)  { clearTimeout(_rearmTimer); _rearmTimer = null }
+    _alarmAcked   = false
+    _neutralSince = null
+    hideAlarmOverlay()
+    return
+  }
+
+  const { hi, lo } = getBandLevels(nq)
+  const inDanger = (isValidVal(hi) && last >= hi) || (isValidVal(lo) && last <= lo)
+
+  if (inDanger) {
+    _neutralSince = null
+    if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
+    if (!_alarmAcked && !_sirenActive) {
+      const bandName = selectedAlarmBand.toUpperCase()
+      const side = (isValidVal(hi) && last >= hi)
+        ? `${bandName}+ ↑  ${last.toFixed(2)}`
+        : `${bandName}− ↓  ${last.toFixed(2)}`
+      triggerAlarm(`🚨 NQ FRANCHIT ${side}`)
+    }
+  } else {
+    // Prix en zone neutre — mémoriser depuis quand
+    if (_neutralSince === null) _neutralSince = Date.now()
+    // Mettre à jour le compteur si overlay visible
+    if (_sirenActive) {
+      const statusEl = document.getElementById('alarm-ack-status')
+      if (statusEl && !statusEl.textContent.startsWith('⛔')) {
+        const ms = Date.now() - _neutralSince
+        if (ms < 30000) {
+          statusEl.textContent = `⏳ ZONE NEUTRE DEPUIS ${Math.floor(ms/1000)}s / 30s`
+        } else {
+          statusEl.textContent = '✅ PRIX NEUTRE ≥ 30S — CLIQUER POUR ACQUITTER'
+        }
+      }
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// BRIDGE + POLLING
+// ════════════════════════════════════════════════════════════════
+function defaultBridge() {
+  const h = window.location.hostname
+  if (!h || h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8766/data'
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return window.location.origin + '/data'
+  return window.location.origin + '/api/bridge-data'
+}
+function getBridgeUrl() {
+  try {
+    const s = localStorage.getItem(LS_BRIDGE)
+    if (s && s.startsWith('http')) return s
+  } catch(e) {}
+  return defaultBridge()
+}
+
+let BRIDGE   = getBridgeUrl()
+let _lastGood = null
+let prevLast  = null
+let miss      = 0
+let demo      = false
+
+async function testBridge() {
+  const inp    = document.getElementById('ei-bridge')
+  const status = document.getElementById('bridge-status')
+  const url    = (inp ? inp.value.trim() : '') || BRIDGE
+  if (!url) { status.textContent = '⚠ Entrer une URL'; status.style.color = 'var(--gold)'; return }
+  status.textContent = '⏳ Connexion…'; status.style.color = 'var(--txt2)'
+  try {
+    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    const d = await r.json()
+    const last = (d.NQ || d).last
+    status.textContent = '✓ BRIDGE OK' + (last ? ' — NQ last: ' + parseFloat(last).toFixed(2) : '')
+    status.style.color = 'var(--green)'
+    try { localStorage.setItem(LS_BRIDGE, url) } catch(e) {}
+    BRIDGE = url
+  } catch(e) {
+    status.textContent = '✗ ' + e.message
+    status.style.color = 'var(--red)'
+  }
+}
+
+function setStatus(state) {
+  const dot = document.getElementById('bdot')
+  const lbl = document.getElementById('blbl')
+  const tag = document.getElementById('demo-tag')
+  if (state === 'ok') {
+    dot.className = 'dot d-ok'; lbl.textContent = 'BRIDGE OK'
+    lbl.style.color = ''; tag.classList.remove('on')
+    miss = 0; demo = false
+  } else if (state === 'wait') {
+    dot.className = 'dot d-warn'; lbl.textContent = '…'
+  } else if (state === 'freeze') {
+    dot.className = 'dot d-warn'; lbl.textContent = 'GEL ✦'
+    lbl.style.color = 'var(--gold)'
+  } else {
+    dot.className = 'dot d-err'; lbl.textContent = 'OFFLINE'
+    lbl.style.color = 'var(--red)'
+    miss++
+    if (miss >= 2 && !demo && !_lastGood) {
+      demo = true; tag.classList.add('on')
+      render(manualLevels || DEMO)
+    }
+  }
+}
+
+async function poll() {
+  setStatus('wait')
+  try {
+    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    const d   = await r.json()
+    const raw = d.NQ || d
+    const eff = effectiveData(raw)
+
+    if (isValidPayload(eff)) {
+      _lastGood = eff
+      cacheRefLevels(raw)
+      miss = 0; demo = false
+      document.getElementById('demo-tag').classList.remove('on')
+      setStatus('ok')
+      render(eff)
+    } else {
+      // VERROU 1 — données corrompues : gel sans rupture visuelle
+      setStatus('freeze')
+      if (_lastGood) render(_lastGood)
+    }
+  } catch {
+    setStatus('err')
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════════════
+function fmt(v) {
+  const f = parseFloat(v)
+  return (isNaN(f) || f === 0) ? '—' : f.toFixed(2)
+}
+function dist(last, lvl) {
+  if (!last || !lvl || isNaN(last) || isNaN(lvl)) return ''
+  const d = Math.round(last - lvl)
+  const c = d >= 0 ? 'var(--sd2l)' : 'var(--sd2h)'
+  return `<span style="color:${c}">${d >= 0 ? '+' : ''}${d}</span>`
+}
+
+function render(nq) {
+  const last = parseFloat(nq.last)
+
+  // Alarme — évaluer avant tout affichage
+  checkAlarmZone(last, nq)
+
+  // Prix principal
+  document.getElementById('p-last').textContent = fmt(last)
+  const chgEl = document.getElementById('p-chg')
+  if (prevLast !== null) {
+    const d = last - prevLast
+    chgEl.textContent = (d >= 0 ? '+' : '') + d.toFixed(2)
+    chgEl.className   = d > 0 ? 'pos' : d < 0 ? 'neg' : 'nil'
+  } else { chgEl.textContent = '—'; chgEl.className = 'nil' }
+
+  // Bandes SD
+  ;[
+    ['sd3h', nq.ovn_sd3h], ['sd2h', nq.sd2h], ['sd1h', nq.sd1h],
+    ['avwp', nq.vwap],
+    ['sd1l', nq.sd1l], ['sd2l', nq.sd2l], ['sd3l', nq.ovn_sd3l]
+  ].forEach(([k, v]) => {
+    const ve = document.getElementById('v-' + k)
+    const de = document.getElementById('d-' + k)
+    if (ve) ve.textContent = fmt(v)
+    if (de) de.innerHTML   = dist(last, parseFloat(v))
+  })
+
+  // AVWAP side
+  const ss = document.getElementById('sig-side')
+  if (nq.avwap_side === 'above') {
+    ss.textContent = '▲ DESSUS AVWAP'; ss.className = 'sig sig-side sig-above'
+  } else if (nq.avwap_side === 'below') {
+    ss.textContent = '▼ DESSOUS AVWAP'; ss.className = 'sig sig-side sig-below'
+  } else {
+    ss.textContent = '— AVWAP'; ss.className = 'sig sig-side'
+  }
+
+  document.getElementById('sig-laf').className = 'sig' + (nq.laf_sd2 ? ' sig-laf' : '')
+  document.getElementById('sig-lbf').className = 'sig' + (nq.lbf_sd2 ? ' sig-lbf' : '')
+
+  // Niveaux de référence
+  ;[
+    ['vah', nq.vah], ['poc', nq.poc], ['val', nq.val],
+    ['j1h', nq.j1_high], ['j1s', nq.j1_settle], ['j1l', nq.j1_low],
+    ['ovnh', nq.ovn_high], ['ovnl', nq.ovn_low],
+    ['ash', nq.asia_high], ['asl', nq.asia_low],
+    ['lnh', nq.lon_high],  ['lnl', nq.lon_low]
+  ].forEach(([k, v]) => {
+    const ve = document.getElementById('v-' + k)
+    const de = document.getElementById('d-' + k)
+    if (ve) ve.textContent = fmt(v)
+    if (de) de.innerHTML   = dist(last, parseFloat(v))
+  })
+
+  const ts = nq.lastUpdate
+    ? new Date(nq.lastUpdate).toLocaleTimeString('fr-FR')
+    : (nq._demo ? 'mode DÉMO' : '—')
+  document.getElementById('upd').textContent = 'SC update : ' + ts
+
+  prevLast = last
+}
+
+// ════════════════════════════════════════════════════════════════
+// CLOCK NY
+// ════════════════════════════════════════════════════════════════
+function nyNow() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+}
+function isRTHOpen() {
+  const d = nyNow(), dow = d.getDay(), m = d.getHours() * 60 + d.getMinutes()
+  if (dow === 6) return false
+  if (dow === 0) return m >= 1080
+  if (dow === 5) return m < 960
+  return true
+}
+function tickClock() {
+  const t = nyNow(), p = n => String(n).padStart(2, '0')
+  document.getElementById('clock').textContent =
+    p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds()) + ' ET'
+  const mp = document.getElementById('mkt-pill')
+  const o  = isRTHOpen()
+  mp.textContent = o ? 'OUVERT' : 'FERMÉ'
+  mp.className   = 'mkt-pill ' + (o ? 'mkt-open' : 'mkt-closed')
+}
+setInterval(tickClock, 1000); tickClock()
+
+// ════════════════════════════════════════════════════════════════
+// EDITOR
+// ════════════════════════════════════════════════════════════════
 function toggleEditor() {
-  const d  = document.getElementById('edit-drawer')
+  const d   = document.getElementById('edit-drawer')
   const btn = document.getElementById('btn-edit')
   const open = d.classList.toggle('open')
   btn.classList.toggle('active', open)
@@ -888,8 +1106,9 @@ function toggleEditor() {
     })
     const bInp = document.getElementById('ei-bridge')
     if (bInp) bInp.value = BRIDGE || ''
-    const bStatus = document.getElementById('bridge-status')
-    if (bStatus) bStatus.textContent = ''
+    const bSel = document.getElementById('ei-alarm-band')
+    if (bSel) bSel.value = selectedAlarmBand
+    document.getElementById('bridge-status').textContent = ''
     document.getElementById('ei-vwap').focus()
   }
 }
@@ -897,13 +1116,17 @@ function toggleEditor() {
 function applyEditor() {
   const g = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) || 0 : 0 }
   const vwap = g('ei-vwap'), sd1h = g('ei-sd1h')
-  const sigma = sd1h > 0 && vwap > 0 ? sd1h - vwap : 120
-  const sd3h_auto = vwap + 3 * sigma
-  const sd3l_auto = vwap - 3 * sigma
-  const sd3h = g('ei-sd3h') || sd3h_auto
-  const sd3l = g('ei-sd3l') || sd3l_auto
-  const currentPrice = parseFloat(document.getElementById('p-last').textContent.replace(/[^0-9.]/g,''))
-  const last = currentPrice > 10000 ? currentPrice : (manualLevels || DEMO).last
+  const sigma    = (sd1h > 0 && vwap > 0) ? sd1h - vwap : 120
+  const sd3h_raw = g('ei-sd3h')
+  const sd3l_raw = g('ei-sd3l')
+  const sd3h = sd3h_raw > 0 ? sd3h_raw : vwap + 3 * sigma
+  const sd3l = sd3l_raw > 0 ? sd3l_raw : vwap - 3 * sigma
+
+  const curStr  = document.getElementById('p-last').textContent.replace(/[^0-9.]/g, '')
+  const curLast = parseFloat(curStr)
+  const last    = isValidVal(curLast) ? curLast : (manualLevels || DEMO).last
+
+  // VERROU 2 — sauvegarde permanente
   manualLevels = {
     last, vwap,
     sd1h: g('ei-sd1h'), sd1l: g('ei-sd1l'),
@@ -916,17 +1139,22 @@ function applyEditor() {
     lon_high: g('ei-lnh'), lon_low: g('ei-lnl'),
     avwap_side: last >= vwap ? 'above' : 'below',
     laf_sd2: false, lbf_sd2: false,
+    savedAt: new Date().toISOString(),
     lastUpdate: new Date().toISOString(),
     _demo: true
   }
   saveLevels(manualLevels)
-  // save bridge URL if changed
+
+  const bSel = document.getElementById('ei-alarm-band')
+  if (bSel) { selectedAlarmBand = bSel.value; saveAlarmBand(selectedAlarmBand) }
+
   const bInp = document.getElementById('ei-bridge')
   if (bInp && bInp.value.trim().startsWith('http')) {
     const burl = bInp.value.trim()
     try { localStorage.setItem(LS_BRIDGE, burl) } catch(e) {}
     BRIDGE = burl
   }
+
   document.getElementById('edit-drawer').classList.remove('open')
   document.getElementById('btn-edit').classList.remove('active')
   render(manualLevels)
@@ -934,13 +1162,16 @@ function applyEditor() {
 
 function resetLevels() {
   manualLevels = null
-  try { localStorage.removeItem(LS_KEY) } catch(e) {}
+  try { localStorage.removeItem(LS_LEVELS) } catch(e) {}
   document.getElementById('edit-drawer').classList.remove('open')
   document.getElementById('btn-edit').classList.remove('active')
   render(DEMO)
 }
 
-// ── ALN PATTERN ──────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// ALN PATTERN
+// ════════════════════════════════════════════════════════════════
+let currentALN = null
 function setALN(p) {
   currentALN = currentALN === p ? null : p
   document.querySelectorAll('.aln-btn').forEach(b => b.classList.remove('active'))
@@ -953,12 +1184,14 @@ function setALN(p) {
   }
 }
 
-// ── PRICE EDIT ────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// PRICE EDIT (clic sur le prix pour saisir manuellement)
+// ════════════════════════════════════════════════════════════════
 function initPriceEdit() {
   const span = document.getElementById('p-last')
   const inp  = document.getElementById('price-input')
   span.addEventListener('click', () => {
-    const cur = parseFloat(span.textContent.replace(/[^0-9.]/g,''))
+    const cur = parseFloat(span.textContent.replace(/[^0-9.]/g, ''))
     inp.value = cur > 0 ? cur : ''
     span.style.display = 'none'
     inp.classList.add('active')
@@ -966,13 +1199,14 @@ function initPriceEdit() {
   })
   const commit = () => {
     const v = parseFloat(inp.value)
-    inp.classList.remove('active')
-    span.style.display = ''
-    if (!isNaN(v) && v > 10000) {
+    inp.classList.remove('active'); span.style.display = ''
+    if (isValidVal(v)) {
       const base = manualLevels || DEMO
-      manualLevels = { ...base, last: v,
+      manualLevels = {
+        ...base, last: v,
         avwap_side: v >= base.vwap ? 'above' : 'below',
-        lastUpdate: new Date().toISOString(), _demo: true }
+        lastUpdate: new Date().toISOString(), _demo: true
+      }
       saveLevels(manualLevels)
       render(manualLevels)
     }
@@ -984,302 +1218,24 @@ function initPriceEdit() {
   inp.addEventListener('blur', commit)
 }
 
-// ── CLOCK ────────────────────────────────────────────
-function nyNow() {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
-}
-function isOpen() {
-  const d = nyNow(), dow = d.getDay(), m = d.getHours() * 60 + d.getMinutes()
-  if (dow === 6) return false
-  if (dow === 0) return m >= 1080
-  if (dow === 5) return m < 960
-  return true
-}
-function tickClock() {
-  const t = nyNow()
-  const p = n => String(n).padStart(2, '0')
-  document.getElementById('clock').textContent =
-    p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds()) + ' ET'
-  const mp = document.getElementById('mkt-pill')
-  const o  = isOpen()
-  mp.textContent = o ? 'OUVERT' : 'FERMÉ'
-  mp.className   = 'mkt-pill ' + (o ? 'mkt-open' : 'mkt-closed')
-}
-setInterval(tickClock, 1000); tickClock()
-
-// ── FORMAT ───────────────────────────────────────────
-function fmt(v) {
-  const f = parseFloat(v)
-  return (isNaN(f) || f === 0) ? '—' : f.toFixed(2)
-}
-function dist(last, lvl) {
-  if (!last || !lvl || isNaN(last) || isNaN(lvl)) return ''
-  const d = Math.round(last - lvl)
-  const s = d >= 0 ? '+' : ''
-  const c = d >= 0 ? 'var(--sd2l)' : 'var(--sd2h)'
-  return `<span style="color:${c}">${s}${d}</span>`
-}
-
-// ── RENDER ───────────────────────────────────────────
-function render(nq) {
-  const last = parseFloat(nq.last)
-
-  // Alarme SD — fenêtre NY 18H–06H
-  checkAlarmZone(last, parseFloat(nq.sd2h || 0), parseFloat(nq.sd2l || 0))
-
-  // price
-  document.getElementById('p-last').textContent = fmt(last)
-  const chgEl = document.getElementById('p-chg')
-  if (prevLast !== null) {
-    const d = last - prevLast
-    chgEl.textContent = (d >= 0 ? '+' : '') + d.toFixed(2)
-    chgEl.className   = d > 0 ? 'pos' : d < 0 ? 'neg' : 'nil'
-  } else { chgEl.textContent = '—'; chgEl.className = 'nil' }
-
-  // SD bands
-  ;[
-    ['sd3h', nq.ovn_sd3h], ['sd2h', nq.sd2h], ['sd1h', nq.sd1h],
-    ['avwp', nq.vwap],
-    ['sd1l', nq.sd1l],     ['sd2l', nq.sd2l], ['sd3l', nq.ovn_sd3l],
-  ].forEach(([k, v]) => {
-    const ve = document.getElementById('v-' + k)
-    const de = document.getElementById('d-' + k)
-    if (ve) ve.textContent = fmt(v)
-    if (de) de.innerHTML   = dist(last, parseFloat(v))
-  })
-
-  // AVWAP side
-  const ss = document.getElementById('sig-side')
-  if (nq.avwap_side === 'above') {
-    ss.textContent = '▲ DESSUS AVWAP'; ss.className = 'sig sig-side sig-above'
-  } else if (nq.avwap_side === 'below') {
-    ss.textContent = '▼ DESSOUS AVWAP'; ss.className = 'sig sig-side sig-below'
-  } else {
-    ss.textContent = '— AVWAP'; ss.className = 'sig sig-side'
-  }
-
-  // LAF / LBF
-  const sl = document.getElementById('sig-laf')
-  const sb = document.getElementById('sig-lbf')
-  sl.className = 'sig' + (nq.laf_sd2 ? ' sig-laf' : '')
-  sb.className = 'sig' + (nq.lbf_sd2 ? ' sig-lbf' : '')
-
-  // ref levels
-  ;[
-    ['vah', nq.vah], ['poc', nq.poc], ['val', nq.val],
-    ['j1h', nq.j1_high], ['j1s', nq.j1_settle], ['j1l', nq.j1_low],
-    ['ovnh', nq.ovn_high], ['ovnl', nq.ovn_low],
-    ['ash', nq.asia_high], ['asl', nq.asia_low],
-    ['lnh', nq.lon_high],  ['lnl', nq.lon_low],
-  ].forEach(([k, v]) => {
-    const ve = document.getElementById('v-' + k)
-    const de = document.getElementById('d-' + k)
-    if (ve) ve.textContent = fmt(v)
-    if (de) de.innerHTML   = dist(last, parseFloat(v))
-  })
-
-  // update time
-  const ts = nq.lastUpdate
-    ? new Date(nq.lastUpdate).toLocaleTimeString('fr-FR')
-    : (nq._demo ? 'mode DÉMO' : '—')
-  document.getElementById('upd').textContent = 'SC update : ' + ts
-
-  prevLast = last
-}
-
-// ── ALARM ENGINE ─────────────────────────────────────
-let _alarmActive = false
-let _alarmAcked  = false
-let _rearmTimer  = null
-let _audioCtx    = null
-let _sirenNodes  = null
-
-function getNYHour() {
-  try {
-    const s = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York', hour: 'numeric', hour12: false
-    }).format(new Date())
-    return parseInt(s, 10)
-  } catch(e) { return new Date().getUTCHours() }  // fallback UTC
-}
-
-function isAlertWindow() {
-  const h = getNYHour()
-  return h >= 18 || h < 6
-}
-
-function startSiren() {
-  if (_sirenNodes) return
-  try {
-    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
-    const ctx = _audioCtx
-    if (ctx.state === 'suspended') ctx.resume()
-
-    const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0.65, ctx.currentTime)
-    gain.connect(ctx.destination)
-
-    const osc = ctx.createOscillator()
-    osc.type = 'sawtooth'
-    osc.frequency.setValueAtTime(780, ctx.currentTime)
-    osc.connect(gain)
-
-    // LFO — balayage sirène ±320 Hz, période 2s
-    const lfo = ctx.createOscillator()
-    lfo.type = 'sine'
-    lfo.frequency.setValueAtTime(0.5, ctx.currentTime)
-    const lfoGain = ctx.createGain()
-    lfoGain.gain.setValueAtTime(320, ctx.currentTime)
-    lfo.connect(lfoGain)
-    lfoGain.connect(osc.frequency)
-
-    osc.start(); lfo.start()
-    _sirenNodes = { osc, gain, lfo, lfoGain }
-  } catch(e) { console.warn('[ALARM] AudioContext error:', e.message) }
-}
-
-function stopSiren() {
-  if (!_sirenNodes) return
-  try { _sirenNodes.osc.stop(); _sirenNodes.lfo.stop(); _sirenNodes.gain.disconnect() } catch(e) {}
-  _sirenNodes = null
-}
-
-function triggerAlarm(msg) {
-  _alarmActive = true
-  const bar = document.getElementById('alert-bar')
-  const txt = document.getElementById('alert-txt')
-  bar.classList.add('on', 'alarm')
-  txt.textContent = msg
-  startSiren()
-}
-
-function ackAlarm() {
-  _alarmActive = false
-  _alarmAcked  = true
-  stopSiren()
-  const bar = document.getElementById('alert-bar')
-  bar.classList.remove('on', 'alarm')
-  if (_rearmTimer) clearTimeout(_rearmTimer)
-  _rearmTimer = null
-}
-
-function checkAlarmZone(last, sd2h, sd2l) {
-  if (!isAlertWindow()) {
-    // Hors fenêtre 18H–06H : silence + reset total
-    if (_alarmActive) { stopSiren(); _alarmActive = false; document.getElementById('alert-bar').classList.remove('on','alarm') }
-    _alarmAcked = false
-    if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
-    return
-  }
-
-  const inDanger = (sd2h > 0 && last >= sd2h) || (sd2l > 0 && last <= sd2l)
-
-  if (inDanger) {
-    // Prix en zone — couper le timer de réarmement
-    if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
-    // Déclencher uniquement si pas encore acquitté
-    if (!_alarmAcked) {
-      const side = (sd2h > 0 && last >= sd2h)
-        ? `SD+2 ↑  ${last.toFixed(2)}`
-        : `SD−2 ↓  ${last.toFixed(2)}`
-      triggerAlarm(`🚨 NQ ${side}`)
-    }
-    // ⚠ Sirène continue même si prix revient : SEUL l'acquittement arrête
-  } else {
-    // Prix entre les bandes — réarmement après 30s si acquitté
-    // La sirène reste active tant que l'utilisateur n'a pas cliqué ACQUITTER
-    if (_alarmAcked && !_rearmTimer) {
-      _rearmTimer = setTimeout(() => { _alarmAcked = false; _rearmTimer = null }, 30000)
-    }
-  }
-}
-
-// ── TEST BRIDGE ───────────────────────────────────────
-async function testBridge() {
-  const inp    = document.getElementById('ei-bridge')
-  const status = document.getElementById('bridge-status')
-  const url    = (inp ? inp.value.trim() : '') || BRIDGE
-  if (!url) { status.textContent = '⚠ Entrer une URL'; status.style.color = 'var(--gold)'; return }
-  status.textContent = '⏳ Connexion...'; status.style.color = 'var(--txt2)'
-  try {
-    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
-    if (!r.ok) throw new Error('HTTP ' + r.status)
-    const d = await r.json()
-    const last = (d.NQ || d).last
-    status.textContent = '✓ BRIDGE OK' + (last ? ' — NQ last: ' + parseFloat(last).toFixed(2) : '')
-    status.style.color = 'var(--green)'
-    try { localStorage.setItem(LS_BRIDGE, url) } catch(e) {}
-    BRIDGE = url
-  } catch(e) {
-    status.textContent = '✗ ' + e.message + ' — vérifier IP ou autoriser contenu mixte'
-    status.style.color = 'var(--red)'
-  }
-}
-
-// ── BRIDGE STATUS ─────────────────────────────────────
-function setStatus(state) {
-  const dot = document.getElementById('bdot')
-  const lbl = document.getElementById('blbl')
-  const tag = document.getElementById('demo-tag')
-  if (state === 'ok') {
-    dot.className = 'dot d-ok'; lbl.textContent = 'BRIDGE OK'
-    lbl.style.color = ''; tag.classList.remove('on')
-    miss = 0; demo = false
-  } else if (state === 'wait') {
-    dot.className = 'dot d-warn'; lbl.textContent = '...'
-  } else if (state === 'freeze') {
-    dot.className = 'dot d-warn'; lbl.textContent = 'GEL ✦'
-    lbl.style.color = 'var(--gold)'
-  } else {
-    dot.className = 'dot d-err'; lbl.textContent = 'OFFLINE'
-    lbl.style.color = 'var(--red)'
-    miss++
-    // Bascule DEMO seulement si aucun snapshot sain n'est disponible
-    if (miss >= 2 && !demo && !_lastGood) {
-      demo = true; tag.classList.add('on')
-      render(manualLevels || DEMO)
-    }
-  }
-}
-
-// ── POLL ─────────────────────────────────────────────
-async function poll() {
-  setStatus('wait')
-  try {
-    const r = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
-    if (!r.ok) throw new Error('HTTP ' + r.status)
-    const d = await r.json()
-    const nq  = d.NQ || d
-    const eff = effectiveData(nq)
-    if (isValidPayload(eff)) {
-      _lastGood = eff
-      cacheRefLevels(nq)
-      miss = 0; demo = false
-      document.getElementById('demo-tag').classList.remove('on')
-      setStatus('ok')
-      render(eff)
-    } else {
-      // Données corrompues ou à zéro — geler l'affichage
-      setStatus('freeze')
-      if (_lastGood) render(_lastGood)
-    }
-  } catch {
-    setStatus('err')
-  }
-}
-
-// ── BOOT ─────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════════════
 loadLevels()
 loadRefCache()
-const initData = manualLevels || DEMO
-render(initData)
+selectedAlarmBand = loadAlarmBand()
+
+render(manualLevels || DEMO)
 document.getElementById('demo-tag').classList.add('on')
 setStatus('err')
 initPriceEdit()
+
 try {
   const savedALN = localStorage.getItem(LS_ALN)
   if (savedALN) setALN(savedALN)
 } catch(e) {}
+
+// Démarrer le polling toutes les 3s (synchro REFRESH_S=3 du bridge)
 poll()
-setInterval(poll, POLL)
+setInterval(poll, POLL_MS)
 </script>
