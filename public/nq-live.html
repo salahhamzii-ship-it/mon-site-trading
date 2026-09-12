@@ -760,12 +760,13 @@ function isNightWindow() {
 // - ACK physique : ne coupe que si prix neutre depuis >= 30s.
 // - Réarmement automatique : 30s après ACK + prix neutre.
 // ════════════════════════════════════════════════════════════════
-let _sirenActive    = false  // sirène en cours
-let _alarmAcked     = false  // l'utilisateur a cliqué ACK
-let _audioCtx       = null
-let _sirenNodes     = null
-let _neutralSince   = null   // timestamp du retour en zone neutre
-let _rearmTimer     = null   // timer pour réarmer après 30s
+let _sirenActive      = false  // sirène en cours
+let _alarmAcked       = false  // l'utilisateur a cliqué ACK
+let _audioCtx         = null
+let _sirenNodes       = null
+let _neutralSince     = null   // timestamp du retour en zone neutre
+let _rearmTimer       = null   // timer pour réarmer après 30s
+let _lastCandleKey    = -1     // clé de la dernière bougie 30min évaluée
 
 let selectedAlarmBand = loadAlarmBand()
 
@@ -986,10 +987,19 @@ function checkAlarmZone(last, nq) {
       : `🚨 NQ FRANCHIT ${bandName}  ${side}`
   }
 
+  // Clé unique par bougie 30 min (epoch ÷ 1800s)
+  const now = new Date()
+  const candleKey = Math.floor(now.getTime() / (30 * 60 * 1000))
+  // Fenêtre de close : dans les 45 premières secondes après :00 ou :30
+  const min = now.getMinutes(), sec = now.getSeconds()
+  const isCloseWindow = (min === 0 || min === 30) && sec < 45
+
   if (inDanger) {
     _neutralSince = null
     if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
-    if (!_alarmAcked && !_sirenActive) {
+    // Déclencher seulement sur le CLOSE de la bougie 30 min
+    if (!_alarmAcked && !_sirenActive && isCloseWindow && candleKey !== _lastCandleKey) {
+      _lastCandleKey = candleKey
       triggerAlarm(alarmMsg)
     }
   } else {
