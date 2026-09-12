@@ -347,8 +347,8 @@ function parseCsv(filepath, diag = false) {
   let idx_sm1  = find('sd-1', 'sd -1', 'vwap sd-1', '-1sd', 'lower1', 'lower band 1', 'lowerband1', 'bande-1', 'bande -1')
   let idx_sp2  = find('sd+2', 'sd +2', 'vwap sd+2', '+2sd', 'upper2', 'upper band 2', 'upperband2', 'bande+2', 'bande +2')
   let idx_sm2  = find('sd-2', 'sd -2', 'vwap sd-2', '-2sd', 'lower2', 'lower band 2', 'lowerband2', 'bande-2', 'bande -2')
-  // Fix: termes précis uniquement — pas de 'val', 'vah', 'poc' seuls (risque collision)
-  let idx_poc  = find('tpo poc', 'tpopoc', 'point of control', 'pointofcontrol')
+  // Fix: 'poc' seul inclus — header Sierra Chart NQ_auto.csv est exactement "POC"
+  let idx_poc  = find('tpo poc', 'tpopoc', 'poc', 'point of control', 'pointofcontrol')
   let idx_vah  = find('tpo vah', 'tpovah', 'value area high', 'valuearehigh', 'valuearahigh')
   let idx_val  = find('tpo val', 'tpoval', 'value area low', 'valuearealow', 'valueараlow')
   let idx_sp3  = find('sd+3', 'sd +3', 'vwap sd+3', '+3sd', 'upper3', 'upperband3', 'bande+3')
@@ -379,6 +379,10 @@ function parseCsv(filepath, diag = false) {
   if (idx_sm1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 17) idx_sm1  = 16
   if (idx_sp2  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 18) idx_sp2  = 17
   if (idx_sm2  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 19) idx_sm2  = 18
+  // POC/VAH/VAL positional fallback — NQ_auto.csv : col 25=POC, 26=VAH, 27=VAL
+  if (idx_poc  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 26) idx_poc  = 25
+  if (idx_vah  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 27) idx_vah  = 26
+  if (idx_val  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 28) idx_val  = 27
 
   if (diag) {
     console.log(`  [DIAG] date=${idx_date} time=${idx_time} O=${idx_open} H=${idx_high} L=${idx_low} C=${idx_last}`)
@@ -743,6 +747,21 @@ function buildPayload(instr, allRows, extraSources = {}) {
     if (m30J1.length)    barsJ1Final    = m30J1
   }
 
+  // SD±3 : calcul depuis σ = SD+1 − AVWAP quand absent du CSV
+  const _sd3 = (() => {
+    const csvSd3h = lastNonempty(allOvn, 'sd3h') || lastNonempty(todayAll, 'sd3h') || lastNonempty(allRows, 'sd3h')
+    const csvSd3l = lastNonempty(allOvn, 'sd3l') || lastNonempty(todayAll, 'sd3l') || lastNonempty(allRows, 'sd3l')
+    if (csvSd3h && csvSd3l) return { h: csvSd3h, l: csvSd3l }
+    // Calcul : dernière AVWAP + SD+1 live (RTH si dispo, sinon OVN)
+    const vwapN = parseFloat(lastNonempty(todayAll, 'vwap') || ovnVwapFinal)
+    const sd1hN = parseFloat(lastNonempty(todayAll, 'sd1h') || ovnSd1h)
+    if (!isNaN(vwapN) && !isNaN(sd1hN) && sd1hN > vwapN && vwapN > 100) {
+      const sigma = sd1hN - vwapN
+      return { h: (vwapN + 3 * sigma).toFixed(2), l: (vwapN - 3 * sigma).toFixed(2) }
+    }
+    return { h: '', l: '' }
+  })()
+
   return {
     last:          lastVal,
     lastUpdate:    new Date().toISOString(),
@@ -774,8 +793,8 @@ function buildPayload(instr, allRows, extraSources = {}) {
     ovn_sd1l:   ovnSd1l,
     ovn_sd2h:   ovnSd2h,
     ovn_sd2l:   ovnSd2l,
-    ovn_sd3h:   lastNonempty(allOvn, 'sd3h') || lastNonempty(todayAll, 'sd3h') || lastNonempty(allRows, 'sd3h'),
-    ovn_sd3l:   lastNonempty(allOvn, 'sd3l') || lastNonempty(todayAll, 'sd3l') || lastNonempty(allRows, 'sd3l'),
+    ovn_sd3h:   _sd3.h,
+    ovn_sd3l:   _sd3.l,
     // ── AVWAP position & signaux ──────────────────────────────────────────────
     // SD live : préférer les barres du jour (RTH migrent les SD) avant de tomber sur OVN
     vwap:   ovnVwapFinal,
