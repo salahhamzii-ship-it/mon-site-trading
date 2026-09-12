@@ -4,395 +4,659 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SUIVI SD NQ LIVE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap">
 <style>
-  :root {
-    --bg:     #0a0a0f;
-    --bg2:    #111118;
-    --bg3:    #16161f;
-    --border: #22222f;
-    --text:   #b8b8cc;
-    --dim:    #55556a;
-    --green:  #00e676;
-    --red:    #ff3355;
-    --yellow: #ffd740;
-    --orange: #ff9100;
-    --blue:   #40c4ff;
-    --white:  #f0f0ff;
+/* ── TOKENS ────────────────────────────────── */
+:root {
+  --bg:       #070d12;
+  --bg-panel: #0b1218;
+  --bg-row:   #0f1820;
+  --border:   #182030;
+  --border2:  #1e2c3c;
+  --text:     #8899aa;
+  --text2:    #5a6a7a;
+  --text-hi:  #ccdde8;
+  --gold:     #f0c040;
+  --gold-dim: #f0c04033;
+  --sd3h: #e04040; --sd2h: #d06020; --sd1h: #c09030;
+  --sd1l: #40b890; --sd2l: #30c868; --sd3l: #20d848;
+  --green:    #30d068;
+  --red:      #e04040;
+  --body-bg:  var(--bg);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:       #f0f4f8;
+    --bg-panel: #ffffff;
+    --bg-row:   #f6f9fc;
+    --border:   #d8e4ee;
+    --border2:  #c8d8e8;
+    --text:     #4a6070;
+    --text2:    #8099aa;
+    --text-hi:  #1a2a38;
+    --gold:     #d08000;
+    --gold-dim: #d0800022;
+    --body-bg:  var(--bg);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+}
+:root[data-theme="dark"] {
+  --bg:       #070d12;
+  --bg-panel: #0b1218;
+  --bg-row:   #0f1820;
+  --border:   #182030;
+  --border2:  #1e2c3c;
+  --text:     #8899aa;
+  --text2:    #5a6a7a;
+  --text-hi:  #ccdde8;
+  --gold:     #f0c040;
+  --gold-dim: #f0c04033;
+  --body-bg:  var(--bg);
+}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    min-height: 100vh;
-    overflow: hidden;
-  }
+/* ── RESET ─────────────────────────────────── */
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--body-bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+}
+.mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
 
-  /* ── HEADER ── */
-  #header {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 9px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  #title {
-    font-size: 15px;
-    font-weight: bold;
-    color: var(--white);
-    letter-spacing: 2px;
-    white-space: nowrap;
-  }
-  #hright { display: flex; align-items: center; gap: 14px; font-size: 11px; }
+/* ── LAYOUT ─────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
 
-  #ny-clock { color: var(--blue); font-size: 15px; font-weight: bold; letter-spacing: 1px; }
+/* ── HEADER ─────────────────────────────────── */
+#hdr {
+  flex: none;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0 18px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: space-between;
+}
+#hdr-left { display: flex; align-items: center; gap: 14px; }
+#hdr-right { display: flex; align-items: center; gap: 16px; }
 
-  #mkt-badge {
-    padding: 2px 10px; border-radius: 2px;
-    font-size: 10px; font-weight: bold; letter-spacing: 1px;
-  }
-  .mkt-open   { background: #002200; color: var(--green); border: 1px solid #00662244; }
-  .mkt-closed { background: #1f0009; color: var(--red);   border: 1px solid #66002244; }
+#logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-hi);
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+#logo span { color: var(--gold); }
 
-  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
-  .dot-ok     { background: var(--green); box-shadow: 0 0 5px var(--green); }
-  .dot-warn   { background: var(--yellow); animation: bk .9s infinite; }
-  .dot-err    { background: var(--red); }
-  @keyframes bk { 0%,100%{opacity:1} 50%{opacity:.25} }
+#ny-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-hi);
+  letter-spacing: .06em;
+  font-variant-numeric: tabular-nums;
+}
 
-  #bridge-lbl { color: var(--dim); }
+#mkt {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  padding: 2px 9px;
+  border-radius: 2px;
+}
+.mkt-o { background: #0a2018; color: var(--green); border: 1px solid #1a4028; }
+.mkt-c { background: #1a0808; color: var(--red);   border: 1px solid #3a1010; }
 
-  /* sound toggle */
-  #snd-btn {
-    background: var(--bg3); border: 1px solid var(--border);
-    color: var(--dim); padding: 3px 10px; cursor: pointer;
-    font-family: inherit; font-size: 11px; border-radius: 2px;
-    transition: color .2s, border-color .2s;
-  }
-  #snd-btn.on { border-color: var(--yellow); color: var(--yellow); }
+/* bridge status */
+#bst {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; color: var(--text2);
+}
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex: none;
+}
+.dot-ok   { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.dot-warn { background: var(--gold);  animation: bk .9s step-end infinite; }
+.dot-err  { background: var(--red); }
+@keyframes bk { 0%,100%{opacity:1} 50%{opacity:.15} }
 
-  /* ── MAIN GRID ── */
-  #main {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    height: calc(100vh - 43px);
-    gap: 1px;
-    background: var(--border);
-  }
-  .panel { background: var(--bg); padding: 12px; overflow-y: auto; }
+/* demo badge */
+#demo-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  padding: 2px 7px; border-radius: 2px;
+  background: #1a1020; color: #9060c0;
+  border: 1px solid #3a2050;
+  display: none;
+}
+#demo-badge.show { display: block; }
 
-  .ptitle {
-    color: var(--dim); font-size: 9px; letter-spacing: 2px;
-    text-transform: uppercase; margin-bottom: 10px;
-    padding-bottom: 5px; border-bottom: 1px solid var(--border);
-  }
-  .sep {
-    color: var(--dim); font-size: 9px; letter-spacing: 2px;
-    margin: 10px 0 5px; display: flex; align-items: center; gap: 8px;
-  }
-  .sep::after { content:''; flex:1; height:1px; background:var(--border); }
+/* sound btn */
+#snd {
+  background: none; border: 1px solid var(--border2);
+  color: var(--text2); font-size: 11px;
+  padding: 3px 10px; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  border-radius: 2px; transition: color .15s, border-color .15s;
+}
+#snd:hover { color: var(--text-hi); border-color: var(--text2); }
+#snd.on { color: var(--gold); border-color: var(--gold-dim); }
 
-  /* ── SD TABLE ── */
-  #sd-wrap { width: 100%; }
+/* ── BODY ───────────────────────────────────── */
+#body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  overflow: hidden;
+  gap: 1px;
+  background: var(--border);
+}
 
-  .sd-row {
-    display: grid;
-    grid-template-columns: 68px 1fr 70px;
-    align-items: center;
-    border-bottom: 1px solid #1a1a25;
-    padding: 4px 2px;
-    transition: background .15s;
-  }
-  .sd-row.active-row { background: #16160a; }
+.panel {
+  background: var(--bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
-  .sd-lbl { font-size: 11px; color: var(--dim); }
-  .sd-price { font-size: 13px; font-weight: bold; color: var(--white); text-align: right; }
-  .sd-dist  { font-size: 11px; text-align: right; padding-left: 4px; }
-  .dist-pos { color: #7affaa; }
-  .dist-neg { color: #ff7a7a; }
+/* ── LEFT PANEL ─────────────────────────────── */
+#p-left { padding: 0; }
 
-  .lbl-sd3h { color: #ff6060; } .lbl-sd3h .sd-price { color: #ff6060; }
-  .lbl-sd2h .sd-price { color: #ff9090; }
-  .lbl-sd1h .sd-price { color: #ffb870; }
-  .lbl-avwp .sd-lbl  { color: var(--yellow); }
-  .lbl-avwp .sd-price { color: var(--yellow); font-size: 15px; }
-  .lbl-sd1l .sd-price { color: #70ffa8; }
-  .lbl-sd2l .sd-price { color: #50ff90; }
-  .lbl-sd3l .sd-price { color: #30ff70; }
+/* section header */
+.shead {
+  padding: 10px 16px 8px;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+  position: sticky; top: 0; z-index: 1;
+}
 
-  .row-price {
-    background: #111108;
-    border: 1px solid #ffd74033;
-    border-radius: 2px;
-    margin: 6px 0;
-    padding: 5px 2px;
-  }
-  .row-price .sd-lbl  { color: var(--yellow); font-weight: bold; }
-  .row-price .sd-price { color: var(--yellow); font-size: 16px; }
-  #price-delta { font-size: 14px; }
+/* SD RULER */
+#ruler-wrap { padding: 16px 16px 8px; }
 
-  /* LAF LBF */
-  #signals { display: flex; gap: 8px; margin-top: 10px; }
-  .sig-badge {
-    flex: 1; text-align: center;
-    padding: 4px; border-radius: 2px; font-size: 10px; font-weight: bold;
-    letter-spacing: 1px; border: 1px solid var(--border); color: var(--dim);
-    background: var(--bg3);
-  }
-  .sig-laf { background: #1a0008; color: var(--red); border-color: var(--red); }
-  .sig-lbf { background: #001a08; color: var(--green); border-color: var(--green); }
+#ruler {
+  position: relative;
+  /* vertical bar on left */
+}
+#ruler::before {
+  content: '';
+  position: absolute;
+  left: 59px;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--border2);
+}
 
-  #avwap-side {
-    margin-top: 8px; text-align: center;
-    padding: 4px; border-radius: 2px; font-size: 11px; font-weight: bold;
-    letter-spacing: 1px; border: 1px solid var(--border); color: var(--dim);
-  }
-  .side-above { background: #001a00; color: var(--green); border-color: #00662244; }
-  .side-below { background: #1a0000; color: var(--red);   border-color: #66002244; }
+.sd-level {
+  display: grid;
+  grid-template-columns: 56px 2px 80px 1fr;
+  align-items: center;
+  gap: 0 10px;
+  padding: 5px 0;
+  position: relative;
+}
+.sd-level.is-avwap {
+  padding: 7px 0;
+  margin: 2px 0;
+}
 
-  #lupdate { margin-top: 8px; font-size: 10px; color: var(--dim); text-align: center; }
+/* label */
+.sd-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: .05em;
+  text-align: right;
+  padding-right: 6px;
+}
+/* tick mark on ruler */
+.sd-tick {
+  width: 2px;
+  height: 100%;
+  align-self: stretch;
+}
+/* price */
+.sd-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+}
+/* distance */
+.sd-dist {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+}
 
-  /* ── REF TABLE ── */
-  .rt { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-  .rt tr { border-bottom: 1px solid #16161f; }
-  .rt td { padding: 3px 4px; font-size: 12px; }
-  .rt .rl { color: var(--dim); width: 78px; }
-  .rt .rv { color: var(--white); text-align: right; }
-  .rt .rd { text-align: right; font-size: 10px; }
+/* color assignments */
+.lv-sd3h .sd-lbl, .lv-sd3h .sd-val { color: var(--sd3h); }
+.lv-sd3h .sd-tick { background: var(--sd3h); opacity: .7; }
+.lv-sd3h .sd-dist { color: var(--sd3h); opacity: .7; }
 
-  /* ── ALERT PANEL ── */
-  #alert-section { margin-top: 12px; }
+.lv-sd2h .sd-lbl, .lv-sd2h .sd-val { color: var(--sd2h); }
+.lv-sd2h .sd-tick { background: var(--sd2h); opacity: .7; }
+.lv-sd2h .sd-dist { color: var(--sd2h); opacity: .7; }
 
-  .alert-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 4px 6px; margin-bottom: 3px; border-radius: 2px;
-    border: 1px solid var(--border); background: var(--bg3);
-    font-size: 11px;
-  }
-  .alert-item .al-name { color: var(--dim); }
-  .alert-item .al-val  { color: var(--white); }
-  .alert-item.armed    { border-color: var(--yellow); background: #111100; }
-  .alert-item.armed .al-name { color: var(--yellow); }
-  .alert-item.firing   { border-color: var(--red); background: #1a0000; animation: pulse .5s infinite; }
-  .alert-item.firing .al-name { color: var(--red); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+.lv-sd1h .sd-lbl, .lv-sd1h .sd-val { color: var(--sd1h); }
+.lv-sd1h .sd-tick { background: var(--sd1h); opacity: .6; }
+.lv-sd1h .sd-dist { color: var(--sd1h); opacity: .7; }
 
-  #alert-window-info {
-    font-size: 10px; color: var(--dim); margin-bottom: 6px;
-  }
-  #alert-window-info span { color: var(--yellow); }
+.lv-avwap .sd-lbl { color: var(--gold); font-weight: 700; }
+.lv-avwap .sd-val { color: var(--gold); font-size: 13px; font-weight: 700; }
+.lv-avwap .sd-tick { background: var(--gold); opacity: .9; height: 100%; }
+.lv-avwap .sd-dist { color: var(--gold); opacity: .8; }
 
-  /* ── ALERT BAR (bottom) ── */
-  #alert-bar {
-    display: none;
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-    background: #1a000a; border-top: 2px solid var(--red);
-    padding: 9px 16px;
-    align-items: center; gap: 12px;
-  }
-  #alert-bar.show { display: flex; }
-  #alert-msg { color: var(--red); font-weight: bold; font-size: 14px; flex: 1; letter-spacing: 1px; }
-  #alert-ok {
-    background: none; border: 1px solid var(--red);
-    color: var(--red); padding: 3px 12px;
-    cursor: pointer; font-family: inherit; font-size: 11px;
-  }
-  #alert-ok:hover { background: #330010; }
+.lv-sd1l .sd-lbl, .lv-sd1l .sd-val { color: var(--sd1l); }
+.lv-sd1l .sd-tick { background: var(--sd1l); opacity: .6; }
+.lv-sd1l .sd-dist { color: var(--sd1l); opacity: .7; }
 
-  /* ── OFFLINE ── */
-  #offline {
-    display: none;
-    position: fixed; inset: 0; z-index: 200;
-    background: #0a0a0fdd;
-    flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  }
-  #offline.show { display: flex; }
-  #offline-h { font-size: 22px; color: var(--red); font-weight: bold; letter-spacing: 3px; }
-  #offline-s { color: var(--dim); font-size: 12px; }
+.lv-sd2l .sd-lbl, .lv-sd2l .sd-val { color: var(--sd2l); }
+.lv-sd2l .sd-tick { background: var(--sd2l); opacity: .7; }
+.lv-sd2l .sd-dist { color: var(--sd2l); opacity: .7; }
 
-  @media (max-width: 680px) {
-    #main { grid-template-columns: 1fr; height: auto; overflow-y: auto; }
-    body { overflow: auto; }
-  }
+.lv-sd3l .sd-lbl, .lv-sd3l .sd-val { color: var(--sd3l); }
+.lv-sd3l .sd-tick { background: var(--sd3l); opacity: .7; }
+.lv-sd3l .sd-dist { color: var(--sd3l); opacity: .7; }
+
+/* PRICE ROW — pinned between bands */
+#price-row {
+  display: grid;
+  grid-template-columns: 56px 2px 1fr;
+  align-items: center;
+  gap: 0 10px;
+  padding: 8px 0;
+  margin: 1px 0;
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--gold-dim);
+  background: linear-gradient(90deg, transparent 0%, #f0c00808 100%);
+}
+#price-row .sd-lbl {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 10px;
+}
+#price-row .sd-tick { background: var(--gold); opacity: 1; }
+#p-price-inner { display: flex; align-items: baseline; gap: 10px; }
+#p-last {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px; font-weight: 700;
+  color: var(--text-hi);
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+}
+#p-delta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.dpos { color: var(--green); }
+.dneg { color: var(--red); }
+.dnil { color: var(--text2); }
+
+/* AVWAP SIDE */
+#side-row {
+  display: flex; gap: 8px; padding: 10px 16px 0;
+}
+.side-pill {
+  flex: 1; text-align: center;
+  font-size: 10px; font-weight: 600; letter-spacing: .12em;
+  padding: 5px 0; border-radius: 2px;
+  transition: all .2s;
+}
+.side-above { background: #0a2018; color: var(--green); border: 1px solid #1a4028; }
+.side-below { background: #1a0808; color: var(--red);   border: 1px solid #3a1010; }
+.side-dim   { background: var(--bg-row); color: var(--text2); border: 1px solid var(--border); }
+
+/* LAF / LBF */
+#sig-row { display: flex; gap: 8px; padding: 8px 16px 14px; }
+.sig {
+  flex: 1; text-align: center;
+  font-size: 10px; font-weight: 600; letter-spacing: .1em;
+  padding: 4px; border-radius: 2px;
+  background: var(--bg-row); color: var(--text2);
+  border: 1px solid var(--border);
+  transition: all .2s;
+}
+.sig-laf-on { background: #1a0808; color: var(--red);   border-color: #5a2020; }
+.sig-lbf-on { background: #0a1a0a; color: var(--green); border-color: #1a4020; }
+
+/* update line */
+#upd-line {
+  padding: 0 16px 14px;
+  font-size: 10px; color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── RIGHT PANEL ────────────────────────────── */
+#p-right { padding: 0; }
+
+.ref-section { padding: 0 18px 14px; }
+.ref-section + .ref-section { border-top: 1px solid var(--border); padding-top: 10px; }
+
+.ref-title {
+  font-size: 9px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text2); padding: 10px 0 6px;
+}
+
+.ref-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 1fr;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 4px;
+}
+.ref-row:last-child { border-bottom: none; }
+.ref-lbl {
+  font-size: 11px; color: var(--text2);
+}
+.ref-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  color: var(--text-hi); text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ref-dist {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Alertes */
+.alert-slot {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  margin-bottom: 5px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+  background: var(--bg-row);
+  font-size: 11px;
+}
+.alert-slot .al { color: var(--text2); }
+.alert-slot .av {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text2); font-weight: 500;
+}
+.alert-slot.pending { border-color: var(--border2); }
+.alert-slot.pending .al { font-style: italic; color: var(--text2); opacity: .5; }
+
+/* ── ALERT BAR ──────────────────────────────── */
+#alert-bar {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  background: #120408; border-top: 1px solid var(--red);
+  padding: 10px 18px;
+  align-items: center; gap: 12px;
+}
+#alert-bar.show { display: flex; }
+#alert-msg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 600; color: var(--red);
+  letter-spacing: .06em; flex: 1;
+}
+#alert-ok {
+  background: none; border: 1px solid var(--red);
+  color: var(--red); padding: 3px 14px; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  border-radius: 2px;
+}
+#alert-ok:hover { background: #240810; }
+
+/* ── OFFLINE OVERLAY ────────────────────────── */
+#offline {
+  display: none; position: fixed; inset: 0; z-index: 80;
+  background: #070d12ee;
+  flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+}
+#offline.show { display: flex; }
+#off-h {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px; font-weight: 700; color: var(--red); letter-spacing: .15em;
+}
+#off-s { font-size: 12px; color: var(--text2); }
+#off-url { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--border2); margin-top: 2px; }
+
+/* ── RESPONSIVE ─────────────────────────────── */
+@media (max-width: 680px) {
+  #body { grid-template-columns: 1fr; }
+  body { overflow: auto; }
+  #app { height: auto; }
+  #p-left { border-bottom: 1px solid var(--border); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dot-warn { animation: none; }
+}
 </style>
 </head>
 <body>
+<div id="app">
 
 <!-- HEADER -->
-<div id="header">
-  <div id="title">⬛ SUIVI SD NQ LIVE</div>
-  <div id="hright">
-    <div id="ny-clock">--:--:-- ET</div>
-    <div id="mkt-badge" class="mkt-closed">FERMÉ</div>
-    <div><span class="dot dot-warn" id="bdot"></span><span id="bridge-lbl">...</span></div>
-    <button id="snd-btn" onclick="toggleSnd()">🔇 SON</button>
+<header id="hdr">
+  <div id="hdr-left">
+    <div id="logo"><span>NQ</span> · SUIVI SD LIVE</div>
+    <div id="mkt" class="mkt-c">FERMÉ</div>
+    <div id="demo-badge">DÉMO</div>
   </div>
-</div>
+  <div id="hdr-right">
+    <div id="ny-time" class="mono">--:--:-- ET</div>
+    <div id="bst"><span class="dot dot-warn" id="bdot"></span><span id="blbl" style="font-size:11px;">...</span></div>
+    <button id="snd" onclick="toggleSnd()">🔇 SON</button>
+  </div>
+</header>
 
-<!-- MAIN -->
-<div id="main">
+<!-- BODY -->
+<div id="body">
 
-  <!-- GAUCHE : SD BANDS + PRIX -->
-  <div class="panel">
-    <div class="ptitle">NQ — BANDES SD · AVWAP 18H</div>
+  <!-- LEFT : SD RULER -->
+  <div class="panel" id="p-left">
+    <div class="shead">BANDES SD · AVWAP 18H</div>
 
-    <div id="sd-wrap">
-      <div class="sd-row lbl-sd3h" id="r-sd3h"><span class="sd-lbl">SD+3</span><span class="sd-price" id="v-sd3h">—</span><span class="sd-dist" id="d-sd3h"></span></div>
-      <div class="sd-row lbl-sd2h" id="r-sd2h"><span class="sd-lbl">SD+2</span><span class="sd-price" id="v-sd2h">—</span><span class="sd-dist" id="d-sd2h"></span></div>
-      <div class="sd-row lbl-sd1h" id="r-sd1h"><span class="sd-lbl">SD+1</span><span class="sd-price" id="v-sd1h">—</span><span class="sd-dist" id="d-sd1h"></span></div>
+    <div id="ruler-wrap">
+      <div id="ruler">
+        <div class="sd-level lv-sd3h">
+          <span class="sd-lbl">SD+3</span><span class="sd-tick"></span>
+          <span class="sd-val mono" id="v-sd3h">—</span>
+          <span class="sd-dist" id="d-sd3h"></span>
+        </div>
+        <div class="sd-level lv-sd2h">
+          <span class="sd-lbl">SD+2</span><span class="sd-tick"></span>
+          <span class="sd-val mono" id="v-sd2h">—</span>
+          <span class="sd-dist" id="d-sd2h"></span>
+        </div>
+        <div class="sd-level lv-sd1h">
+          <span class="sd-lbl">SD+1</span><span class="sd-tick"></span>
+          <span class="sd-val mono" id="v-sd1h">—</span>
+          <span class="sd-dist" id="d-sd1h"></span>
+        </div>
 
-      <div class="sd-row row-price">
-        <span class="sd-lbl">▶ NQ</span>
-        <span class="sd-price" id="v-last">—</span>
-        <span class="sd-dist" id="price-delta">—</span>
+        <div id="price-row">
+          <span class="sd-lbl">▶ NQ</span><span class="sd-tick"></span>
+          <div id="p-price-inner">
+            <span id="p-last" class="mono">—</span>
+            <span id="p-delta" class="dnil">—</span>
+          </div>
+        </div>
+
+        <div class="sd-level lv-avwap is-avwap">
+          <span class="sd-lbl">AVWAP</span><span class="sd-tick"></span>
+          <span class="sd-val mono" id="v-avwp">—</span>
+          <span class="sd-dist" id="d-avwp"></span>
+        </div>
+        <div class="sd-level lv-sd1l">
+          <span class="sd-lbl">SD-1</span><span class="sd-tick"></span>
+          <span class="sd-val mono" id="v-sd1l">—</span>
+          <span class="sd-dist" id="d-sd1l"></span>
+        </div>
+        <div class="sd-level lv-sd2l">
+          <span class="sd-lbl">SD-2</span><span class="sd-tick"></span>
+          <span class="sd-val mono" id="v-sd2l">—</span>
+          <span class="sd-dist" id="d-sd2l"></span>
+        </div>
+        <div class="sd-level lv-sd3l">
+          <span class="sd-lbl">SD-3</span><span class="sd-tick"></span>
+          <span class="sd-val mono" id="v-sd3l">—</span>
+          <span class="sd-dist" id="d-sd3l"></span>
+        </div>
       </div>
-
-      <div class="sd-row lbl-avwp" id="r-avwp"><span class="sd-lbl">👑 AVWAP</span><span class="sd-price" id="v-avwp">—</span><span class="sd-dist" id="d-avwp"></span></div>
-      <div class="sd-row lbl-sd1l" id="r-sd1l"><span class="sd-lbl">SD-1</span><span class="sd-price" id="v-sd1l">—</span><span class="sd-dist" id="d-sd1l"></span></div>
-      <div class="sd-row lbl-sd2l" id="r-sd2l"><span class="sd-lbl">SD-2</span><span class="sd-price" id="v-sd2l">—</span><span class="sd-dist" id="d-sd2l"></span></div>
-      <div class="sd-row lbl-sd3l" id="r-sd3l"><span class="sd-lbl">SD-3</span><span class="sd-price" id="v-sd3l">—</span><span class="sd-dist" id="d-sd3l"></span></div>
     </div>
 
-    <div id="avwap-side">— AVWAP —</div>
-    <div id="signals">
-      <div class="sig-badge" id="sig-laf">LAF SD+2</div>
-      <div class="sig-badge" id="sig-lbf">LBF SD-2</div>
+    <div id="side-row">
+      <div class="side-pill side-dim" id="side-above">▲ DESSUS AVWAP</div>
+      <div class="side-pill side-dim" id="side-below">▼ DESSOUS AVWAP</div>
     </div>
-    <div id="lupdate">—</div>
+    <div id="sig-row">
+      <div class="sig" id="sig-laf">LAF SD+2</div>
+      <div class="sig" id="sig-lbf">LBF SD-2</div>
+    </div>
+    <div id="upd-line">SC update : —</div>
   </div>
 
-  <!-- DROITE : NIVEAUX + ALERTES -->
-  <div class="panel">
-    <div class="ptitle">NIVEAUX DE RÉFÉRENCE</div>
+  <!-- RIGHT : REFERENCE LEVELS + ALERTS -->
+  <div class="panel" id="p-right">
+    <div class="shead">NIVEAUX DE RÉFÉRENCE</div>
 
-    <div class="sep">J-1 RTH</div>
-    <table class="rt">
-      <tr><td class="rl">VAH</td>    <td class="rv" id="v-vah">—</td>    <td class="rd" id="d-vah"></td></tr>
-      <tr><td class="rl">POC</td>    <td class="rv" id="v-poc">—</td>    <td class="rd" id="d-poc"></td></tr>
-      <tr><td class="rl">VAL</td>    <td class="rv" id="v-val">—</td>    <td class="rd" id="d-val"></td></tr>
-      <tr><td class="rl">High J-1</td><td class="rv" id="v-j1h">—</td>  <td class="rd" id="d-j1h"></td></tr>
-      <tr><td class="rl">Settle</td><td class="rv" id="v-j1s">—</td>    <td class="rd" id="d-j1s"></td></tr>
-      <tr><td class="rl">Low J-1</td><td class="rv" id="v-j1l">—</td>   <td class="rd" id="d-j1l"></td></tr>
-    </table>
+    <div class="ref-section">
+      <div class="ref-title">J-1 RTH</div>
+      <div class="ref-row"><span class="ref-lbl">VAH</span>    <span class="ref-val mono" id="v-vah">—</span>    <span class="ref-dist" id="d-vah"></span></div>
+      <div class="ref-row"><span class="ref-lbl">POC</span>    <span class="ref-val mono" id="v-poc">—</span>    <span class="ref-dist" id="d-poc"></span></div>
+      <div class="ref-row"><span class="ref-lbl">VAL</span>    <span class="ref-val mono" id="v-val">—</span>    <span class="ref-dist" id="d-val"></span></div>
+      <div class="ref-row"><span class="ref-lbl">High J-1</span><span class="ref-val mono" id="v-j1h">—</span><span class="ref-dist" id="d-j1h"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Settle</span> <span class="ref-val mono" id="v-j1s">—</span>   <span class="ref-dist" id="d-j1s"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Low J-1</span><span class="ref-val mono" id="v-j1l">—</span>  <span class="ref-dist" id="d-j1l"></span></div>
+    </div>
 
-    <div class="sep">OVN (18H → 09H30)</div>
-    <table class="rt">
-      <tr><td class="rl">High OVN</td><td class="rv" id="v-ovnh">—</td><td class="rd" id="d-ovnh"></td></tr>
-      <tr><td class="rl">Low OVN</td> <td class="rv" id="v-ovnl">—</td><td class="rd" id="d-ovnl"></td></tr>
-    </table>
+    <div class="ref-section">
+      <div class="ref-title">OVN (18H → 09H30)</div>
+      <div class="ref-row"><span class="ref-lbl">High OVN</span><span class="ref-val mono" id="v-ovnh">—</span><span class="ref-dist" id="d-ovnh"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Low OVN</span> <span class="ref-val mono" id="v-ovnl">—</span><span class="ref-dist" id="d-ovnl"></span></div>
+    </div>
 
-    <div class="sep">ALN — ASIE / LONDRES</div>
-    <table class="rt">
-      <tr><td class="rl">Asie High</td>  <td class="rv" id="v-ash">—</td><td class="rd" id="d-ash"></td></tr>
-      <tr><td class="rl">Asie Low</td>   <td class="rv" id="v-asl">—</td><td class="rd" id="d-asl"></td></tr>
-      <tr><td class="rl">London High</td><td class="rv" id="v-lnh">—</td><td class="rd" id="d-lnh"></td></tr>
-      <tr><td class="rl">London Low</td> <td class="rv" id="v-lnl">—</td><td class="rd" id="d-lnl"></td></tr>
-    </table>
+    <div class="ref-section">
+      <div class="ref-title">ALN — ASIE / LONDRES</div>
+      <div class="ref-row"><span class="ref-lbl">Asie High</span>  <span class="ref-val mono" id="v-ash">—</span><span class="ref-dist" id="d-ash"></span></div>
+      <div class="ref-row"><span class="ref-lbl">Asie Low</span>   <span class="ref-val mono" id="v-asl">—</span><span class="ref-dist" id="d-asl"></span></div>
+      <div class="ref-row"><span class="ref-lbl">London High</span><span class="ref-val mono" id="v-lnh">—</span><span class="ref-dist" id="d-lnh"></span></div>
+      <div class="ref-row"><span class="ref-lbl">London Low</span> <span class="ref-val mono" id="v-lnl">—</span><span class="ref-dist" id="d-lnl"></span></div>
+    </div>
 
-    <!-- ALERTES -->
-    <div id="alert-section">
-      <div class="sep">ALERTES SONORES</div>
-      <div id="alert-window-info">Fenêtre active : <span>18H00 → 06H00 ET</span></div>
-
-      <div class="alert-item" id="ai-sd3h">
-        <span class="al-name">NQ touche SD+3 (EXTRÊME HAUT)</span>
-        <span class="al-val" id="av-sd3h">—</span>
+    <div class="ref-section">
+      <div class="ref-title">ALERTES SONORES</div>
+      <div class="alert-slot pending">
+        <span class="al">Déclencheur 1</span>
+        <span class="av">à définir</span>
       </div>
-      <div class="alert-item" id="ai-sd2h">
-        <span class="al-name">NQ touche SD+2 → LAF possible</span>
-        <span class="al-val" id="av-sd2h">—</span>
+      <div class="alert-slot pending">
+        <span class="al">Déclencheur 2</span>
+        <span class="av">à définir</span>
       </div>
-      <div class="alert-item" id="ai-avwp-x">
-        <span class="al-name">NQ croise AVWAP (changement côté)</span>
-        <span class="al-val" id="av-avwp">—</span>
-      </div>
-      <div class="alert-item" id="ai-sd2l">
-        <span class="al-name">NQ touche SD-2 → LBF possible</span>
-        <span class="al-val" id="av-sd2l">—</span>
-      </div>
-      <div class="alert-item" id="ai-sd3l">
-        <span class="al-name">NQ touche SD-3 (EXTRÊME BAS)</span>
-        <span class="al-val" id="av-sd3l">—</span>
+      <div class="alert-slot pending">
+        <span class="al">Fenêtre horaire</span>
+        <span class="av">à définir</span>
       </div>
     </div>
-  </div>
 
-</div>
+  </div><!-- /p-right -->
+</div><!-- /body -->
+</div><!-- /app -->
 
 <!-- ALERT BAR -->
 <div id="alert-bar">
   <div id="alert-msg">⚠ ALERTE NQ</div>
-  <button id="alert-ok" onclick="clearAlert()">OK</button>
+  <button id="alert-ok" onclick="document.getElementById('alert-bar').classList.remove('show')">OK</button>
 </div>
 
 <!-- OFFLINE OVERLAY -->
 <div id="offline">
-  <div id="offline-h">⚡ BRIDGE OFFLINE</div>
-  <div id="offline-s">Vérifier startup_bridge.bat → sc_bridge.js</div>
-  <div style="color:#333;font-size:11px;margin-top:6px;">localhost:8766</div>
+  <div id="off-h">BRIDGE OFFLINE</div>
+  <div id="off-s">Lancer startup_bridge.bat → sc_bridge.js</div>
+  <div id="off-url">localhost:8766</div>
 </div>
 
 <script>
-// ════════════════════════════════════════════════
-//  CONFIG — modifier ici si besoin
-// ════════════════════════════════════════════════
-const BRIDGE   = 'http://localhost:8766/data'
-const POLL     = 5000          // ms entre chaque fetch
-const TOUCH_PT = 8             // distance en pts pour déclencher "touche"
-const ALT_FROM = 18            // début fenêtre alerte (heure NY)
-const ALT_TO   = 6             // fin fenêtre alerte   (heure NY)
+// ═══════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════
+const BRIDGE = 'http://localhost:8766/data'
+const POLL   = 5000
 
-// ════════════════════════════════════════════════
-//  ÉTAT
-// ════════════════════════════════════════════════
-let sndOn       = false
-let prevPrice   = null
-let prevSide    = null         // 'above' | 'below'
-let alertActive = {}           // clé → timestamp dernier déclenchement
-const COOLDOWN  = 120000       // 2 min entre 2 alertes du même type
-let audioCtx    = null
-let missCount   = 0
+// ═══════════════════════════════════════════════
+//  DEMO DATA — affiché quand bridge offline
+// ═══════════════════════════════════════════════
+const DEMO = {
+  NQ: {
+    last: 19845.50,
+    vwap: 19780.00,
+    sd1h: 19830.00, sd1l: 19730.00,
+    sd2h: 19880.00, sd2l: 19680.00,
+    ovn_sd3h: 19930.00, ovn_sd3l: 19630.00,
+    vah: 19820.00, poc: 19790.00, val: 19755.00,
+    j1_high: 19895.00, j1_settle: 19800.00, j1_low: 19710.00,
+    ovn_high: 19870.00, ovn_low: 19740.00,
+    asia_high: 19860.00, asia_low: 19760.00,
+    lon_high: 19880.00, lon_low: 19745.00,
+    avwap_side: 'above', laf_sd2: false, lbf_sd2: false,
+    lastUpdate: null,
+    _demo: true
+  }
+}
 
-// ════════════════════════════════════════════════
-//  NY TIME / MARKET STATUS
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let sndOn     = false
+let prevPrice = null
+let prevSide  = null
+let missCount = 0
+let audioCtx  = null
+let isDemo    = false
+
+// ═══════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════
 function nyNow() {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
 }
-function isMarketOpen() {
+function isOpen() {
   const d = nyNow(), day = d.getDay(), m = d.getHours() * 60 + d.getMinutes()
   if (day === 6) return false
-  if (day === 0) return m >= 1080  // dim ≥ 18h00
-  if (day === 5) return m < 960    // ven < 16h00
+  if (day === 0) return m >= 1080
+  if (day === 5) return m < 960
   return true
 }
-function inAlertWindow() {
-  const h = nyNow().getHours()
-  return h >= ALT_FROM || h < ALT_TO
-}
-
 function tickClock() {
-  const t = nyNow()
-  const pad = n => String(n).padStart(2,'0')
-  document.getElementById('ny-clock').textContent =
-    pad(t.getHours())+':'+pad(t.getMinutes())+':'+pad(t.getSeconds())+' ET'
-  const mkt = document.getElementById('mkt-badge')
-  const open = isMarketOpen()
-  mkt.textContent = open ? 'OUVERT' : 'FERMÉ'
-  mkt.className   = open ? 'mkt-open' : 'mkt-closed'
+  const t   = nyNow()
+  const pad = n => String(n).padStart(2, '0')
+  document.getElementById('ny-time').textContent =
+    pad(t.getHours()) + ':' + pad(t.getMinutes()) + ':' + pad(t.getSeconds()) + ' ET'
+  const b = document.getElementById('mkt')
+  const o = isOpen()
+  b.textContent = o ? 'OUVERT' : 'FERMÉ'
+  b.className   = o ? 'mkt-o' : 'mkt-c'
 }
-setInterval(tickClock, 1000); tickClock()
+setInterval(tickClock, 1000)
+tickClock()
 
-// ════════════════════════════════════════════════
-//  AUDIO
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  SOUND
+// ═══════════════════════════════════════════════
 function toggleSnd() {
   sndOn = !sndOn
-  const b = document.getElementById('snd-btn')
+  const b = document.getElementById('snd')
   if (sndOn) {
     b.textContent = '🔔 SON'
     b.classList.add('on')
@@ -402,160 +666,81 @@ function toggleSnd() {
     b.classList.remove('on')
   }
 }
-
-function beep(freq, dur, vol, delay) {
+// Sound API exposed for future alert config
+window._beep = function(freq, dur, vol, delay) {
   if (!sndOn || !audioCtx) return
   setTimeout(() => {
     const o = audioCtx.createOscillator()
     const g = audioCtx.createGain()
     o.connect(g); g.connect(audioCtx.destination)
-    o.frequency.value = freq
-    g.gain.setValueAtTime(vol, audioCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur)
-    o.start(); o.stop(audioCtx.currentTime + dur)
+    o.frequency.value = freq || 880
+    g.gain.setValueAtTime(vol || 0.4, audioCtx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (dur || .5))
+    o.start(); o.stop(audioCtx.currentTime + (dur || .5))
   }, delay || 0)
 }
-
-const SOUNDS = {
-  sd3h:  () => { beep(1400,.15,.5,0); beep(1400,.15,.5,200); beep(1568,.4,.6,400) },
-  sd2h:  () => { beep(1047,.2,.45,0); beep(1319,.35,.55,280) },
-  avwap: () => { beep(880,.15,.4,0); beep(988,.15,.4,200); beep(880,.3,.4,400) },
-  sd2l:  () => { beep(659,.2,.45,0); beep(523,.35,.55,280) },
-  sd3l:  () => { beep(440,.15,.5,0); beep(440,.15,.5,200); beep(392,.4,.6,400) },
-}
-
-// ════════════════════════════════════════════════
-//  ALERTE
-// ════════════════════════════════════════════════
-function triggerAlert(key, msg, lvl) {
-  const now = Date.now()
-  if (alertActive[key] && now - alertActive[key] < COOLDOWN) return
-  alertActive[key] = now
-  if (SOUNDS[key]) SOUNDS[key]()
-  showBar('⚠ ' + msg + (lvl ? '  @ ' + fmt(lvl) : ''))
-  flashItem('ai-' + key.replace('avwp', 'avwp-x'))
-}
-
-function flashItem(id) {
-  const el = document.getElementById(id)
-  if (!el) return
-  el.classList.add('firing')
-  setTimeout(() => el.classList.remove('firing'), 4000)
-}
-
-function showBar(msg) {
-  document.getElementById('alert-msg').textContent = msg
+window._alert = function(msg) {
+  document.getElementById('alert-msg').textContent = '⚠ ' + msg
   document.getElementById('alert-bar').classList.add('show')
 }
-function clearAlert() {
-  document.getElementById('alert-bar').classList.remove('show')
-}
 
-// Met à jour le statut visuel "armé / hors fenêtre" des lignes d'alerte
-function refreshAlertItems(nq) {
-  const win = inAlertWindow()
-  const ids = ['sd3h','sd2h','avwp','sd2l','sd3l']
-  const vals = {
-    sd3h: nq.ovn_sd3h, sd2h: nq.sd2h, avwp: nq.vwap,
-    sd2l: nq.sd2l, sd3l: nq.ovn_sd3l
-  }
-  ids.forEach(k => {
-    const el = document.getElementById('ai-' + (k==='avwp'?'avwp-x':k))
-    if (!el) return
-    el.classList.toggle('armed', win)
-    document.getElementById('av-' + k).textContent = fmt(vals[k])
-  })
-  document.getElementById('alert-window-info').innerHTML =
-    'Fenêtre : <span>' + ALT_FROM + 'H00 → ' + ALT_TO + 'H00 ET</span>'
-    + ' — ' + (win
-      ? '<span style="color:var(--yellow)">ACTIVE ⚡</span>'
-      : '<span style="color:var(--dim)">hors fenêtre</span>')
-}
-
-// ════════════════════════════════════════════════
-//  CHECKS ALERTE
-// ════════════════════════════════════════════════
-function checkAlerts(nq) {
-  if (!inAlertWindow()) return
-  const p = parseFloat(nq.last)
-  if (isNaN(p)) return
-
-  const sd3h = parseFloat(nq.ovn_sd3h)
-  const sd2h = parseFloat(nq.sd2h)
-  const avwp = parseFloat(nq.vwap)
-  const sd2l = parseFloat(nq.sd2l)
-  const sd3l = parseFloat(nq.ovn_sd3l)
-
-  if (!isNaN(sd3h) && p >= sd3h - TOUCH_PT) triggerAlert('sd3h', 'NQ EXTRÊME HAUT SD+3', sd3h)
-  if (!isNaN(sd2h) && p >= sd2h - TOUCH_PT) triggerAlert('sd2h', 'NQ TOUCHE SD+2 — LAF POSSIBLE', sd2h)
-  if (!isNaN(sd2l) && p <= sd2l + TOUCH_PT) triggerAlert('sd2l', 'NQ TOUCHE SD-2 — LBF POSSIBLE', sd2l)
-  if (!isNaN(sd3l) && p <= sd3l + TOUCH_PT) triggerAlert('sd3l', 'NQ EXTRÊME BAS SD-3', sd3l)
-
-  // croisement AVWAP
-  const side = nq.avwap_side
-  if (prevSide && side && side !== prevSide) {
-    triggerAlert('avwp', 'NQ CROISE AVWAP → ' + (side === 'above' ? 'DESSUS' : 'DESSOUS'), avwp)
-  }
-}
-
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 //  FORMAT
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 function fmt(v) {
   if (v == null || v === '' || isNaN(Number(v))) return '—'
   return Number(v).toFixed(2)
 }
-function dspan(last, lvl) {
+function distHtml(last, lvl) {
   if (!last || !lvl || isNaN(last) || isNaN(lvl)) return ''
-  const d = (last - lvl).toFixed(0)
-  const cls = d >= 0 ? 'dist-pos' : 'dist-neg'
-  const sign = d >= 0 ? '+' : ''
-  return `<span class="${cls}">${sign}${d}</span>`
+  const d = Math.round(last - lvl)
+  const s = d >= 0 ? '+' : ''
+  const c = d >= 0 ? '#5a9a70' : '#9a5a5a'
+  return `<span style="color:${c};font-family:'JetBrains Mono',monospace;font-size:10px">${s}${d}</span>`
 }
 
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 //  RENDER
-// ════════════════════════════════════════════════
-function render(data) {
-  const nq = data && data.NQ
-  if (!nq) return
-
+// ═══════════════════════════════════════════════
+function render(nq) {
   const last = parseFloat(nq.last)
 
-  // PRIX
-  document.getElementById('v-last').textContent = fmt(last)
+  // PRICE
+  document.getElementById('p-last').textContent = fmt(last)
   if (prevPrice !== null) {
-    const d = last - prevPrice
-    const el = document.getElementById('price-delta')
+    const d  = last - prevPrice
+    const el = document.getElementById('p-delta')
     el.textContent = (d >= 0 ? '+' : '') + d.toFixed(2)
-    el.style.color = d > 0 ? 'var(--green)' : d < 0 ? 'var(--red)' : 'var(--dim)'
+    el.className   = d > 0 ? 'dpos' : d < 0 ? 'dneg' : 'dnil'
   }
-
-  // AVWAP SIDE
-  const sideEl = document.getElementById('avwap-side')
-  if (nq.avwap_side === 'above') {
-    sideEl.textContent = '▲ DESSUS AVWAP'; sideEl.className = 'side-above'
-  } else if (nq.avwap_side === 'below') {
-    sideEl.textContent = '▼ DESSOUS AVWAP'; sideEl.className = 'side-below'
-  }
-
-  // LAF / LBF
-  document.getElementById('sig-laf').className = 'sig-badge' + (nq.laf_sd2 ? ' sig-laf' : '')
-  document.getElementById('sig-lbf').className = 'sig-badge' + (nq.lbf_sd2 ? ' sig-lbf' : '')
 
   // SD BANDS
   const bands = [
     ['sd3h', nq.ovn_sd3h], ['sd2h', nq.sd2h], ['sd1h', nq.sd1h],
     ['avwp', nq.vwap],
-    ['sd1l', nq.sd1l], ['sd2l', nq.sd2l], ['sd3l', nq.ovn_sd3l],
+    ['sd1l', nq.sd1l],     ['sd2l', nq.sd2l], ['sd3l', nq.ovn_sd3l],
   ]
   bands.forEach(([k, v]) => {
-    document.getElementById('v-'+k).textContent = fmt(v)
-    const del = document.getElementById('d-'+k)
-    if (del) del.innerHTML = dspan(last, parseFloat(v))
+    const ve = document.getElementById('v-' + k)
+    const de = document.getElementById('d-' + k)
+    if (ve) ve.textContent = fmt(v)
+    if (de) de.innerHTML   = distHtml(last, parseFloat(v))
   })
 
-  // J-1
+  // AVWAP SIDE
+  const ab = document.getElementById('side-above')
+  const bl = document.getElementById('side-below')
+  if (nq.avwap_side === 'above') {
+    ab.className = 'side-pill side-above'; bl.className = 'side-pill side-dim'
+  } else if (nq.avwap_side === 'below') {
+    ab.className = 'side-pill side-dim';   bl.className = 'side-pill side-below'
+  }
+
+  // LAF / LBF
+  document.getElementById('sig-laf').className = 'sig' + (nq.laf_sd2 ? ' sig-laf-on' : '')
+  document.getElementById('sig-lbf').className = 'sig' + (nq.lbf_sd2 ? ' sig-lbf-on' : '')
+
+  // REF LEVELS
   const refs = [
     ['vah', nq.vah], ['poc', nq.poc], ['val', nq.val],
     ['j1h', nq.j1_high], ['j1s', nq.j1_settle], ['j1l', nq.j1_low],
@@ -564,53 +749,62 @@ function render(data) {
     ['lnh', nq.lon_high],  ['lnl', nq.lon_low],
   ]
   refs.forEach(([k, v]) => {
-    const ev = document.getElementById('v-'+k)
-    const ed = document.getElementById('d-'+k)
-    if (ev) ev.textContent = fmt(v)
-    if (ed) ed.innerHTML   = dspan(last, parseFloat(v))
+    const ve = document.getElementById('v-' + k)
+    const de = document.getElementById('d-' + k)
+    if (ve) ve.textContent = fmt(v)
+    if (de) de.innerHTML   = distHtml(last, parseFloat(v))
   })
 
-  // UPDATE TIME
-  const ts = nq.lastUpdate ? new Date(nq.lastUpdate).toLocaleTimeString('fr-FR') : '—'
-  document.getElementById('lupdate').textContent = 'Update SC : ' + ts
-
-  // ALERTES
-  refreshAlertItems(nq)
-  checkAlerts(nq)
+  // UPDATE
+  const ts = nq.lastUpdate
+    ? new Date(nq.lastUpdate).toLocaleTimeString('fr-FR')
+    : (nq._demo ? 'mode démo' : '—')
+  document.getElementById('upd-line').textContent = 'SC update : ' + ts
 
   prevSide  = nq.avwap_side
   prevPrice = last
 }
 
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 //  BRIDGE STATUS
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 function setBridge(state) {
   const dot = document.getElementById('bdot')
-  const lbl = document.getElementById('bridge-lbl')
+  const lbl = document.getElementById('blbl')
   const ov  = document.getElementById('offline')
+  const db  = document.getElementById('demo-badge')
   if (state === 'ok') {
-    dot.className = 'dot dot-ok'
+    dot.className   = 'dot dot-ok'
     lbl.textContent = 'BRIDGE OK'
     lbl.style.color = ''
     ov.classList.remove('show')
+    db.classList.remove('show')
     missCount = 0
+    isDemo    = false
   } else if (state === 'wait') {
-    dot.className = 'dot dot-warn'
-    lbl.textContent = 'ATTENTE...'
-    lbl.style.color = '#ffd74099'
+    dot.className   = 'dot dot-warn'
+    lbl.textContent = '...'
   } else {
-    dot.className = 'dot dot-err'
+    dot.className   = 'dot dot-err'
     lbl.textContent = 'OFFLINE'
     lbl.style.color = 'var(--red)'
     missCount++
-    if (missCount >= 3) ov.classList.add('show')
+    // After 2 misses: show demo data + badge, hide overlay
+    if (missCount >= 2 && !isDemo) {
+      isDemo = true
+      db.classList.add('show')
+      ov.classList.remove('show')
+      render(DEMO.NQ)
+    }
+    if (missCount >= 10) {
+      ov.classList.add('show')
+    }
   }
 }
 
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 //  POLL
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 async function poll() {
   setBridge('wait')
   try {
@@ -621,7 +815,7 @@ async function poll() {
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     setBridge('ok')
-    render(d)
+    render(d.NQ || d)
   } catch {
     setBridge('err')
   }
