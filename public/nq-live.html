@@ -773,6 +773,15 @@ const DEMO = {
 // ── STATE ────────────────────────────────────────────
 let prevLast = null, miss = 0, demo = false
 let manualLevels = null, currentALN = null
+let _lastGood = null   // dernier payload validé — gel d'affichage si données corrompues
+
+// ── VALIDATION GÉOMÉTRIQUE ───────────────────────────
+const NQ_RANGE = [8000, 50000]
+function isValidPayload(nq) {
+  if (!nq || typeof nq !== 'object') return false
+  const chk = [parseFloat(nq.last), parseFloat(nq.vwap), parseFloat(nq.sd2h), parseFloat(nq.sd2l)]
+  return chk.every(v => !isNaN(v) && v >= NQ_RANGE[0] && v <= NQ_RANGE[1])
+}
 
 // ── STORAGE ──────────────────────────────────────────
 function saveLevels(lvl) {
@@ -1083,11 +1092,15 @@ function setStatus(state) {
     miss = 0; demo = false
   } else if (state === 'wait') {
     dot.className = 'dot d-warn'; lbl.textContent = '...'
+  } else if (state === 'freeze') {
+    dot.className = 'dot d-warn'; lbl.textContent = 'GEL ✦'
+    lbl.style.color = 'var(--gold)'
   } else {
     dot.className = 'dot d-err'; lbl.textContent = 'OFFLINE'
     lbl.style.color = 'var(--red)'
     miss++
-    if (miss >= 2 && !demo) {
+    // Bascule DEMO seulement si aucun snapshot sain n'est disponible
+    if (miss >= 2 && !demo && !_lastGood) {
       demo = true; tag.classList.add('on')
       render(manualLevels || DEMO)
     }
@@ -1101,10 +1114,20 @@ async function poll() {
     const r = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
-    setStatus('ok')
-    const nq = d.NQ || d
-    cacheRefLevels(nq)
-    render(effectiveData(nq))
+    const nq  = d.NQ || d
+    const eff = effectiveData(nq)
+    if (isValidPayload(eff)) {
+      _lastGood = eff
+      cacheRefLevels(nq)
+      miss = 0; demo = false
+      document.getElementById('demo-tag').classList.remove('on')
+      setStatus('ok')
+      render(eff)
+    } else {
+      // Données corrompues ou à zéro — geler l'affichage
+      setStatus('freeze')
+      if (_lastGood) render(_lastGood)
+    }
   } catch {
     setStatus('err')
   }
