@@ -1008,6 +1008,37 @@ const INSTRUMENTS = new Set(['NQ', 'ES', 'GC', 'CL'])
 const httpServer = createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
 
+  // ── Sert le tracker HTML directement — accessible sur tout écran du réseau
+  if (req.method === 'GET' && (req.url === '/' || req.url === '/tracker')) {
+    const htmlPaths = [
+      // Windows : même dossier que sc_bridge.js
+      IS_WIN ? String.raw`C:\Users\${process.env.USERNAME || 'USER'}\Desktop\sc-bridge\suivi_sd_nq.html` : '',
+      IS_WIN ? String.raw`C:\Users\${process.env.USERPROFILE?.split('\\').pop() || 'USER'}\Desktop\sc-bridge\suivi_sd_nq.html` : '',
+      // Chemin relatif au process (fonctionne si lancé depuis le dossier sc-bridge)
+      new URL('../suivi_sd_nq.html', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'),
+      '/home/user/mon-site-trading/suivi_sd_nq.html',
+    ]
+    let html = null
+    for (const p of htmlPaths) {
+      if (!p) continue
+      try { html = readFileSync(p, 'utf-8'); break } catch {}
+    }
+    if (!html) {
+      // Fallback : redirige vers /data brut
+      res.writeHead(302, { Location: '/data' }); res.end(); return
+    }
+    // Patch inline : remplace BRIDGE pour pointer sur l'IP courante (LAN)
+    // Le navigateur distant recevra la bonne URL via window.location.origin
+    html = html.replace(
+      "const BRIDGE = 'http://localhost:8766/data'",
+      "const BRIDGE = window.location.origin + '/data'"
+    )
+    const buf = Buffer.from(html, 'utf-8')
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': buf.length })
+    res.end(buf)
+    return
+  }
+
   if (req.method === 'GET' && req.url === '/data') {
     const body = Buffer.from(LAST_MSG, 'utf-8')
     res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': body.length })
@@ -1152,6 +1183,18 @@ function refreshAndBroadcast() {
 
 httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
   console.log(`SC Bridge HTTP  http://0.0.0.0:${HTTP_PORT}/data`)
+  // Affiche l'URL LAN pour accès depuis un autre écran / appareil
+  import('os').then(({ networkInterfaces }) => {
+    for (const iface of Object.values(networkInterfaces())) {
+      for (const addr of iface) {
+        if (addr.family === 'IPv4' && !addr.internal) {
+          console.log(`  ╔══════════════════════════════════════════════════════╗`)
+          console.log(`  ║  AUTRE ECRAN → http://${addr.address}:${HTTP_PORT}/  ║`)
+          console.log(`  ╚══════════════════════════════════════════════════════╝`)
+        }
+      }
+    }
+  }).catch(() => {})
 })
 
 wss.on('listening', () => {
