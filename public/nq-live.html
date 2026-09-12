@@ -443,6 +443,7 @@ body {
           <option value="sd2">SD+2 / SD−2</option>
           <option value="sd1">SD+1 / SD−1</option>
           <option value="sd3">SD+3 / SD−3</option>
+          <option value="zone12">Zone SD+1↔SD+2 / SD−1↔SD−2</option>
         </select>
       </div>
       <div class="edit-field" style="display:flex;align-items:flex-end">
@@ -946,6 +947,11 @@ function getBandLevels(nq) {
   const band = selectedAlarmBand
   if (band === 'sd1') return { hi: parseFloat(nq.sd1h || 0), lo: parseFloat(nq.sd1l || 0) }
   if (band === 'sd3') return { hi: parseFloat(nq.ovn_sd3h || 0), lo: parseFloat(nq.ovn_sd3l || 0) }
+  if (band === 'zone12') return {
+    hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0),
+    hi2: parseFloat(nq.sd1h || 0), lo2: parseFloat(nq.sd1l || 0),
+    zoneMode: true
+  }
   return { hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0) }
 }
 
@@ -960,18 +966,24 @@ function checkAlarmZone(last, nq) {
     return
   }
 
-  const { hi, lo } = getBandLevels(nq)
-  const inDanger = (isValidVal(hi) && last >= hi) || (isValidVal(lo) && last <= lo)
+  const { hi, lo, hi2, lo2, zoneMode } = getBandLevels(nq)
+  let inDanger, alarmMsg
+  if (zoneMode) {
+    const inUpper = isValidVal(hi2) && isValidVal(hi) && last >= hi2 && last <= hi
+    const inLower = isValidVal(lo2) && isValidVal(lo) && last <= lo2 && last >= lo
+    inDanger = inUpper || inLower
+    alarmMsg = `🚨 NQ ZONE ${inUpper ? `SD+1↔SD+2 ↑  ${last.toFixed(2)}` : `SD-1↔SD-2 ↓  ${last.toFixed(2)}`}`
+  } else {
+    inDanger = (isValidVal(hi) && last >= hi) || (isValidVal(lo) && last <= lo)
+    const bandName = selectedAlarmBand.toUpperCase()
+    alarmMsg = `🚨 NQ FRANCHIT ${(isValidVal(hi) && last >= hi) ? `${bandName}+ ↑  ${last.toFixed(2)}` : `${bandName}− ↓  ${last.toFixed(2)}`}`
+  }
 
   if (inDanger) {
     _neutralSince = null
     if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
     if (!_alarmAcked && !_sirenActive) {
-      const bandName = selectedAlarmBand.toUpperCase()
-      const side = (isValidVal(hi) && last >= hi)
-        ? `${bandName}+ ↑  ${last.toFixed(2)}`
-        : `${bandName}− ↓  ${last.toFixed(2)}`
-      triggerAlarm(`🚨 NQ FRANCHIT ${side}`)
+      triggerAlarm(alarmMsg)
     }
   } else {
     // Prix en zone neutre — mémoriser depuis quand
