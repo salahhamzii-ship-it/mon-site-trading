@@ -445,11 +445,19 @@ body {
           <option value="sd3">SD+3 / SD−3</option>
         </select>
       </div>
+      <div class="edit-field" style="display:flex;align-items:flex-end">
+        <button class="btn-apply" style="background:#8b0000;border-color:#cc0000;white-space:nowrap" onclick="testSiren()">🔔 TEST SIRÈNE</button>
+      </div>
     </div>
   </div>
 
   <div class="edit-section">
     <div class="edit-sec-lbl">J−1 RTH</div>
+    <div style="margin-bottom:8px">
+      <input type="file" id="csv-file-input" accept=".csv,.txt" style="display:none" onchange="importCsvFile(this)">
+      <button class="btn-apply" style="background:#1a3a1a;border-color:#2d6a2d;font-size:11px" onclick="document.getElementById('csv-file-input').click()">📂 IMPORTER CSV SIERRA CHART</button>
+      <span id="csv-import-status" style="margin-left:10px;font-size:11px;color:#aaa"></span>
+    </div>
     <div class="edit-grid">
       <div class="edit-field"><label class="edit-lbl">VAH</label><input class="edit-inp" id="ei-vah" type="number" step="0.25"></div>
       <div class="edit-field"><label class="edit-lbl">POC</label><input class="edit-inp" id="ei-poc" type="number" step="0.25"></div>
@@ -704,9 +712,16 @@ const DEMO = {
 function effectiveData(bridge) {
   if (bridge && !bridge._demo) {
     const merged = Object.assign({}, bridge)
+    // Priorité 1 : refCache (valeurs bridge déjà vues)
     if (refCache) {
       REF_FIELDS.forEach(k => {
         if (!isValidVal(merged[k]) && isValidVal(refCache[k])) merged[k] = refCache[k]
+      })
+    }
+    // Priorité 2 : manualLevels (saisie manuelle) — s'applique même quand bridge connecté
+    if (manualLevels) {
+      REF_FIELDS.forEach(k => {
+        if (!isValidVal(merged[k]) && isValidVal(manualLevels[k])) merged[k] = manualLevels[k]
       })
     }
     return merged
@@ -835,6 +850,96 @@ function ackAlarm() {
     _alarmAcked = false
     _rearmTimer = null
   }, 30000)
+}
+
+function importCsvFile(input) {
+  const file = input.files[0]
+  if (!file) return
+  const statusEl = document.getElementById('csv-import-status')
+  statusEl.textContent = '⏳ Lecture...'
+  const reader = new FileReader()
+  reader.onload = function(e) {
+    try {
+      const lines = e.target.result.split(/\r?\n/).filter(l => l.trim())
+      // Détecter la ligne d'en-tête
+      const hdrIdx = lines.findIndex(l => /date/i.test(l) && /time/i.test(l))
+      if (hdrIdx < 0) { statusEl.textContent = '❌ En-tête non trouvée'; return }
+      const hdr = lines[hdrIdx].split(',').map(h => h.trim().toLowerCase())
+
+      // Indices colonnes Sierra Chart
+      const iDate = hdr.findIndex(h => h === 'date')
+      const iTime = hdr.findIndex(h => h === 'time')
+      const iHigh = hdr.findIndex(h => h === 'high')
+      const iLow  = hdr.findIndex(h => h === 'low')
+      const iLast = hdr.findIndex(h => h === 'last')
+      const iPoc  = hdr.findIndex(h => h.includes('poc'))
+      const iVah  = hdr.findIndex(h => h.includes('value area high'))
+      const iVal  = hdr.findIndex(h => h.includes('value area low'))
+
+      if ([iDate,iTime,iHigh,iLow,iLast,iPoc,iVah,iVal].some(i => i < 0)) {
+        statusEl.textContent = '❌ Colonnes manquantes — vérifier le CSV'; return
+      }
+
+      // Parser les lignes de données
+      const rows = []
+      for (let i = hdrIdx + 1; i < lines.length; i++) {
+        const c = lines[i].split(',')
+        if (c.length < 8) continue
+        const dateStr = c[iDate]?.trim()
+        const timeStr = c[iTime]?.trim()
+        if (!dateStr || !timeStr) continue
+        // Convertir heure → minutes depuis minuit
+        const [hh, mm] = timeStr.split(':').map(Number)
+        const mins = hh * 60 + mm
+        rows.push({ dateStr, mins, high: parseFloat(c[iHigh]), low: parseFloat(c[iLow]),
+          last: parseFloat(c[iLast]), poc: parseFloat(c[iPoc]),
+          vah: parseFloat(c[iVah]), val: parseFloat(c[iVal]) })
+      }
+
+      if (!rows.length) { statusEl.textContent = '❌ Aucune donnée'; return }
+
+      // Trouver J-1 = dernier jour RTH présent (09:30–16:00)
+      const rthRows = rows.filter(r => r.mins >= 570 && r.mins <= 960)
+      if (!rthRows.length) { statusEl.textContent = '❌ Aucune ligne RTH trouvée'; return }
+
+      // Dernière date RTH dans le fichier = J-1
+      const lastDate = rthRows[rthRows.length - 1].dateStr
+      const j1Rows = rthRows.filter(r => r.dateStr === lastDate)
+      if (!j1Rows.length) { statusEl.textContent = '❌ J-1 vide'; return }
+
+      const j1High   = Math.max(...j1Rows.map(r => r.high))
+      const j1Low    = Math.min(...j1Rows.map(r => r.low))
+      const j1Last   = j1Rows[j1Rows.length - 1]  // dernière barre RTH
+
+      // Remplir les champs
+      document.getElementById('ei-vah').value = j1Last.vah.toFixed(2)
+      document.getElementById('ei-poc').value = j1Last.poc.toFixed(2)
+      document.getElementById('ei-val').value = j1Last.val.toFixed(2)
+      document.getElementById('ei-j1h').value = j1High.toFixed(2)
+      document.getElementById('ei-j1s').value = j1Last.last.toFixed(2)
+      document.getElementById('ei-j1l').value = j1Low.toFixed(2)
+
+      statusEl.textContent = `✅ J-1 ${lastDate} importé — cliquez APPLIQUER`
+      statusEl.style.color = '#4caf50'
+    } catch(err) {
+      statusEl.textContent = '❌ Erreur : ' + err.message
+      statusEl.style.color = '#ff6666'
+    }
+    // Reset input pour permettre de re-sélectionner le même fichier
+    input.value = ''
+  }
+  reader.readAsText(file)
+}
+
+function testSiren() {
+  triggerAlarm('🔔 TEST SIRÈNE — VÉRIFICATION OK')
+  // Auto-stop après 10s si pas d'ACK (mode test uniquement)
+  setTimeout(() => {
+    if (_sirenActive) {
+      _neutralSince = Date.now() - 31000  // simule 31s neutre → ACK possible
+      document.getElementById('alarm-ack-status').textContent = '✅ MODE TEST — cliquez ACK pour couper'
+    }
+  }, 500)
 }
 
 function getBandLevels(nq) {
