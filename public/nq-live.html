@@ -729,6 +729,7 @@ body {
 const LS_KEY        = 'nq_levels_v2'
 const LS_ALN        = 'nq_aln_v1'
 const LS_BRIDGE     = 'nq_bridge_url_v1'
+const LS_REF        = 'nq_reflev_v1'   // cache niveaux J-1/OVN/ALN depuis bridge
 const POLL          = 3000   // 3s — synchro avec REFRESH_S=3 du bridge
 
 function defaultBridge() {
@@ -783,8 +784,49 @@ function loadLevels() {
     if (s) manualLevels = JSON.parse(s)
   } catch(e) {}
 }
+// ── REFERENCE LEVELS CACHE ──────────────────────────
+// Persist J-1/OVN/ALN levels from bridge across OVN
+// (bridge can't compute them at 2AM — use last valid values)
+const REF_FIELDS = [
+  'vah','poc','val',
+  'j1_high','j1_settle','j1_low',
+  'ovn_high','ovn_low',
+  'asia_high','asia_low',
+  'lon_high','lon_low'
+]
+let refCache = null
+
+function loadRefCache() {
+  try {
+    const s = localStorage.getItem(LS_REF)
+    if (s) refCache = JSON.parse(s)
+  } catch(e) {}
+}
+
+function cacheRefLevels(bridge) {
+  if (!bridge || bridge._demo) return
+  const hasValid = REF_FIELDS.some(k => parseFloat(bridge[k]) > 0)
+  if (!hasValid) return
+  const snap = {}
+  REF_FIELDS.forEach(k => { if (parseFloat(bridge[k]) > 0) snap[k] = bridge[k] })
+  refCache = Object.assign({}, refCache || {}, snap)
+  try { localStorage.setItem(LS_REF, JSON.stringify(refCache)) } catch(e) {}
+}
+
 function effectiveData(bridge) {
-  if (bridge && !bridge._demo) return bridge
+  if (bridge && !bridge._demo) {
+    // Merge: bridge live data + refCache for any missing ref fields
+    if (refCache) {
+      const merged = Object.assign({}, bridge)
+      REF_FIELDS.forEach(k => {
+        if (!(parseFloat(merged[k]) > 0) && parseFloat(refCache[k]) > 0) {
+          merged[k] = refCache[k]
+        }
+      })
+      return merged
+    }
+    return bridge
+  }
   return manualLevels || DEMO
 }
 
@@ -1060,7 +1102,9 @@ async function poll() {
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     setStatus('ok')
-    render(effectiveData(d.NQ || d))
+    const nq = d.NQ || d
+    cacheRefLevels(nq)
+    render(effectiveData(nq))
   } catch {
     setStatus('err')
   }
@@ -1068,6 +1112,7 @@ async function poll() {
 
 // ── BOOT ─────────────────────────────────────────────
 loadLevels()
+loadRefCache()
 const initData = manualLevels || DEMO
 render(initData)
 document.getElementById('demo-tag').classList.add('on')
