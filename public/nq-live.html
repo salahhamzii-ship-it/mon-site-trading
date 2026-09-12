@@ -1165,7 +1165,7 @@ function ackAlarm() {
 
 function checkAlarmZone(last, sd2h, sd2l) {
   if (!isAlertWindow()) {
-    // Hors fenêtre 18H–06H : silence + reset acquittement
+    // Hors fenêtre 18H–06H : silence + reset total
     if (_alarmActive) { stopSiren(); _alarmActive = false; document.getElementById('alert-bar').classList.remove('on','alarm') }
     _alarmAcked = false
     if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
@@ -1175,20 +1175,19 @@ function checkAlarmZone(last, sd2h, sd2l) {
   const inDanger = (sd2h > 0 && last >= sd2h) || (sd2l > 0 && last <= sd2l)
 
   if (inDanger) {
+    // Prix en zone — couper le timer de réarmement
     if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
+    // Déclencher uniquement si pas encore acquitté
     if (!_alarmAcked) {
       const side = (sd2h > 0 && last >= sd2h)
         ? `SD+2 ↑  ${last.toFixed(2)}`
         : `SD−2 ↓  ${last.toFixed(2)}`
       triggerAlarm(`🚨 NQ ${side}`)
     }
+    // ⚠ Sirène continue même si prix revient : SEUL l'acquittement arrête
   } else {
-    // Prix revenu entre les bandes
-    if (_alarmActive) {
-      stopSiren(); _alarmActive = false
-      document.getElementById('alert-bar').classList.remove('on','alarm')
-    }
-    // Réarmement : 30s hors danger déverrouille l'acquittement
+    // Prix entre les bandes — réarmement après 30s si acquitté
+    // La sirène reste active tant que l'utilisateur n'a pas cliqué ACQUITTER
     if (_alarmAcked && !_rearmTimer) {
       _rearmTimer = setTimeout(() => { _alarmAcked = false; _rearmTimer = null }, 30000)
     }
