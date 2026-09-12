@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUIVI SD NQ LIVE</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a25;
+    --border: #2a2a3a;
+    --text: #c8c8d8;
+    --dim: #666680;
+    --green: #00e676;
+    --red: #ff1744;
+    --yellow: #ffd740;
+    --orange: #ff9100;
+    --blue: #40c4ff;
+    --purple: #ce93d8;
+    --white: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  #header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #title {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--white);
+    letter-spacing: 2px;
+  }
+  #header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+  }
+  #ny-time { color: var(--blue); font-size: 14px; font-weight: bold; }
+  #market-status {
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .status-open { background: #003300; color: var(--green); border: 1px solid var(--green); }
+  .status-closed { background: #220000; color: var(--red); border: 1px solid var(--red); }
+  #bridge-status { font-size: 11px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-red { background: var(--red); }
+  .dot-yellow { background: var(--yellow); animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* MAIN GRID */
+  #main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    padding: 1px;
+    height: calc(100vh - 49px);
+  }
+  .panel {
+    background: var(--bg);
+    padding: 12px;
+    overflow: auto;
+  }
+  .panel-title {
+    color: var(--dim);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  /* PRICE PANEL */
+  #panel-price {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  #live-price {
+    font-size: 52px;
+    font-weight: bold;
+    color: var(--white);
+    line-height: 1;
+    letter-spacing: 2px;
+  }
+  #price-change {
+    font-size: 18px;
+    margin-top: 6px;
+  }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .flat { color: var(--dim); }
+  #avwap-side {
+    margin-top: 12px;
+    font-size: 13px;
+    padding: 4px 16px;
+    border-radius: 3px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .side-above { background: #001a00; color: var(--green); border: 1px solid #00660044; }
+  .side-below { background: #1a0000; color: var(--red); border: 1px solid #66000044; }
+  #last-update {
+    margin-top: 14px;
+    font-size: 10px;
+    color: var(--dim);
+  }
+  #laf-lbf {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+  }
+  .signal-badge {
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .laf-active { background: #330000; color: var(--red); border: 1px solid var(--red); }
+  .lbf-active { background: #003300; color: var(--green); border: 1px solid var(--green); }
+  .signal-off { background: var(--bg3); color: var(--dim); border: 1px solid var(--border); }
+
+  /* SD TABLE */
+  .sd-table { width: 100%; border-collapse: collapse; }
+  .sd-table tr { border-bottom: 1px solid var(--border); }
+  .sd-table td {
+    padding: 5px 6px;
+    font-size: 12px;
+  }
+  .sd-table .label { color: var(--dim); width: 70px; }
+  .sd-table .price { color: var(--white); font-weight: bold; text-align: right; width: 90px; }
+  .sd-table .dist {
+    text-align: right;
+    font-size: 11px;
+    width: 70px;
+  }
+  .sd-table .bar-cell { width: 120px; }
+  .level-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .level-bar-fill { height: 100%; border-radius: 2px; }
+
+  /* Row colors */
+  .row-sd3h td { color: #ff6b6b; }
+  .row-sd3h .label { color: #ff6b6b88; }
+  .row-sd3h .price { color: #ff6b6b; }
+  .row-sd2h td.label { color: #ff9b9b88; }
+  .row-sd2h .price { color: #ff9b9b; }
+  .row-sd1h .price { color: #ffcb9b; }
+  .row-avwap td.label { color: var(--yellow); }
+  .row-avwap .price { color: var(--yellow); font-size: 14px; }
+  .row-sd1l .price { color: #9bffcb; }
+  .row-sd2l .price { color: #9bffab; }
+  .row-sd3l td.label { color: #6bff8b88; }
+  .row-sd3l .price { color: #6bff8b; }
+
+  .row-price-marker td {
+    background: var(--bg3);
+    border-top: 1px solid var(--yellow);
+    border-bottom: 1px solid var(--yellow);
+  }
+  .row-price-marker .label { color: var(--yellow); font-weight: bold; }
+  .row-price-marker .price { color: var(--yellow); font-size: 14px; }
+
+  /* J-1 TABLE */
+  .ref-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+  .ref-table tr { border-bottom: 1px solid #1a1a25; }
+  .ref-table td { padding: 4px 6px; font-size: 12px; }
+  .ref-table .lbl { color: var(--dim); width: 80px; }
+  .ref-table .val { color: var(--white); text-align: right; }
+  .ref-table .dist-col { color: var(--dim); text-align: right; font-size: 11px; }
+
+  /* SECTION */
+  .section-sep {
+    color: var(--dim);
+    font-size: 10px;
+    letter-spacing: 2px;
+    margin: 10px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-sep::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ALERT PANEL */
+  #alert-bar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1a0000;
+    border-top: 2px solid var(--red);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 100;
+  }
+  #alert-bar.hidden { display: none !important; }
+  #alert-text { color: var(--red); font-weight: bold; font-size: 14px; flex: 1; }
+  #alert-dismiss {
+    background: none;
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 3px 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+  }
+  #alert-dismiss:hover { background: #330000; }
+
+  /* SOUND toggle */
+  #sound-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    border-radius: 3px;
+  }
+  #sound-btn.active { border-color: var(--yellow); color: var(--yellow); }
+
+  /* OFFLINE overlay */
+  #offline-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0a0a0fcc;
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+  }
+  #offline-overlay.show { display: flex; }
+  #offline-msg {
+    font-size: 20px;
+    color: var(--red);
+    font-weight: bold;
+    letter-spacing: 3px;
+  }
+  #offline-sub { color: var(--dim); font-size: 13px; }
+
+  @media (max-width: 700px) {
+    #main { grid-template-columns: 1fr; height: auto; }
+    #live-price { font-size: 38px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="title">⬛ SUIVI SD NQ LIVE</div>
+  <div id="header-right">
+    <div id="ny-time">--:--:-- ET</div>
+    <div id="market-status" class="status-closed">FERMÉ</div>
+    <div id="bridge-status"><span class="dot dot-yellow" id="bridge-dot"></span><span id="bridge-label">CONNEXION...</span></div>
+    <button id="sound-btn" onclick="toggleSound()">🔇 SON OFF</button>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- PANEL GAUCHE — PRIX + SD BANDS -->
+  <div class="panel" id="panel-sd">
+    <div class="panel-title">NQ — BANDES SD (AVWAP 18H)</div>
+    <table class="sd-table" id="sd-table">
+      <tr class="row-sd3h"><td class="label">SD+3</td><td class="price" id="sd3h">—</td><td class="dist" id="d-sd3h"></td><td class="bar-cell"></td></tr>
+      <tr class="row-sd2h"><td class="label">SD+2</td><td class="price" id="sd2h">—</td><td class="dist" id="d-sd2h"></td><td class="bar-cell"></td></tr>
+      <tr class="row-sd1h"><td class="label">SD+1</td><td class="price" id="sd1h">—</td><td class="dist" id="d-sd1h"></td><td class="bar-cell"></td></tr>
+      <tr class="row-avwap"><td class="label">👑 AVWAP</td><td class="price" id="avwap">—</td><td class="dist" id="d-avwap"></td><td class="bar-cell"></td></tr>
+      <tr class="row-sd1l"><td class="label">SD-1</td><td class="price" id="sd1l">—</td><td class="dist" id="d-sd1l"></td><td class="bar-cell"></td></tr>
+      <tr class="row-sd2l"><td class="label">SD-2</td><td class="price" id="sd2l">—</td><td class="dist" id="d-sd2l"></td><td class="bar-cell"></td></tr>
+      <tr class="row-sd3l"><td class="label">SD-3</td><td class="price" id="sd3l">—</td><td class="dist" id="d-sd3l"></td><td class="bar-cell"></td></tr>
+    </table>
+
+    <div style="margin-top: 20px; text-align: center;">
+      <div id="live-price">—</div>
+      <div id="price-change" class="flat">—</div>
+      <div id="avwap-side" class="side-above" style="display:none">DESSUS AVWAP</div>
+      <div id="laf-lbf">
+        <div class="signal-badge signal-off" id="laf-badge">LAF SD+2</div>
+        <div class="signal-badge signal-off" id="lbf-badge">LBF SD-2</div>
+      </div>
+      <div id="last-update">Dernière mise à jour : —</div>
+    </div>
+  </div>
+
+  <!-- PANEL DROIT — NIVEAUX J-1 + SESSIONS -->
+  <div class="panel" id="panel-ref">
+    <div class="panel-title">NIVEAUX DE RÉFÉRENCE</div>
+
+    <div class="section-sep">J-1 RTH</div>
+    <table class="ref-table">
+      <tr><td class="lbl">VAH</td><td class="val" id="j1-vah">—</td><td class="dist-col" id="dj1-vah"></td></tr>
+      <tr><td class="lbl">POC</td><td class="val" id="j1-poc">—</td><td class="dist-col" id="dj1-poc"></td></tr>
+      <tr><td class="lbl">VAL</td><td class="val" id="j1-val">—</td><td class="dist-col" id="dj1-val"></td></tr>
+      <tr><td class="lbl">High</td><td class="val" id="j1-high">—</td><td class="dist-col" id="dj1-high"></td></tr>
+      <tr><td class="lbl">Settle</td><td class="val" id="j1-settle">—</td><td class="dist-col" id="dj1-settle"></td></tr>
+      <tr><td class="lbl">Low</td><td class="val" id="j1-low">—</td><td class="dist-col" id="dj1-low"></td></tr>
+    </table>
+
+    <div class="section-sep">OVN (18H → 09H30)</div>
+    <table class="ref-table">
+      <tr><td class="lbl">High OVN</td><td class="val" id="ovn-high">—</td><td class="dist-col" id="dovn-high"></td></tr>
+      <tr><td class="lbl">Low OVN</td><td class="val" id="ovn-low">—</td><td class="dist-col" id="dovn-low"></td></tr>
+    </table>
+
+    <div class="section-sep">ALN — ASIE / LONDRES</div>
+    <table class="ref-table">
+      <tr><td class="lbl">Asie High</td><td class="val" id="asia-high">—</td><td class="dist-col" id="dasia-high"></td></tr>
+      <tr><td class="lbl">Asie Low</td><td class="val" id="asia-low">—</td><td class="dist-col" id="dasia-low"></td></tr>
+      <tr><td class="lbl">London High</td><td class="val" id="lon-high">—</td><td class="dist-col" id="dlon-high"></td></tr>
+      <tr><td class="lbl">London Low</td><td class="val" id="lon-low">—</td><td class="dist-col" id="dlon-low"></td></tr>
+    </table>
+
+    <div class="section-sep">ALERTES SONORES</div>
+    <div id="alert-config" style="color:var(--dim);font-size:11px;line-height:1.8;">
+      <div>Fenêtre : <span style="color:var(--yellow)" id="alert-window">18H00 → 06H00 ET</span></div>
+      <div>Déclencheur : <span style="color:var(--orange)" id="alert-trigger">— à configurer —</span></div>
+      <div>Statut : <span id="alert-status" style="color:var(--dim)">EN ATTENTE DE CONFIG</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ALERT BAR -->
+<div id="alert-bar" class="hidden">
+  <div id="alert-text">⚠ ALERTE NQ</div>
+  <button id="alert-dismiss" onclick="dismissAlert()">FERMER</button>
+</div>
+
+<!-- OFFLINE OVERLAY -->
+<div id="offline-overlay">
+  <div id="offline-msg">⚡ BRIDGE OFFLINE</div>
+  <div id="offline-sub">Vérifier sc_bridge.js → startup_bridge.bat</div>
+  <div id="offline-sub2" style="color:#444;font-size:11px;margin-top:4px;">http://localhost:8766/data</div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────
+const BRIDGE_URL    = 'http://localhost:8766/data'
+const POLL_MS       = 5000
+const ALERT_FROM_H  = 18   // 18h00 ET — À CONFIGURER
+const ALERT_TO_H    = 6    //  6h00 ET — À CONFIGURER
+// Déclencheur : laisser null jusqu'à config user
+// Syntaxe exemple : { type:'touch', level:'sd2h' }  ou  { type:'cross', level:'avwap' }
+const ALERT_TRIGGER = null
+
+// ─── STATE ────────────────────────────────────────────────
+let soundEnabled  = false
+let prevPrice     = null
+let alertFired    = false
+let offlineCount  = 0
+let audioCtx      = null
+
+// ─── NY TIME ──────────────────────────────────────────────
+function getNYTime() {
+  return new Date().toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  })
+}
+
+function getNYDate() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+}
+
+function isMarketOpen() {
+  const ny = getNYDate()
+  const day = ny.getDay()   // 0=Sun 1=Mon ... 5=Fri 6=Sat
+  const h   = ny.getHours()
+  const m   = ny.getMinutes()
+  const mins = h * 60 + m
+
+  // Sunday 18:00 → Friday 16:00
+  if (day === 6) return false // Saturday = closed
+  if (day === 0) return mins >= 18 * 60 // Sunday after 18h
+  if (day === 5) return mins < 16 * 60  // Friday before 16h
+  return true // Mon→Thu always open (overnight)
+}
+
+function isAlertWindow() {
+  const ny = getNYDate()
+  const h  = ny.getHours()
+  // 18h → 06h (crosses midnight)
+  return h >= ALERT_FROM_H || h < ALERT_TO_H
+}
+
+// ─── CLOCK ────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('ny-time').textContent = getNYTime() + ' ET'
+  const open = isMarketOpen()
+  const el = document.getElementById('market-status')
+  if (open) {
+    el.textContent = 'OUVERT'
+    el.className = 'status-open'
+  } else {
+    el.textContent = 'FERMÉ'
+    el.className = 'status-closed'
+  }
+}
+setInterval(updateClock, 1000)
+updateClock()
+
+// ─── SOUND ────────────────────────────────────────────────
+function toggleSound() {
+  soundEnabled = !soundEnabled
+  const btn = document.getElementById('sound-btn')
+  if (soundEnabled) {
+    btn.textContent = '🔔 SON ON'
+    btn.classList.add('active')
+    // init AudioContext on user gesture
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  } else {
+    btn.textContent = '🔇 SON OFF'
+    btn.classList.remove('active')
+  }
+}
+
+function playBeep(freq, dur, vol) {
+  if (!soundEnabled || !audioCtx) return
+  const osc  = audioCtx.createOscillator()
+  const gain = audioCtx.createGain()
+  osc.connect(gain)
+  gain.connect(audioCtx.destination)
+  osc.frequency.value = freq || 880
+  gain.gain.setValueAtTime(vol || 0.4, audioCtx.currentTime)
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (dur || 0.6))
+  osc.start()
+  osc.stop(audioCtx.currentTime + (dur || 0.6))
+}
+
+function playAlert() {
+  if (!soundEnabled) return
+  // Triple beep
+  playBeep(1047, 0.2, 0.5)
+  setTimeout(() => playBeep(1047, 0.2, 0.5), 250)
+  setTimeout(() => playBeep(1319, 0.5, 0.6), 500)
+}
+
+// ─── ALERT LOGIC ─────────────────────────────────────────
+function checkAlert(data) {
+  if (!ALERT_TRIGGER || !isAlertWindow()) return
+  const nq   = data.NQ
+  if (!nq) return
+  const last = nq.last
+
+  let triggered = false
+  // Exemple: { type:'touch', level:'sd2h' }
+  if (ALERT_TRIGGER.type === 'touch') {
+    const lvl = getLevelValue(nq, ALERT_TRIGGER.level)
+    if (lvl && Math.abs(last - lvl) <= 5) triggered = true
+  }
+  if (ALERT_TRIGGER.type === 'cross_above') {
+    const lvl = getLevelValue(nq, ALERT_TRIGGER.level)
+    if (lvl && prevPrice && prevPrice < lvl && last >= lvl) triggered = true
+  }
+  if (ALERT_TRIGGER.type === 'cross_below') {
+    const lvl = getLevelValue(nq, ALERT_TRIGGER.level)
+    if (lvl && prevPrice && prevPrice > lvl && last <= lvl) triggered = true
+  }
+
+  if (triggered && !alertFired) {
+    alertFired = true
+    playAlert()
+    showAlertBar('⚠ NQ ALERTE — ' + (ALERT_TRIGGER.label || ALERT_TRIGGER.level.toUpperCase()) + ' @ ' + fmt(last))
+  }
+  if (!triggered) alertFired = false
+}
+
+function getLevelValue(nq, key) {
+  const map = {
+    sd3h: nq.ovn_sd3h, sd2h: nq.sd2h, sd1h: nq.sd1h,
+    avwap: nq.vwap,
+    sd1l: nq.sd1l, sd2l: nq.sd2l, sd3l: nq.ovn_sd3l,
+    vah: nq.vah, poc: nq.poc, val: nq.val,
+    j1_high: nq.j1_high, j1_settle: nq.j1_settle, j1_low: nq.j1_low,
+  }
+  return map[key] || null
+}
+
+function showAlertBar(msg) {
+  const el = document.getElementById('alert-bar')
+  document.getElementById('alert-text').textContent = msg
+  el.classList.remove('hidden')
+}
+
+function dismissAlert() {
+  document.getElementById('alert-bar').classList.add('hidden')
+}
+
+// ─── FORMAT ───────────────────────────────────────────────
+function fmt(v) {
+  if (v == null || isNaN(v)) return '—'
+  return Number(v).toFixed(2)
+}
+
+function dist(last, level) {
+  if (!last || !level || isNaN(last) || isNaN(level)) return ''
+  const d = last - level
+  const sign = d >= 0 ? '+' : ''
+  const col  = d > 0 ? '#9bffab' : '#ff9b9b'
+  return `<span style="color:${col}">${sign}${d.toFixed(0)}</span>`
+}
+
+// ─── RENDER ───────────────────────────────────────────────
+function render(data) {
+  const nq   = data.NQ
+  if (!nq) return
+  const last = parseFloat(nq.last)
+  const prev = prevPrice
+
+  // Price
+  document.getElementById('live-price').textContent = fmt(last)
+  if (prev !== null) {
+    const chg  = last - prev
+    const sign = chg >= 0 ? '+' : ''
+    const el   = document.getElementById('price-change')
+    el.textContent = sign + chg.toFixed(2)
+    el.className   = chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat'
+  }
+  prevPrice = last
+
+  // AVWAP side
+  const sideEl = document.getElementById('avwap-side')
+  sideEl.style.display = 'block'
+  if (nq.avwap_side === 'above') {
+    sideEl.textContent = '▲ DESSUS AVWAP'
+    sideEl.className = 'side-above'
+  } else {
+    sideEl.textContent = '▼ DESSOUS AVWAP'
+    sideEl.className = 'side-below'
+  }
+
+  // LAF / LBF
+  const laf = document.getElementById('laf-badge')
+  const lbf = document.getElementById('lbf-badge')
+  laf.className = 'signal-badge ' + (nq.laf_sd2 ? 'laf-active' : 'signal-off')
+  lbf.className = 'signal-badge ' + (nq.lbf_sd2 ? 'lbf-active' : 'signal-off')
+
+  // Last update
+  const lu = nq.lastUpdate ? new Date(nq.lastUpdate).toLocaleTimeString('fr-FR') : '—'
+  document.getElementById('last-update').textContent = 'Update : ' + lu
+
+  // SD BANDS
+  const levels = [
+    { id: 'sd3h', v: nq.ovn_sd3h, did: 'd-sd3h' },
+    { id: 'sd2h', v: nq.sd2h,     did: 'd-sd2h' },
+    { id: 'sd1h', v: nq.sd1h,     did: 'd-sd1h' },
+    { id: 'avwap', v: nq.vwap,    did: 'd-avwap' },
+    { id: 'sd1l', v: nq.sd1l,     did: 'd-sd1l' },
+    { id: 'sd2l', v: nq.sd2l,     did: 'd-sd2l' },
+    { id: 'sd3l', v: nq.ovn_sd3l, did: 'd-sd3l' },
+  ]
+  levels.forEach(l => {
+    document.getElementById(l.id).textContent = fmt(l.v)
+    document.getElementById(l.did).innerHTML  = dist(last, l.v)
+  })
+
+  // J-1
+  const j1 = [
+    { id: 'j1-vah',    v: nq.vah,       did: 'dj1-vah'    },
+    { id: 'j1-poc',    v: nq.poc,       did: 'dj1-poc'    },
+    { id: 'j1-val',    v: nq.val,       did: 'dj1-val'    },
+    { id: 'j1-high',   v: nq.j1_high,   did: 'dj1-high'   },
+    { id: 'j1-settle', v: nq.j1_settle, did: 'dj1-settle' },
+    { id: 'j1-low',    v: nq.j1_low,    did: 'dj1-low'    },
+  ]
+  j1.forEach(l => {
+    document.getElementById(l.id).textContent = fmt(l.v)
+    document.getElementById(l.did).innerHTML  = dist(last, l.v)
+  })
+
+  // OVN
+  document.getElementById('ovn-high').textContent = fmt(nq.ovn_high)
+  document.getElementById('ovn-low').textContent  = fmt(nq.ovn_low)
+  document.getElementById('dovn-high').innerHTML  = dist(last, nq.ovn_high)
+  document.getElementById('dovn-low').innerHTML   = dist(last, nq.ovn_low)
+
+  // ALN
+  document.getElementById('asia-high').textContent = fmt(nq.asia_high)
+  document.getElementById('asia-low').textContent  = fmt(nq.asia_low)
+  document.getElementById('lon-high').textContent  = fmt(nq.lon_high)
+  document.getElementById('lon-low').textContent   = fmt(nq.lon_low)
+  document.getElementById('dasia-high').innerHTML  = dist(last, nq.asia_high)
+  document.getElementById('dasia-low').innerHTML   = dist(last, nq.asia_low)
+  document.getElementById('dlon-high').innerHTML   = dist(last, nq.lon_high)
+  document.getElementById('dlon-low').innerHTML    = dist(last, nq.lon_low)
+
+  // Alert window info
+  document.getElementById('alert-window').textContent = ALERT_FROM_H + 'H00 → ' + ALERT_TO_H + 'H00 ET'
+  if (ALERT_TRIGGER) {
+    document.getElementById('alert-trigger').textContent = ALERT_TRIGGER.label || JSON.stringify(ALERT_TRIGGER)
+    document.getElementById('alert-status').textContent  = isAlertWindow() ? '🟡 FENÊTRE ACTIVE' : '⬛ HORS FENÊTRE'
+    document.getElementById('alert-status').style.color  = isAlertWindow() ? '#ffd740' : '#666680'
+  }
+
+  checkAlert(data)
+}
+
+// ─── POLL BRIDGE ─────────────────────────────────────────
+function setBridgeStatus(state) {
+  const dot   = document.getElementById('bridge-dot')
+  const label = document.getElementById('bridge-label')
+  const overlay = document.getElementById('offline-overlay')
+  if (state === 'ok') {
+    dot.className   = 'dot dot-green'
+    label.textContent = 'BRIDGE OK'
+    label.style.color = ''
+    overlay.classList.remove('show')
+    offlineCount = 0
+  } else if (state === 'retry') {
+    dot.className   = 'dot dot-yellow'
+    label.textContent = 'RECONNEXION...'
+    label.style.color = '#ffd740'
+  } else {
+    dot.className   = 'dot dot-red'
+    label.textContent = 'BRIDGE OFFLINE'
+    label.style.color = '#ff1744'
+    offlineCount++
+    if (offlineCount >= 3) overlay.classList.add('show')
+  }
+}
+
+async function poll() {
+  try {
+    setBridgeStatus('retry')
+    const res = await fetch(BRIDGE_URL, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(4000)
+    })
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    const data = await res.json()
+    setBridgeStatus('ok')
+    render(data)
+  } catch (e) {
+    setBridgeStatus('error')
+  }
+}
+
+// Start polling
+poll()
+setInterval(poll, POLL_MS)
+</script>
+
+</body>
+</html>
