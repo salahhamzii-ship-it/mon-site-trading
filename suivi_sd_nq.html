@@ -6,681 +6,629 @@
 <title>SUIVI SD NQ LIVE</title>
 <style>
   :root {
-    --bg: #0a0a0f;
-    --bg2: #111118;
-    --bg3: #1a1a25;
-    --border: #2a2a3a;
-    --text: #c8c8d8;
-    --dim: #666680;
-    --green: #00e676;
-    --red: #ff1744;
+    --bg:     #0a0a0f;
+    --bg2:    #111118;
+    --bg3:    #16161f;
+    --border: #22222f;
+    --text:   #b8b8cc;
+    --dim:    #55556a;
+    --green:  #00e676;
+    --red:    #ff3355;
     --yellow: #ffd740;
     --orange: #ff9100;
-    --blue: #40c4ff;
-    --purple: #ce93d8;
-    --white: #ffffff;
+    --blue:   #40c4ff;
+    --white:  #f0f0ff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'Courier New', monospace;
     font-size: 13px;
     min-height: 100vh;
+    overflow: hidden;
   }
 
-  /* HEADER */
+  /* ── HEADER ── */
   #header {
     background: var(--bg2);
     border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
+    padding: 9px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: 8px;
   }
   #title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
     color: var(--white);
     letter-spacing: 2px;
+    white-space: nowrap;
   }
-  #header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 12px;
-  }
-  #ny-time { color: var(--blue); font-size: 14px; font-weight: bold; }
-  #market-status {
-    padding: 3px 10px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: bold;
-    letter-spacing: 1px;
-  }
-  .status-open { background: #003300; color: var(--green); border: 1px solid var(--green); }
-  .status-closed { background: #220000; color: var(--red); border: 1px solid var(--red); }
-  #bridge-status { font-size: 11px; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
-  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .dot-red { background: var(--red); }
-  .dot-yellow { background: var(--yellow); animation: blink 1s infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  #hright { display: flex; align-items: center; gap: 14px; font-size: 11px; }
 
-  /* MAIN GRID */
+  #ny-clock { color: var(--blue); font-size: 15px; font-weight: bold; letter-spacing: 1px; }
+
+  #mkt-badge {
+    padding: 2px 10px; border-radius: 2px;
+    font-size: 10px; font-weight: bold; letter-spacing: 1px;
+  }
+  .mkt-open   { background: #002200; color: var(--green); border: 1px solid #00662244; }
+  .mkt-closed { background: #1f0009; color: var(--red);   border: 1px solid #66002244; }
+
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .dot-ok     { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .dot-warn   { background: var(--yellow); animation: bk .9s infinite; }
+  .dot-err    { background: var(--red); }
+  @keyframes bk { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+  #bridge-lbl { color: var(--dim); }
+
+  /* sound toggle */
+  #snd-btn {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--dim); padding: 3px 10px; cursor: pointer;
+    font-family: inherit; font-size: 11px; border-radius: 2px;
+    transition: color .2s, border-color .2s;
+  }
+  #snd-btn.on { border-color: var(--yellow); color: var(--yellow); }
+
+  /* ── MAIN GRID ── */
   #main {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    height: calc(100vh - 43px);
     gap: 1px;
     background: var(--border);
-    padding: 1px;
-    height: calc(100vh - 49px);
   }
-  .panel {
-    background: var(--bg);
-    padding: 12px;
-    overflow: auto;
-  }
-  .panel-title {
-    color: var(--dim);
-    font-size: 10px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 6px;
-  }
+  .panel { background: var(--bg); padding: 12px; overflow-y: auto; }
 
-  /* PRICE PANEL */
-  #panel-price {
-    display: flex;
-    flex-direction: column;
+  .ptitle {
+    color: var(--dim); font-size: 9px; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 10px;
+    padding-bottom: 5px; border-bottom: 1px solid var(--border);
+  }
+  .sep {
+    color: var(--dim); font-size: 9px; letter-spacing: 2px;
+    margin: 10px 0 5px; display: flex; align-items: center; gap: 8px;
+  }
+  .sep::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── SD TABLE ── */
+  #sd-wrap { width: 100%; }
+
+  .sd-row {
+    display: grid;
+    grid-template-columns: 68px 1fr 70px;
     align-items: center;
-    justify-content: center;
-    text-align: center;
+    border-bottom: 1px solid #1a1a25;
+    padding: 4px 2px;
+    transition: background .15s;
   }
-  #live-price {
-    font-size: 52px;
-    font-weight: bold;
-    color: var(--white);
-    line-height: 1;
-    letter-spacing: 2px;
-  }
-  #price-change {
-    font-size: 18px;
-    margin-top: 6px;
-  }
-  .up { color: var(--green); }
-  .down { color: var(--red); }
-  .flat { color: var(--dim); }
-  #avwap-side {
-    margin-top: 12px;
-    font-size: 13px;
-    padding: 4px 16px;
-    border-radius: 3px;
-    font-weight: bold;
-    letter-spacing: 1px;
-  }
-  .side-above { background: #001a00; color: var(--green); border: 1px solid #00660044; }
-  .side-below { background: #1a0000; color: var(--red); border: 1px solid #66000044; }
-  #last-update {
-    margin-top: 14px;
-    font-size: 10px;
-    color: var(--dim);
-  }
-  #laf-lbf {
-    margin-top: 10px;
-    display: flex;
-    gap: 10px;
-  }
-  .signal-badge {
-    padding: 3px 10px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: bold;
-    letter-spacing: 1px;
-  }
-  .laf-active { background: #330000; color: var(--red); border: 1px solid var(--red); }
-  .lbf-active { background: #003300; color: var(--green); border: 1px solid var(--green); }
-  .signal-off { background: var(--bg3); color: var(--dim); border: 1px solid var(--border); }
+  .sd-row.active-row { background: #16160a; }
 
-  /* SD TABLE */
-  .sd-table { width: 100%; border-collapse: collapse; }
-  .sd-table tr { border-bottom: 1px solid var(--border); }
-  .sd-table td {
-    padding: 5px 6px;
-    font-size: 12px;
-  }
-  .sd-table .label { color: var(--dim); width: 70px; }
-  .sd-table .price { color: var(--white); font-weight: bold; text-align: right; width: 90px; }
-  .sd-table .dist {
-    text-align: right;
-    font-size: 11px;
-    width: 70px;
-  }
-  .sd-table .bar-cell { width: 120px; }
-  .level-bar {
-    height: 4px;
+  .sd-lbl { font-size: 11px; color: var(--dim); }
+  .sd-price { font-size: 13px; font-weight: bold; color: var(--white); text-align: right; }
+  .sd-dist  { font-size: 11px; text-align: right; padding-left: 4px; }
+  .dist-pos { color: #7affaa; }
+  .dist-neg { color: #ff7a7a; }
+
+  .lbl-sd3h { color: #ff6060; } .lbl-sd3h .sd-price { color: #ff6060; }
+  .lbl-sd2h .sd-price { color: #ff9090; }
+  .lbl-sd1h .sd-price { color: #ffb870; }
+  .lbl-avwp .sd-lbl  { color: var(--yellow); }
+  .lbl-avwp .sd-price { color: var(--yellow); font-size: 15px; }
+  .lbl-sd1l .sd-price { color: #70ffa8; }
+  .lbl-sd2l .sd-price { color: #50ff90; }
+  .lbl-sd3l .sd-price { color: #30ff70; }
+
+  .row-price {
+    background: #111108;
+    border: 1px solid #ffd74033;
     border-radius: 2px;
-    background: var(--border);
-    position: relative;
-    overflow: hidden;
+    margin: 6px 0;
+    padding: 5px 2px;
   }
-  .level-bar-fill { height: 100%; border-radius: 2px; }
+  .row-price .sd-lbl  { color: var(--yellow); font-weight: bold; }
+  .row-price .sd-price { color: var(--yellow); font-size: 16px; }
+  #price-delta { font-size: 14px; }
 
-  /* Row colors */
-  .row-sd3h td { color: #ff6b6b; }
-  .row-sd3h .label { color: #ff6b6b88; }
-  .row-sd3h .price { color: #ff6b6b; }
-  .row-sd2h td.label { color: #ff9b9b88; }
-  .row-sd2h .price { color: #ff9b9b; }
-  .row-sd1h .price { color: #ffcb9b; }
-  .row-avwap td.label { color: var(--yellow); }
-  .row-avwap .price { color: var(--yellow); font-size: 14px; }
-  .row-sd1l .price { color: #9bffcb; }
-  .row-sd2l .price { color: #9bffab; }
-  .row-sd3l td.label { color: #6bff8b88; }
-  .row-sd3l .price { color: #6bff8b; }
-
-  .row-price-marker td {
+  /* LAF LBF */
+  #signals { display: flex; gap: 8px; margin-top: 10px; }
+  .sig-badge {
+    flex: 1; text-align: center;
+    padding: 4px; border-radius: 2px; font-size: 10px; font-weight: bold;
+    letter-spacing: 1px; border: 1px solid var(--border); color: var(--dim);
     background: var(--bg3);
-    border-top: 1px solid var(--yellow);
-    border-bottom: 1px solid var(--yellow);
   }
-  .row-price-marker .label { color: var(--yellow); font-weight: bold; }
-  .row-price-marker .price { color: var(--yellow); font-size: 14px; }
+  .sig-laf { background: #1a0008; color: var(--red); border-color: var(--red); }
+  .sig-lbf { background: #001a08; color: var(--green); border-color: var(--green); }
 
-  /* J-1 TABLE */
-  .ref-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-  .ref-table tr { border-bottom: 1px solid #1a1a25; }
-  .ref-table td { padding: 4px 6px; font-size: 12px; }
-  .ref-table .lbl { color: var(--dim); width: 80px; }
-  .ref-table .val { color: var(--white); text-align: right; }
-  .ref-table .dist-col { color: var(--dim); text-align: right; font-size: 11px; }
-
-  /* SECTION */
-  .section-sep {
-    color: var(--dim);
-    font-size: 10px;
-    letter-spacing: 2px;
-    margin: 10px 0 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  #avwap-side {
+    margin-top: 8px; text-align: center;
+    padding: 4px; border-radius: 2px; font-size: 11px; font-weight: bold;
+    letter-spacing: 1px; border: 1px solid var(--border); color: var(--dim);
   }
-  .section-sep::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
+  .side-above { background: #001a00; color: var(--green); border-color: #00662244; }
+  .side-below { background: #1a0000; color: var(--red);   border-color: #66002244; }
 
-  /* ALERT PANEL */
+  #lupdate { margin-top: 8px; font-size: 10px; color: var(--dim); text-align: center; }
+
+  /* ── REF TABLE ── */
+  .rt { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  .rt tr { border-bottom: 1px solid #16161f; }
+  .rt td { padding: 3px 4px; font-size: 12px; }
+  .rt .rl { color: var(--dim); width: 78px; }
+  .rt .rv { color: var(--white); text-align: right; }
+  .rt .rd { text-align: right; font-size: 10px; }
+
+  /* ── ALERT PANEL ── */
+  #alert-section { margin-top: 12px; }
+
+  .alert-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 6px; margin-bottom: 3px; border-radius: 2px;
+    border: 1px solid var(--border); background: var(--bg3);
+    font-size: 11px;
+  }
+  .alert-item .al-name { color: var(--dim); }
+  .alert-item .al-val  { color: var(--white); }
+  .alert-item.armed    { border-color: var(--yellow); background: #111100; }
+  .alert-item.armed .al-name { color: var(--yellow); }
+  .alert-item.firing   { border-color: var(--red); background: #1a0000; animation: pulse .5s infinite; }
+  .alert-item.firing .al-name { color: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+  #alert-window-info {
+    font-size: 10px; color: var(--dim); margin-bottom: 6px;
+  }
+  #alert-window-info span { color: var(--yellow); }
+
+  /* ── ALERT BAR (bottom) ── */
   #alert-bar {
     display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #1a0000;
-    border-top: 2px solid var(--red);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    z-index: 100;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: #1a000a; border-top: 2px solid var(--red);
+    padding: 9px 16px;
+    align-items: center; gap: 12px;
   }
-  #alert-bar.hidden { display: none !important; }
-  #alert-text { color: var(--red); font-weight: bold; font-size: 14px; flex: 1; }
-  #alert-dismiss {
-    background: none;
-    border: 1px solid var(--red);
-    color: var(--red);
-    padding: 3px 12px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 11px;
+  #alert-bar.show { display: flex; }
+  #alert-msg { color: var(--red); font-weight: bold; font-size: 14px; flex: 1; letter-spacing: 1px; }
+  #alert-ok {
+    background: none; border: 1px solid var(--red);
+    color: var(--red); padding: 3px 12px;
+    cursor: pointer; font-family: inherit; font-size: 11px;
   }
-  #alert-dismiss:hover { background: #330000; }
+  #alert-ok:hover { background: #330010; }
 
-  /* SOUND toggle */
-  #sound-btn {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--dim);
-    padding: 3px 10px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 11px;
-    border-radius: 3px;
-  }
-  #sound-btn.active { border-color: var(--yellow); color: var(--yellow); }
-
-  /* OFFLINE overlay */
-  #offline-overlay {
+  /* ── OFFLINE ── */
+  #offline {
     display: none;
-    position: fixed;
-    inset: 0;
-    background: #0a0a0fcc;
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
+    position: fixed; inset: 0; z-index: 200;
+    background: #0a0a0fdd;
+    flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   }
-  #offline-overlay.show { display: flex; }
-  #offline-msg {
-    font-size: 20px;
-    color: var(--red);
-    font-weight: bold;
-    letter-spacing: 3px;
-  }
-  #offline-sub { color: var(--dim); font-size: 13px; }
+  #offline.show { display: flex; }
+  #offline-h { font-size: 22px; color: var(--red); font-weight: bold; letter-spacing: 3px; }
+  #offline-s { color: var(--dim); font-size: 12px; }
 
-  @media (max-width: 700px) {
-    #main { grid-template-columns: 1fr; height: auto; }
-    #live-price { font-size: 38px; }
+  @media (max-width: 680px) {
+    #main { grid-template-columns: 1fr; height: auto; overflow-y: auto; }
+    body { overflow: auto; }
   }
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div id="header">
   <div id="title">⬛ SUIVI SD NQ LIVE</div>
-  <div id="header-right">
-    <div id="ny-time">--:--:-- ET</div>
-    <div id="market-status" class="status-closed">FERMÉ</div>
-    <div id="bridge-status"><span class="dot dot-yellow" id="bridge-dot"></span><span id="bridge-label">CONNEXION...</span></div>
-    <button id="sound-btn" onclick="toggleSound()">🔇 SON OFF</button>
+  <div id="hright">
+    <div id="ny-clock">--:--:-- ET</div>
+    <div id="mkt-badge" class="mkt-closed">FERMÉ</div>
+    <div><span class="dot dot-warn" id="bdot"></span><span id="bridge-lbl">...</span></div>
+    <button id="snd-btn" onclick="toggleSnd()">🔇 SON</button>
   </div>
 </div>
 
+<!-- MAIN -->
 <div id="main">
 
-  <!-- PANEL GAUCHE — PRIX + SD BANDS -->
-  <div class="panel" id="panel-sd">
-    <div class="panel-title">NQ — BANDES SD (AVWAP 18H)</div>
-    <table class="sd-table" id="sd-table">
-      <tr class="row-sd3h"><td class="label">SD+3</td><td class="price" id="sd3h">—</td><td class="dist" id="d-sd3h"></td><td class="bar-cell"></td></tr>
-      <tr class="row-sd2h"><td class="label">SD+2</td><td class="price" id="sd2h">—</td><td class="dist" id="d-sd2h"></td><td class="bar-cell"></td></tr>
-      <tr class="row-sd1h"><td class="label">SD+1</td><td class="price" id="sd1h">—</td><td class="dist" id="d-sd1h"></td><td class="bar-cell"></td></tr>
-      <tr class="row-avwap"><td class="label">👑 AVWAP</td><td class="price" id="avwap">—</td><td class="dist" id="d-avwap"></td><td class="bar-cell"></td></tr>
-      <tr class="row-sd1l"><td class="label">SD-1</td><td class="price" id="sd1l">—</td><td class="dist" id="d-sd1l"></td><td class="bar-cell"></td></tr>
-      <tr class="row-sd2l"><td class="label">SD-2</td><td class="price" id="sd2l">—</td><td class="dist" id="d-sd2l"></td><td class="bar-cell"></td></tr>
-      <tr class="row-sd3l"><td class="label">SD-3</td><td class="price" id="sd3l">—</td><td class="dist" id="d-sd3l"></td><td class="bar-cell"></td></tr>
-    </table>
+  <!-- GAUCHE : SD BANDS + PRIX -->
+  <div class="panel">
+    <div class="ptitle">NQ — BANDES SD · AVWAP 18H</div>
 
-    <div style="margin-top: 20px; text-align: center;">
-      <div id="live-price">—</div>
-      <div id="price-change" class="flat">—</div>
-      <div id="avwap-side" class="side-above" style="display:none">DESSUS AVWAP</div>
-      <div id="laf-lbf">
-        <div class="signal-badge signal-off" id="laf-badge">LAF SD+2</div>
-        <div class="signal-badge signal-off" id="lbf-badge">LBF SD-2</div>
+    <div id="sd-wrap">
+      <div class="sd-row lbl-sd3h" id="r-sd3h"><span class="sd-lbl">SD+3</span><span class="sd-price" id="v-sd3h">—</span><span class="sd-dist" id="d-sd3h"></span></div>
+      <div class="sd-row lbl-sd2h" id="r-sd2h"><span class="sd-lbl">SD+2</span><span class="sd-price" id="v-sd2h">—</span><span class="sd-dist" id="d-sd2h"></span></div>
+      <div class="sd-row lbl-sd1h" id="r-sd1h"><span class="sd-lbl">SD+1</span><span class="sd-price" id="v-sd1h">—</span><span class="sd-dist" id="d-sd1h"></span></div>
+
+      <div class="sd-row row-price">
+        <span class="sd-lbl">▶ NQ</span>
+        <span class="sd-price" id="v-last">—</span>
+        <span class="sd-dist" id="price-delta">—</span>
       </div>
-      <div id="last-update">Dernière mise à jour : —</div>
+
+      <div class="sd-row lbl-avwp" id="r-avwp"><span class="sd-lbl">👑 AVWAP</span><span class="sd-price" id="v-avwp">—</span><span class="sd-dist" id="d-avwp"></span></div>
+      <div class="sd-row lbl-sd1l" id="r-sd1l"><span class="sd-lbl">SD-1</span><span class="sd-price" id="v-sd1l">—</span><span class="sd-dist" id="d-sd1l"></span></div>
+      <div class="sd-row lbl-sd2l" id="r-sd2l"><span class="sd-lbl">SD-2</span><span class="sd-price" id="v-sd2l">—</span><span class="sd-dist" id="d-sd2l"></span></div>
+      <div class="sd-row lbl-sd3l" id="r-sd3l"><span class="sd-lbl">SD-3</span><span class="sd-price" id="v-sd3l">—</span><span class="sd-dist" id="d-sd3l"></span></div>
     </div>
+
+    <div id="avwap-side">— AVWAP —</div>
+    <div id="signals">
+      <div class="sig-badge" id="sig-laf">LAF SD+2</div>
+      <div class="sig-badge" id="sig-lbf">LBF SD-2</div>
+    </div>
+    <div id="lupdate">—</div>
   </div>
 
-  <!-- PANEL DROIT — NIVEAUX J-1 + SESSIONS -->
-  <div class="panel" id="panel-ref">
-    <div class="panel-title">NIVEAUX DE RÉFÉRENCE</div>
+  <!-- DROITE : NIVEAUX + ALERTES -->
+  <div class="panel">
+    <div class="ptitle">NIVEAUX DE RÉFÉRENCE</div>
 
-    <div class="section-sep">J-1 RTH</div>
-    <table class="ref-table">
-      <tr><td class="lbl">VAH</td><td class="val" id="j1-vah">—</td><td class="dist-col" id="dj1-vah"></td></tr>
-      <tr><td class="lbl">POC</td><td class="val" id="j1-poc">—</td><td class="dist-col" id="dj1-poc"></td></tr>
-      <tr><td class="lbl">VAL</td><td class="val" id="j1-val">—</td><td class="dist-col" id="dj1-val"></td></tr>
-      <tr><td class="lbl">High</td><td class="val" id="j1-high">—</td><td class="dist-col" id="dj1-high"></td></tr>
-      <tr><td class="lbl">Settle</td><td class="val" id="j1-settle">—</td><td class="dist-col" id="dj1-settle"></td></tr>
-      <tr><td class="lbl">Low</td><td class="val" id="j1-low">—</td><td class="dist-col" id="dj1-low"></td></tr>
+    <div class="sep">J-1 RTH</div>
+    <table class="rt">
+      <tr><td class="rl">VAH</td>    <td class="rv" id="v-vah">—</td>    <td class="rd" id="d-vah"></td></tr>
+      <tr><td class="rl">POC</td>    <td class="rv" id="v-poc">—</td>    <td class="rd" id="d-poc"></td></tr>
+      <tr><td class="rl">VAL</td>    <td class="rv" id="v-val">—</td>    <td class="rd" id="d-val"></td></tr>
+      <tr><td class="rl">High J-1</td><td class="rv" id="v-j1h">—</td>  <td class="rd" id="d-j1h"></td></tr>
+      <tr><td class="rl">Settle</td><td class="rv" id="v-j1s">—</td>    <td class="rd" id="d-j1s"></td></tr>
+      <tr><td class="rl">Low J-1</td><td class="rv" id="v-j1l">—</td>   <td class="rd" id="d-j1l"></td></tr>
     </table>
 
-    <div class="section-sep">OVN (18H → 09H30)</div>
-    <table class="ref-table">
-      <tr><td class="lbl">High OVN</td><td class="val" id="ovn-high">—</td><td class="dist-col" id="dovn-high"></td></tr>
-      <tr><td class="lbl">Low OVN</td><td class="val" id="ovn-low">—</td><td class="dist-col" id="dovn-low"></td></tr>
+    <div class="sep">OVN (18H → 09H30)</div>
+    <table class="rt">
+      <tr><td class="rl">High OVN</td><td class="rv" id="v-ovnh">—</td><td class="rd" id="d-ovnh"></td></tr>
+      <tr><td class="rl">Low OVN</td> <td class="rv" id="v-ovnl">—</td><td class="rd" id="d-ovnl"></td></tr>
     </table>
 
-    <div class="section-sep">ALN — ASIE / LONDRES</div>
-    <table class="ref-table">
-      <tr><td class="lbl">Asie High</td><td class="val" id="asia-high">—</td><td class="dist-col" id="dasia-high"></td></tr>
-      <tr><td class="lbl">Asie Low</td><td class="val" id="asia-low">—</td><td class="dist-col" id="dasia-low"></td></tr>
-      <tr><td class="lbl">London High</td><td class="val" id="lon-high">—</td><td class="dist-col" id="dlon-high"></td></tr>
-      <tr><td class="lbl">London Low</td><td class="val" id="lon-low">—</td><td class="dist-col" id="dlon-low"></td></tr>
+    <div class="sep">ALN — ASIE / LONDRES</div>
+    <table class="rt">
+      <tr><td class="rl">Asie High</td>  <td class="rv" id="v-ash">—</td><td class="rd" id="d-ash"></td></tr>
+      <tr><td class="rl">Asie Low</td>   <td class="rv" id="v-asl">—</td><td class="rd" id="d-asl"></td></tr>
+      <tr><td class="rl">London High</td><td class="rv" id="v-lnh">—</td><td class="rd" id="d-lnh"></td></tr>
+      <tr><td class="rl">London Low</td> <td class="rv" id="v-lnl">—</td><td class="rd" id="d-lnl"></td></tr>
     </table>
 
-    <div class="section-sep">ALERTES SONORES</div>
-    <div id="alert-config" style="color:var(--dim);font-size:11px;line-height:1.8;">
-      <div>Fenêtre : <span style="color:var(--yellow)" id="alert-window">18H00 → 06H00 ET</span></div>
-      <div>Déclencheur : <span style="color:var(--orange)" id="alert-trigger">— à configurer —</span></div>
-      <div>Statut : <span id="alert-status" style="color:var(--dim)">EN ATTENTE DE CONFIG</span></div>
+    <!-- ALERTES -->
+    <div id="alert-section">
+      <div class="sep">ALERTES SONORES</div>
+      <div id="alert-window-info">Fenêtre active : <span>18H00 → 06H00 ET</span></div>
+
+      <div class="alert-item" id="ai-sd3h">
+        <span class="al-name">NQ touche SD+3 (EXTRÊME HAUT)</span>
+        <span class="al-val" id="av-sd3h">—</span>
+      </div>
+      <div class="alert-item" id="ai-sd2h">
+        <span class="al-name">NQ touche SD+2 → LAF possible</span>
+        <span class="al-val" id="av-sd2h">—</span>
+      </div>
+      <div class="alert-item" id="ai-avwp-x">
+        <span class="al-name">NQ croise AVWAP (changement côté)</span>
+        <span class="al-val" id="av-avwp">—</span>
+      </div>
+      <div class="alert-item" id="ai-sd2l">
+        <span class="al-name">NQ touche SD-2 → LBF possible</span>
+        <span class="al-val" id="av-sd2l">—</span>
+      </div>
+      <div class="alert-item" id="ai-sd3l">
+        <span class="al-name">NQ touche SD-3 (EXTRÊME BAS)</span>
+        <span class="al-val" id="av-sd3l">—</span>
+      </div>
     </div>
   </div>
 
 </div>
 
 <!-- ALERT BAR -->
-<div id="alert-bar" class="hidden">
-  <div id="alert-text">⚠ ALERTE NQ</div>
-  <button id="alert-dismiss" onclick="dismissAlert()">FERMER</button>
+<div id="alert-bar">
+  <div id="alert-msg">⚠ ALERTE NQ</div>
+  <button id="alert-ok" onclick="clearAlert()">OK</button>
 </div>
 
 <!-- OFFLINE OVERLAY -->
-<div id="offline-overlay">
-  <div id="offline-msg">⚡ BRIDGE OFFLINE</div>
-  <div id="offline-sub">Vérifier sc_bridge.js → startup_bridge.bat</div>
-  <div id="offline-sub2" style="color:#444;font-size:11px;margin-top:4px;">http://localhost:8766/data</div>
+<div id="offline">
+  <div id="offline-h">⚡ BRIDGE OFFLINE</div>
+  <div id="offline-s">Vérifier startup_bridge.bat → sc_bridge.js</div>
+  <div style="color:#333;font-size:11px;margin-top:6px;">localhost:8766</div>
 </div>
 
 <script>
-// ─── CONFIG ───────────────────────────────────────────────
-const BRIDGE_URL    = 'http://localhost:8766/data'
-const POLL_MS       = 5000
-const ALERT_FROM_H  = 18   // 18h00 ET — À CONFIGURER
-const ALERT_TO_H    = 6    //  6h00 ET — À CONFIGURER
-// Déclencheur : laisser null jusqu'à config user
-// Syntaxe exemple : { type:'touch', level:'sd2h' }  ou  { type:'cross', level:'avwap' }
-const ALERT_TRIGGER = null
+// ════════════════════════════════════════════════
+//  CONFIG — modifier ici si besoin
+// ════════════════════════════════════════════════
+const BRIDGE   = 'http://localhost:8766/data'
+const POLL     = 5000          // ms entre chaque fetch
+const TOUCH_PT = 8             // distance en pts pour déclencher "touche"
+const ALT_FROM = 18            // début fenêtre alerte (heure NY)
+const ALT_TO   = 6             // fin fenêtre alerte   (heure NY)
 
-// ─── STATE ────────────────────────────────────────────────
-let soundEnabled  = false
-let prevPrice     = null
-let alertFired    = false
-let offlineCount  = 0
-let audioCtx      = null
+// ════════════════════════════════════════════════
+//  ÉTAT
+// ════════════════════════════════════════════════
+let sndOn       = false
+let prevPrice   = null
+let prevSide    = null         // 'above' | 'below'
+let alertActive = {}           // clé → timestamp dernier déclenchement
+const COOLDOWN  = 120000       // 2 min entre 2 alertes du même type
+let audioCtx    = null
+let missCount   = 0
 
-// ─── NY TIME ──────────────────────────────────────────────
-function getNYTime() {
-  return new Date().toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false
-  })
-}
-
-function getNYDate() {
+// ════════════════════════════════════════════════
+//  NY TIME / MARKET STATUS
+// ════════════════════════════════════════════════
+function nyNow() {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
 }
-
 function isMarketOpen() {
-  const ny = getNYDate()
-  const day = ny.getDay()   // 0=Sun 1=Mon ... 5=Fri 6=Sat
-  const h   = ny.getHours()
-  const m   = ny.getMinutes()
-  const mins = h * 60 + m
-
-  // Sunday 18:00 → Friday 16:00
-  if (day === 6) return false // Saturday = closed
-  if (day === 0) return mins >= 18 * 60 // Sunday after 18h
-  if (day === 5) return mins < 16 * 60  // Friday before 16h
-  return true // Mon→Thu always open (overnight)
+  const d = nyNow(), day = d.getDay(), m = d.getHours() * 60 + d.getMinutes()
+  if (day === 6) return false
+  if (day === 0) return m >= 1080  // dim ≥ 18h00
+  if (day === 5) return m < 960    // ven < 16h00
+  return true
+}
+function inAlertWindow() {
+  const h = nyNow().getHours()
+  return h >= ALT_FROM || h < ALT_TO
 }
 
-function isAlertWindow() {
-  const ny = getNYDate()
-  const h  = ny.getHours()
-  // 18h → 06h (crosses midnight)
-  return h >= ALERT_FROM_H || h < ALERT_TO_H
-}
-
-// ─── CLOCK ────────────────────────────────────────────────
-function updateClock() {
-  document.getElementById('ny-time').textContent = getNYTime() + ' ET'
+function tickClock() {
+  const t = nyNow()
+  const pad = n => String(n).padStart(2,'0')
+  document.getElementById('ny-clock').textContent =
+    pad(t.getHours())+':'+pad(t.getMinutes())+':'+pad(t.getSeconds())+' ET'
+  const mkt = document.getElementById('mkt-badge')
   const open = isMarketOpen()
-  const el = document.getElementById('market-status')
-  if (open) {
-    el.textContent = 'OUVERT'
-    el.className = 'status-open'
-  } else {
-    el.textContent = 'FERMÉ'
-    el.className = 'status-closed'
-  }
+  mkt.textContent = open ? 'OUVERT' : 'FERMÉ'
+  mkt.className   = open ? 'mkt-open' : 'mkt-closed'
 }
-setInterval(updateClock, 1000)
-updateClock()
+setInterval(tickClock, 1000); tickClock()
 
-// ─── SOUND ────────────────────────────────────────────────
-function toggleSound() {
-  soundEnabled = !soundEnabled
-  const btn = document.getElementById('sound-btn')
-  if (soundEnabled) {
-    btn.textContent = '🔔 SON ON'
-    btn.classList.add('active')
-    // init AudioContext on user gesture
+// ════════════════════════════════════════════════
+//  AUDIO
+// ════════════════════════════════════════════════
+function toggleSnd() {
+  sndOn = !sndOn
+  const b = document.getElementById('snd-btn')
+  if (sndOn) {
+    b.textContent = '🔔 SON'
+    b.classList.add('on')
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
   } else {
-    btn.textContent = '🔇 SON OFF'
-    btn.classList.remove('active')
+    b.textContent = '🔇 SON'
+    b.classList.remove('on')
   }
 }
 
-function playBeep(freq, dur, vol) {
-  if (!soundEnabled || !audioCtx) return
-  const osc  = audioCtx.createOscillator()
-  const gain = audioCtx.createGain()
-  osc.connect(gain)
-  gain.connect(audioCtx.destination)
-  osc.frequency.value = freq || 880
-  gain.gain.setValueAtTime(vol || 0.4, audioCtx.currentTime)
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (dur || 0.6))
-  osc.start()
-  osc.stop(audioCtx.currentTime + (dur || 0.6))
+function beep(freq, dur, vol, delay) {
+  if (!sndOn || !audioCtx) return
+  setTimeout(() => {
+    const o = audioCtx.createOscillator()
+    const g = audioCtx.createGain()
+    o.connect(g); g.connect(audioCtx.destination)
+    o.frequency.value = freq
+    g.gain.setValueAtTime(vol, audioCtx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur)
+    o.start(); o.stop(audioCtx.currentTime + dur)
+  }, delay || 0)
 }
 
-function playAlert() {
-  if (!soundEnabled) return
-  // Triple beep
-  playBeep(1047, 0.2, 0.5)
-  setTimeout(() => playBeep(1047, 0.2, 0.5), 250)
-  setTimeout(() => playBeep(1319, 0.5, 0.6), 500)
+const SOUNDS = {
+  sd3h:  () => { beep(1400,.15,.5,0); beep(1400,.15,.5,200); beep(1568,.4,.6,400) },
+  sd2h:  () => { beep(1047,.2,.45,0); beep(1319,.35,.55,280) },
+  avwap: () => { beep(880,.15,.4,0); beep(988,.15,.4,200); beep(880,.3,.4,400) },
+  sd2l:  () => { beep(659,.2,.45,0); beep(523,.35,.55,280) },
+  sd3l:  () => { beep(440,.15,.5,0); beep(440,.15,.5,200); beep(392,.4,.6,400) },
 }
 
-// ─── ALERT LOGIC ─────────────────────────────────────────
-function checkAlert(data) {
-  if (!ALERT_TRIGGER || !isAlertWindow()) return
-  const nq   = data.NQ
-  if (!nq) return
-  const last = nq.last
+// ════════════════════════════════════════════════
+//  ALERTE
+// ════════════════════════════════════════════════
+function triggerAlert(key, msg, lvl) {
+  const now = Date.now()
+  if (alertActive[key] && now - alertActive[key] < COOLDOWN) return
+  alertActive[key] = now
+  if (SOUNDS[key]) SOUNDS[key]()
+  showBar('⚠ ' + msg + (lvl ? '  @ ' + fmt(lvl) : ''))
+  flashItem('ai-' + key.replace('avwp', 'avwp-x'))
+}
 
-  let triggered = false
-  // Exemple: { type:'touch', level:'sd2h' }
-  if (ALERT_TRIGGER.type === 'touch') {
-    const lvl = getLevelValue(nq, ALERT_TRIGGER.level)
-    if (lvl && Math.abs(last - lvl) <= 5) triggered = true
+function flashItem(id) {
+  const el = document.getElementById(id)
+  if (!el) return
+  el.classList.add('firing')
+  setTimeout(() => el.classList.remove('firing'), 4000)
+}
+
+function showBar(msg) {
+  document.getElementById('alert-msg').textContent = msg
+  document.getElementById('alert-bar').classList.add('show')
+}
+function clearAlert() {
+  document.getElementById('alert-bar').classList.remove('show')
+}
+
+// Met à jour le statut visuel "armé / hors fenêtre" des lignes d'alerte
+function refreshAlertItems(nq) {
+  const win = inAlertWindow()
+  const ids = ['sd3h','sd2h','avwp','sd2l','sd3l']
+  const vals = {
+    sd3h: nq.ovn_sd3h, sd2h: nq.sd2h, avwp: nq.vwap,
+    sd2l: nq.sd2l, sd3l: nq.ovn_sd3l
   }
-  if (ALERT_TRIGGER.type === 'cross_above') {
-    const lvl = getLevelValue(nq, ALERT_TRIGGER.level)
-    if (lvl && prevPrice && prevPrice < lvl && last >= lvl) triggered = true
-  }
-  if (ALERT_TRIGGER.type === 'cross_below') {
-    const lvl = getLevelValue(nq, ALERT_TRIGGER.level)
-    if (lvl && prevPrice && prevPrice > lvl && last <= lvl) triggered = true
-  }
-
-  if (triggered && !alertFired) {
-    alertFired = true
-    playAlert()
-    showAlertBar('⚠ NQ ALERTE — ' + (ALERT_TRIGGER.label || ALERT_TRIGGER.level.toUpperCase()) + ' @ ' + fmt(last))
-  }
-  if (!triggered) alertFired = false
+  ids.forEach(k => {
+    const el = document.getElementById('ai-' + (k==='avwp'?'avwp-x':k))
+    if (!el) return
+    el.classList.toggle('armed', win)
+    document.getElementById('av-' + k).textContent = fmt(vals[k])
+  })
+  document.getElementById('alert-window-info').innerHTML =
+    'Fenêtre : <span>' + ALT_FROM + 'H00 → ' + ALT_TO + 'H00 ET</span>'
+    + ' — ' + (win
+      ? '<span style="color:var(--yellow)">ACTIVE ⚡</span>'
+      : '<span style="color:var(--dim)">hors fenêtre</span>')
 }
 
-function getLevelValue(nq, key) {
-  const map = {
-    sd3h: nq.ovn_sd3h, sd2h: nq.sd2h, sd1h: nq.sd1h,
-    avwap: nq.vwap,
-    sd1l: nq.sd1l, sd2l: nq.sd2l, sd3l: nq.ovn_sd3l,
-    vah: nq.vah, poc: nq.poc, val: nq.val,
-    j1_high: nq.j1_high, j1_settle: nq.j1_settle, j1_low: nq.j1_low,
+// ════════════════════════════════════════════════
+//  CHECKS ALERTE
+// ════════════════════════════════════════════════
+function checkAlerts(nq) {
+  if (!inAlertWindow()) return
+  const p = parseFloat(nq.last)
+  if (isNaN(p)) return
+
+  const sd3h = parseFloat(nq.ovn_sd3h)
+  const sd2h = parseFloat(nq.sd2h)
+  const avwp = parseFloat(nq.vwap)
+  const sd2l = parseFloat(nq.sd2l)
+  const sd3l = parseFloat(nq.ovn_sd3l)
+
+  if (!isNaN(sd3h) && p >= sd3h - TOUCH_PT) triggerAlert('sd3h', 'NQ EXTRÊME HAUT SD+3', sd3h)
+  if (!isNaN(sd2h) && p >= sd2h - TOUCH_PT) triggerAlert('sd2h', 'NQ TOUCHE SD+2 — LAF POSSIBLE', sd2h)
+  if (!isNaN(sd2l) && p <= sd2l + TOUCH_PT) triggerAlert('sd2l', 'NQ TOUCHE SD-2 — LBF POSSIBLE', sd2l)
+  if (!isNaN(sd3l) && p <= sd3l + TOUCH_PT) triggerAlert('sd3l', 'NQ EXTRÊME BAS SD-3', sd3l)
+
+  // croisement AVWAP
+  const side = nq.avwap_side
+  if (prevSide && side && side !== prevSide) {
+    triggerAlert('avwp', 'NQ CROISE AVWAP → ' + (side === 'above' ? 'DESSUS' : 'DESSOUS'), avwp)
   }
-  return map[key] || null
 }
 
-function showAlertBar(msg) {
-  const el = document.getElementById('alert-bar')
-  document.getElementById('alert-text').textContent = msg
-  el.classList.remove('hidden')
-}
-
-function dismissAlert() {
-  document.getElementById('alert-bar').classList.add('hidden')
-}
-
-// ─── FORMAT ───────────────────────────────────────────────
+// ════════════════════════════════════════════════
+//  FORMAT
+// ════════════════════════════════════════════════
 function fmt(v) {
-  if (v == null || isNaN(v)) return '—'
+  if (v == null || v === '' || isNaN(Number(v))) return '—'
   return Number(v).toFixed(2)
 }
-
-function dist(last, level) {
-  if (!last || !level || isNaN(last) || isNaN(level)) return ''
-  const d = last - level
+function dspan(last, lvl) {
+  if (!last || !lvl || isNaN(last) || isNaN(lvl)) return ''
+  const d = (last - lvl).toFixed(0)
+  const cls = d >= 0 ? 'dist-pos' : 'dist-neg'
   const sign = d >= 0 ? '+' : ''
-  const col  = d > 0 ? '#9bffab' : '#ff9b9b'
-  return `<span style="color:${col}">${sign}${d.toFixed(0)}</span>`
+  return `<span class="${cls}">${sign}${d}</span>`
 }
 
-// ─── RENDER ───────────────────────────────────────────────
+// ════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════
 function render(data) {
-  const nq   = data.NQ
+  const nq = data && data.NQ
   if (!nq) return
+
   const last = parseFloat(nq.last)
-  const prev = prevPrice
 
-  // Price
-  document.getElementById('live-price').textContent = fmt(last)
-  if (prev !== null) {
-    const chg  = last - prev
-    const sign = chg >= 0 ? '+' : ''
-    const el   = document.getElementById('price-change')
-    el.textContent = sign + chg.toFixed(2)
-    el.className   = chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat'
+  // PRIX
+  document.getElementById('v-last').textContent = fmt(last)
+  if (prevPrice !== null) {
+    const d = last - prevPrice
+    const el = document.getElementById('price-delta')
+    el.textContent = (d >= 0 ? '+' : '') + d.toFixed(2)
+    el.style.color = d > 0 ? 'var(--green)' : d < 0 ? 'var(--red)' : 'var(--dim)'
   }
-  prevPrice = last
 
-  // AVWAP side
+  // AVWAP SIDE
   const sideEl = document.getElementById('avwap-side')
-  sideEl.style.display = 'block'
   if (nq.avwap_side === 'above') {
-    sideEl.textContent = '▲ DESSUS AVWAP'
-    sideEl.className = 'side-above'
-  } else {
-    sideEl.textContent = '▼ DESSOUS AVWAP'
-    sideEl.className = 'side-below'
+    sideEl.textContent = '▲ DESSUS AVWAP'; sideEl.className = 'side-above'
+  } else if (nq.avwap_side === 'below') {
+    sideEl.textContent = '▼ DESSOUS AVWAP'; sideEl.className = 'side-below'
   }
 
   // LAF / LBF
-  const laf = document.getElementById('laf-badge')
-  const lbf = document.getElementById('lbf-badge')
-  laf.className = 'signal-badge ' + (nq.laf_sd2 ? 'laf-active' : 'signal-off')
-  lbf.className = 'signal-badge ' + (nq.lbf_sd2 ? 'lbf-active' : 'signal-off')
-
-  // Last update
-  const lu = nq.lastUpdate ? new Date(nq.lastUpdate).toLocaleTimeString('fr-FR') : '—'
-  document.getElementById('last-update').textContent = 'Update : ' + lu
+  document.getElementById('sig-laf').className = 'sig-badge' + (nq.laf_sd2 ? ' sig-laf' : '')
+  document.getElementById('sig-lbf').className = 'sig-badge' + (nq.lbf_sd2 ? ' sig-lbf' : '')
 
   // SD BANDS
-  const levels = [
-    { id: 'sd3h', v: nq.ovn_sd3h, did: 'd-sd3h' },
-    { id: 'sd2h', v: nq.sd2h,     did: 'd-sd2h' },
-    { id: 'sd1h', v: nq.sd1h,     did: 'd-sd1h' },
-    { id: 'avwap', v: nq.vwap,    did: 'd-avwap' },
-    { id: 'sd1l', v: nq.sd1l,     did: 'd-sd1l' },
-    { id: 'sd2l', v: nq.sd2l,     did: 'd-sd2l' },
-    { id: 'sd3l', v: nq.ovn_sd3l, did: 'd-sd3l' },
+  const bands = [
+    ['sd3h', nq.ovn_sd3h], ['sd2h', nq.sd2h], ['sd1h', nq.sd1h],
+    ['avwp', nq.vwap],
+    ['sd1l', nq.sd1l], ['sd2l', nq.sd2l], ['sd3l', nq.ovn_sd3l],
   ]
-  levels.forEach(l => {
-    document.getElementById(l.id).textContent = fmt(l.v)
-    document.getElementById(l.did).innerHTML  = dist(last, l.v)
+  bands.forEach(([k, v]) => {
+    document.getElementById('v-'+k).textContent = fmt(v)
+    const del = document.getElementById('d-'+k)
+    if (del) del.innerHTML = dspan(last, parseFloat(v))
   })
 
   // J-1
-  const j1 = [
-    { id: 'j1-vah',    v: nq.vah,       did: 'dj1-vah'    },
-    { id: 'j1-poc',    v: nq.poc,       did: 'dj1-poc'    },
-    { id: 'j1-val',    v: nq.val,       did: 'dj1-val'    },
-    { id: 'j1-high',   v: nq.j1_high,   did: 'dj1-high'   },
-    { id: 'j1-settle', v: nq.j1_settle, did: 'dj1-settle' },
-    { id: 'j1-low',    v: nq.j1_low,    did: 'dj1-low'    },
+  const refs = [
+    ['vah', nq.vah], ['poc', nq.poc], ['val', nq.val],
+    ['j1h', nq.j1_high], ['j1s', nq.j1_settle], ['j1l', nq.j1_low],
+    ['ovnh', nq.ovn_high], ['ovnl', nq.ovn_low],
+    ['ash', nq.asia_high], ['asl', nq.asia_low],
+    ['lnh', nq.lon_high],  ['lnl', nq.lon_low],
   ]
-  j1.forEach(l => {
-    document.getElementById(l.id).textContent = fmt(l.v)
-    document.getElementById(l.did).innerHTML  = dist(last, l.v)
+  refs.forEach(([k, v]) => {
+    const ev = document.getElementById('v-'+k)
+    const ed = document.getElementById('d-'+k)
+    if (ev) ev.textContent = fmt(v)
+    if (ed) ed.innerHTML   = dspan(last, parseFloat(v))
   })
 
-  // OVN
-  document.getElementById('ovn-high').textContent = fmt(nq.ovn_high)
-  document.getElementById('ovn-low').textContent  = fmt(nq.ovn_low)
-  document.getElementById('dovn-high').innerHTML  = dist(last, nq.ovn_high)
-  document.getElementById('dovn-low').innerHTML   = dist(last, nq.ovn_low)
+  // UPDATE TIME
+  const ts = nq.lastUpdate ? new Date(nq.lastUpdate).toLocaleTimeString('fr-FR') : '—'
+  document.getElementById('lupdate').textContent = 'Update SC : ' + ts
 
-  // ALN
-  document.getElementById('asia-high').textContent = fmt(nq.asia_high)
-  document.getElementById('asia-low').textContent  = fmt(nq.asia_low)
-  document.getElementById('lon-high').textContent  = fmt(nq.lon_high)
-  document.getElementById('lon-low').textContent   = fmt(nq.lon_low)
-  document.getElementById('dasia-high').innerHTML  = dist(last, nq.asia_high)
-  document.getElementById('dasia-low').innerHTML   = dist(last, nq.asia_low)
-  document.getElementById('dlon-high').innerHTML   = dist(last, nq.lon_high)
-  document.getElementById('dlon-low').innerHTML    = dist(last, nq.lon_low)
+  // ALERTES
+  refreshAlertItems(nq)
+  checkAlerts(nq)
 
-  // Alert window info
-  document.getElementById('alert-window').textContent = ALERT_FROM_H + 'H00 → ' + ALERT_TO_H + 'H00 ET'
-  if (ALERT_TRIGGER) {
-    document.getElementById('alert-trigger').textContent = ALERT_TRIGGER.label || JSON.stringify(ALERT_TRIGGER)
-    document.getElementById('alert-status').textContent  = isAlertWindow() ? '🟡 FENÊTRE ACTIVE' : '⬛ HORS FENÊTRE'
-    document.getElementById('alert-status').style.color  = isAlertWindow() ? '#ffd740' : '#666680'
-  }
-
-  checkAlert(data)
+  prevSide  = nq.avwap_side
+  prevPrice = last
 }
 
-// ─── POLL BRIDGE ─────────────────────────────────────────
-function setBridgeStatus(state) {
-  const dot   = document.getElementById('bridge-dot')
-  const label = document.getElementById('bridge-label')
-  const overlay = document.getElementById('offline-overlay')
+// ════════════════════════════════════════════════
+//  BRIDGE STATUS
+// ════════════════════════════════════════════════
+function setBridge(state) {
+  const dot = document.getElementById('bdot')
+  const lbl = document.getElementById('bridge-lbl')
+  const ov  = document.getElementById('offline')
   if (state === 'ok') {
-    dot.className   = 'dot dot-green'
-    label.textContent = 'BRIDGE OK'
-    label.style.color = ''
-    overlay.classList.remove('show')
-    offlineCount = 0
-  } else if (state === 'retry') {
-    dot.className   = 'dot dot-yellow'
-    label.textContent = 'RECONNEXION...'
-    label.style.color = '#ffd740'
+    dot.className = 'dot dot-ok'
+    lbl.textContent = 'BRIDGE OK'
+    lbl.style.color = ''
+    ov.classList.remove('show')
+    missCount = 0
+  } else if (state === 'wait') {
+    dot.className = 'dot dot-warn'
+    lbl.textContent = 'ATTENTE...'
+    lbl.style.color = '#ffd74099'
   } else {
-    dot.className   = 'dot dot-red'
-    label.textContent = 'BRIDGE OFFLINE'
-    label.style.color = '#ff1744'
-    offlineCount++
-    if (offlineCount >= 3) overlay.classList.add('show')
+    dot.className = 'dot dot-err'
+    lbl.textContent = 'OFFLINE'
+    lbl.style.color = 'var(--red)'
+    missCount++
+    if (missCount >= 3) ov.classList.add('show')
   }
 }
 
+// ════════════════════════════════════════════════
+//  POLL
+// ════════════════════════════════════════════════
 async function poll() {
+  setBridge('wait')
   try {
-    setBridgeStatus('retry')
-    const res = await fetch(BRIDGE_URL, {
+    const r = await fetch(BRIDGE, {
       cache: 'no-store',
       signal: AbortSignal.timeout(4000)
     })
-    if (!res.ok) throw new Error('HTTP ' + res.status)
-    const data = await res.json()
-    setBridgeStatus('ok')
-    render(data)
-  } catch (e) {
-    setBridgeStatus('error')
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    const d = await r.json()
+    setBridge('ok')
+    render(d)
+  } catch {
+    setBridge('err')
   }
 }
 
-// Start polling
 poll()
-setInterval(poll, POLL_MS)
+setInterval(poll, POLL)
 </script>
 
 </body>
