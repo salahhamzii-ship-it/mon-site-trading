@@ -7,7 +7,7 @@
  */
 
 import { createServer } from 'http'
-import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, readdirSync, watch as fsWatch } from 'fs'
 import { join } from 'path'
 import { WebSocketServer, WebSocket } from 'ws'
 import { execFile } from 'child_process'
@@ -191,7 +191,7 @@ const RTH_END   = { NQ: '16:00', ES: '16:00', GC: '13:30', CL: '14:30' }
 
 const WS_PORT   = 8765
 const HTTP_PORT = 8766
-const REFRESH_S = 10
+const REFRESH_S = 3
 
 if (!IS_WIN) {
   mkdirSync(UPLOAD_DIR, { recursive: true })
@@ -1015,7 +1015,7 @@ const httpServer = createServer((req, res) => {
       IS_WIN ? String.raw`C:\Users\${process.env.USERNAME || 'USER'}\Desktop\sc-bridge\suivi_sd_nq.html` : '',
       IS_WIN ? String.raw`C:\Users\${process.env.USERPROFILE?.split('\\').pop() || 'USER'}\Desktop\sc-bridge\suivi_sd_nq.html` : '',
       // Chemin relatif au process (fonctionne si lancé depuis le dossier sc-bridge)
-      new URL('../suivi_sd_nq.html', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'),
+      new URL('./suivi_sd_nq.html', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'),
       '/home/user/mon-site-trading/suivi_sd_nq.html',
     ]
     let html = null
@@ -1220,6 +1220,35 @@ console.log()
 
 LAST_MSG = buildMessage()
 setInterval(refreshAndBroadcast, REFRESH_S * 1000)
+
+// ─── WATCH CSV — détection instantanée des changements Sierra Chart ───────────
+// fs.watch sur les CSV principaux pour déclencher un refresh immédiat
+;(function watchCsvFiles() {
+  const watched = new Set()
+  const debounceMap = new Map()
+  function watchFile(fp) {
+    if (!fp || watched.has(fp) || !existsSync(fp)) return
+    try {
+      fsWatch(fp, { persistent: false }, (event) => {
+        if (event !== 'change') return
+        // debounce 300ms pour éviter les doubles événements Sierra Chart
+        if (debounceMap.has(fp)) return
+        debounceMap.set(fp, setTimeout(() => {
+          debounceMap.delete(fp)
+          console.log(`  [WATCH] CSV modifié: ${fp.split(/[\\/]/).pop()} → refresh immédiat`)
+          refreshAndBroadcast()
+        }, 300))
+      })
+      watched.add(fp)
+      console.log(`  [WATCH] Surveillance: ${fp.split(/[\\/]/).pop()}`)
+    } catch(e) {
+      console.log(`  [WATCH] Impossible de surveiller: ${fp.split(/[\\/]/).pop()} (${e.message})`)
+    }
+  }
+  // Surveille tous les CSV connus
+  for (const fp of Object.values(FILES)) watchFile(fp)
+  for (const fp of Object.values(NQ_PATHS)) watchFile(fp)
+})();
 
 // ─── TUNNEL NGROK AUTOMATIQUE ─────────────────────────────────────────────────
 // Lit l'authtoken depuis le fichier de config ngrok existant (pas d'action requise)
