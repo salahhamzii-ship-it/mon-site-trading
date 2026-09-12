@@ -5,7 +5,13 @@
   "framework": "vite",
   "headers": [
     {
-      "source": "/cockpit-v3.html",
+      "source": "/(cockpit-v3|nq-live|tracker).html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(cockpit|nq-live|tracker)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
       ]
