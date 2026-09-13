@@ -1055,7 +1055,7 @@ async function testBridge() {
   }
 }
 
-function setStatus(state) {
+function setStatus(state, errMsg) {
   const dot = document.getElementById('bdot')
   const lbl = document.getElementById('blbl')
   const tag = document.getElementById('demo-tag')
@@ -1069,7 +1069,15 @@ function setStatus(state) {
     dot.className = 'dot d-warn'; lbl.textContent = 'GEL ✦'
     lbl.style.color = 'var(--gold)'
   } else {
-    dot.className = 'dot d-err'; lbl.textContent = 'OFFLINE'
+    dot.className = 'dot d-err'
+    try {
+      const u = new URL(BRIDGE)
+      const short = u.hostname.length > 28 ? u.hostname.slice(0,28)+'…' : u.hostname
+      lbl.textContent = 'OFFLINE — ' + short
+      lbl.title = 'URL: ' + BRIDGE + (errMsg ? ' | ' + errMsg : '')
+    } catch(_) {
+      lbl.textContent = 'OFFLINE'
+    }
     lbl.style.color = 'var(--red)'
     miss++
     if (miss >= 2 && !demo && !_lastGood) {
@@ -1100,8 +1108,8 @@ async function poll() {
       setStatus('freeze')
       if (_lastGood) render(_lastGood)
     }
-  } catch {
-    setStatus('err')
+  } catch(e) {
+    setStatus('err', e && e.message)
   }
 }
 
