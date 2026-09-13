@@ -1018,7 +1018,7 @@ function defaultBridge() {
   const h = window.location.hostname
   if (!h || h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8766/data'
   if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return window.location.origin + '/data'
-  return window.location.origin + '/api/bridge-data'
+  return 'https://hatbox-placidly-crabmeat.ngrok-free.dev/api/bridge-data'
 }
 function getBridgeUrl() {
   try {
