@@ -440,9 +440,8 @@ body {
       <div class="edit-field">
         <label class="edit-lbl">BANDE ALARME</label>
         <select class="edit-inp" id="ei-alarm-band" style="appearance:auto">
-          <option value="sd2">SD+2 / SD−2</option>
-          <option value="sd1">SD+1 / SD−1</option>
-          <option value="sd3">SD+3 / SD−3</option>
+          <option value="sd2">Zone SD+1↔SD+2 / SD−1↔SD−2 (défaut)</option>
+          <option value="sd3">Zone SD+2↔SD+3 / SD−2↔SD−3</option>
         </select>
       </div>
       <div class="edit-field" style="display:flex;align-items:flex-end">
@@ -759,12 +758,13 @@ function isNightWindow() {
 // - ACK physique : ne coupe que si prix neutre depuis >= 30s.
 // - Réarmement automatique : 30s après ACK + prix neutre.
 // ════════════════════════════════════════════════════════════════
-let _sirenActive    = false  // sirène en cours
-let _alarmAcked     = false  // l'utilisateur a cliqué ACK
-let _audioCtx       = null
-let _sirenNodes     = null
-let _neutralSince   = null   // timestamp du retour en zone neutre
-let _rearmTimer     = null   // timer pour réarmer après 30s
+let _sirenActive      = false  // sirène en cours
+let _alarmAcked       = false  // l'utilisateur a cliqué ACK
+let _audioCtx         = null
+let _sirenNodes       = null
+let _neutralSince     = null   // timestamp du retour en zone neutre
+let _rearmTimer       = null   // timer pour réarmer après 30s
+let _lastCandleKey    = -1     // clé de la dernière bougie 30min évaluée
 
 let selectedAlarmBand = loadAlarmBand()
 
@@ -944,9 +944,18 @@ function testSiren() {
 
 function getBandLevels(nq) {
   const band = selectedAlarmBand
-  if (band === 'sd1') return { hi: parseFloat(nq.sd1h || 0), lo: parseFloat(nq.sd1l || 0) }
-  if (band === 'sd3') return { hi: parseFloat(nq.ovn_sd3h || 0), lo: parseFloat(nq.ovn_sd3l || 0) }
-  return { hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0) }
+  // sd3 : close ENTRE SD+2 et SD+3 (zone extrême bornée)
+  if (band === 'sd3') return {
+    hi: parseFloat(nq.ovn_sd3h || 0), lo: parseFloat(nq.ovn_sd3l || 0),
+    hi2: parseFloat(nq.sd2h || 0), lo2: parseFloat(nq.sd2l || 0),
+    zoneMode: true
+  }
+  // sd2 (défaut) : close ENTRE SD+1 et SD+2 / SD−1 et SD−2 (zone danger bornée)
+  return {
+    hi: parseFloat(nq.sd2h || 0), lo: parseFloat(nq.sd2l || 0),
+    hi2: parseFloat(nq.sd1h || 0), lo2: parseFloat(nq.sd1l || 0),
+    zoneMode: true
+  }
 }
 
 function checkAlarmZone(last, nq) {
@@ -960,18 +969,29 @@ function checkAlarmZone(last, nq) {
     return
   }
 
-  const { hi, lo } = getBandLevels(nq)
-  const inDanger = (isValidVal(hi) && last >= hi) || (isValidVal(lo) && last <= lo)
+  const { hi, lo, hi2, lo2, zoneMode } = getBandLevels(nq)
+  let inDanger, alarmMsg
+  if (zoneMode) {
+    const inUpper = isValidVal(hi2) && isValidVal(hi) && last >= hi2 && last <= hi
+    const inLower = isValidVal(lo2) && isValidVal(lo) && last <= lo2 && last >= lo
+    inDanger = inUpper || inLower
+    alarmMsg = `🚨 NQ ZONE ${inUpper ? `SD+1↔SD+2 ↑  ${last.toFixed(2)}` : `SD-1↔SD-2 ↓  ${last.toFixed(2)}`}`
+  }
+
+  // Clé unique par bougie 30 min (epoch ÷ 1800s)
+  const now = new Date()
+  const candleKey = Math.floor(now.getTime() / (30 * 60 * 1000))
+  // Fenêtre de close : dans les 45 premières secondes après :00 ou :30
+  const min = now.getMinutes(), sec = now.getSeconds()
+  const isCloseWindow = (min === 0 || min === 30) && sec < 45
 
   if (inDanger) {
     _neutralSince = null
     if (_rearmTimer) { clearTimeout(_rearmTimer); _rearmTimer = null }
-    if (!_alarmAcked && !_sirenActive) {
-      const bandName = selectedAlarmBand.toUpperCase()
-      const side = (isValidVal(hi) && last >= hi)
-        ? `${bandName}+ ↑  ${last.toFixed(2)}`
-        : `${bandName}− ↓  ${last.toFixed(2)}`
-      triggerAlarm(`🚨 NQ FRANCHIT ${side}`)
+    // Déclencher seulement sur le CLOSE de la bougie 30 min
+    if (!_alarmAcked && !_sirenActive && isCloseWindow && candleKey !== _lastCandleKey) {
+      _lastCandleKey = candleKey
+      triggerAlarm(alarmMsg)
     }
   } else {
     // Prix en zone neutre — mémoriser depuis quand
