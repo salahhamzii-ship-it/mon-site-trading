@@ -1023,7 +1023,9 @@ function defaultBridge() {
 function getBridgeUrl() {
   try {
     const s = localStorage.getItem(LS_BRIDGE)
-    if (s && s.startsWith('http')) return s
+    // Rejeter toute URL pointant vers github.io (jamais un bridge valide)
+    if (s && s.startsWith('http') && !s.includes('github.io')) return s
+    if (s && s.includes('github.io')) localStorage.removeItem(LS_BRIDGE)
   } catch(e) {}
   return defaultBridge()
 }
