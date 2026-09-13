@@ -1041,7 +1041,7 @@ async function testBridge() {
   if (!url) { status.textContent = '⚠ Entrer une URL'; status.style.color = 'var(--gold)'; return }
   status.textContent = '⏳ Connexion…'; status.style.color = 'var(--txt2)'
   try {
-    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000), headers: {'ngrok-skip-browser-warning': '1'} })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     const last = (d.NQ || d).last
@@ -1082,7 +1082,7 @@ function setStatus(state) {
 async function poll() {
   setStatus('wait')
   try {
-    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000), headers: {'ngrok-skip-browser-warning': '1'} })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d   = await r.json()
     const raw = d.NQ || d
