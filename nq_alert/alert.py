@@ -129,26 +129,31 @@ def parse_row(row: pd.Series, cfg: dict) -> dict | None:
 # ── Alertes ──────────────────────────────────────────────────────────────────
 
 def send_sound():
-    """Sirène 3 minutes — assez longue pour réveiller."""
+    """Sirène infinie — s'arrête UNIQUEMENT quand l'utilisateur appuie sur une touche."""
     try:
         if platform.system() == "Windows":
             import winsound
+            import msvcrt  # module Windows intégré, aucune installation requise
 
-            # Si un fichier siren.wav existe dans le même dossier, l'utiliser
             wav = os.path.join(os.path.dirname(__file__), "siren.wav")
-            if os.path.isfile(wav):
-                for _ in range(12):          # ~3 min si le wav dure ~15s
-                    winsound.PlaySound(wav, winsound.SND_FILENAME)
-                return
 
-            # Sinon : sirène alternée haute/basse pendant 3 minutes
-            for _ in range(90):              # 90 × 2s ≈ 3 min
-                winsound.Beep(1200, 600)     # aigu
-                winsound.Beep(800,  400)     # grave
+            print("\n" + "!"*60)
+            print("  *** ALARME NQ ACTIVE ***")
+            print("  Appuyez sur n'importe quelle touche pour arrêter")
+            print("!"*60 + "\n", flush=True)
+
+            while not msvcrt.kbhit():
+                if os.path.isfile(wav):
+                    winsound.PlaySound(wav, winsound.SND_FILENAME)
+                else:
+                    winsound.Beep(1200, 600)
+                    winsound.Beep(800,  400)
+
+            msvcrt.getch()  # consomme la touche
+            winsound.PlaySound(None, winsound.SND_PURGE)  # coupe le son
+            print("Alarme arrêtée.\n", flush=True)
         else:
-            for _ in range(30):
-                print("\a", end="", flush=True)
-                time.sleep(2)
+            print("\a", end="", flush=True)
     except Exception as e:
         log.warning(f"Son : {e}")
 
