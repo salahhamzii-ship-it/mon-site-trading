@@ -1425,6 +1425,110 @@ function checkAvwapAlerts(d){
   }
 }
 
+// ── ZONE ALARM SD±1/SD±2 (Règle 13 — 30mn close) ────────
+let _zoneAlarmRunning=false;
+let _zoneAlarmTick=null;
+let _zoneAlarmBar='';
+
+function _nyDate(){
+  try{return new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));}
+  catch(e){return new Date();}
+}
+
+function isGlobexWindow(){
+  const d=_nyDate(), h=d.getHours(), m=d.getMinutes();
+  const t=h*60+m;
+  return t>=18*60||t<9*60+30;
+}
+
+function isAt30MinClose(){
+  const d=_nyDate();
+  const secsFromMark=(d.getMinutes()%30)*60+d.getSeconds();
+  return secsFromMark<=90;
+}
+
+function _barId(){
+  const d=_nyDate();
+  const b=Math.floor(d.getMinutes()/30)*30;
+  return `${d.getFullYear()}${d.getMonth()}${d.getDate()}${d.getHours()}${b}`;
+}
+
+function _sirenBurst(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const now=ctx.currentTime;
+    [[900,0],[1100,0.25],[900,0.5],[1100,0.75],[900,1.0],[1100,1.25]].forEach(([f,t])=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=f;o.type='square';
+      g.gain.setValueAtTime(0.18,now+t);
+      g.gain.linearRampToValueAtTime(0,now+t+0.22);
+      o.start(now+t);o.stop(now+t+0.25);
+    });
+    setTimeout(()=>{try{ctx.close();}catch(e){}},2000);
+  }catch(e){}
+}
+
+function startZoneSiren(){
+  if(_zoneAlarmRunning)return;
+  _zoneAlarmRunning=true;
+  function loop(){
+    if(!_zoneAlarmRunning)return;
+    _sirenBurst();
+    _zoneAlarmTick=setTimeout(loop,2500);
+  }
+  loop();
+}
+
+function stopZoneSiren(){
+  _zoneAlarmRunning=false;
+  if(_zoneAlarmTick){clearTimeout(_zoneAlarmTick);_zoneAlarmTick=null;}
+}
+
+function showZoneOverlay(zone){
+  if(document.getElementById('zone-alarm-ov'))return;
+  if(!document.getElementById('zone-alarm-css')){
+    const s=document.createElement('style');s.id='zone-alarm-css';
+    s.textContent='@keyframes zpulse{0%,100%{opacity:1}50%{opacity:.5}}';
+    document.head.appendChild(s);
+  }
+  const col=zone==='high'?'#E05C5C':'#4CAF82';
+  const lbl=zone==='high'?'🔴 ZONE SD+1/SD+2  SHORT ZONE':'🟢 ZONE SD-1/SD-2  LONG ZONE';
+  const ov=document.createElement('div');
+  ov.id='zone-alarm-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(11,15,23,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;';
+  ov.innerHTML=`
+    <div style="font-family:var(--mono);font-size:24px;font-weight:700;color:${col};letter-spacing:.06em;text-align:center;animation:zpulse .7s infinite">${lbl}</div>
+    <div style="font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;line-height:1.8">CLÔTURE 30 MN EN ZONE CRITIQUE · Règle 13 Excess</div>
+    <button onclick="ackZoneAlarm()" style="padding:16px 44px;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.1em;background:${col};color:#0B0F17;border:none;border-radius:4px;cursor:pointer;">⏹ ARRÊTER L'ALARME</button>
+  `;
+  document.body.appendChild(ov);
+}
+
+function ackZoneAlarm(){
+  stopZoneSiren();
+  const ov=document.getElementById('zone-alarm-ov');
+  if(ov)ov.remove();
+}
+
+function checkZoneAlarm(nq){
+  if(!nq||!isGlobexWindow()||!isAt30MinClose())return;
+  const bid=_barId();
+  if(bid===_zoneAlarmBar)return;
+  const price=parseFloat(nq.last||0);
+  const sd1h=parseFloat(nq.sd1h||0),sd2h=parseFloat(nq.sd2h||0);
+  const sd1l=parseFloat(nq.sd1l||0),sd2l=parseFloat(nq.sd2l||0);
+  if(!price||!sd1h||!sd2h||!sd1l||!sd2l)return;
+  let zone=null;
+  if(price>sd1h&&price<sd2h)zone='high';
+  else if(price<sd1l&&price>sd2l)zone='low';
+  if(zone){
+    _zoneAlarmBar=bid;
+    startZoneSiren();
+    showZoneOverlay(zone);
+  }
+}
+
 function showAvwapFlash(msg, color){
   const t=document.getElementById('toast')
   if(!t)return
@@ -1452,6 +1556,7 @@ async function fetchAvwap(){
 function renderAvwapPanel(d){
   const nq=d.NQ||d.nq, es=d.ES||d.es;
   checkAvwapAlerts(d);
+  checkZoneAlarm(nq);
   renderAVwapInst('nq',nq);
   renderAVwapInst('es',es);
   autoFillTopDown(nq);
