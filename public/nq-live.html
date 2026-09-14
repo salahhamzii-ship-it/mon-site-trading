@@ -1018,7 +1018,9 @@ function defaultBridge() {
   const h = window.location.hostname
   if (!h || h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8766/data'
   if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return window.location.origin + '/data'
-  return 'https://hatbox-placidly-crabmeat.ngrok-free.dev/data'
+  if (h.includes('vercel.app')) return window.location.origin + '/api/bridge-data'
+  // GitHub Pages → proxy Vercel (évite CORS + interstitielle ngrok)
+  return 'https://salah-tataouine-terminal.vercel.app/api/bridge-data'
 }
 function getBridgeUrl() {
   try {
@@ -1043,7 +1045,7 @@ async function testBridge() {
   if (!url) { status.textContent = '⚠ Entrer une URL'; status.style.color = 'var(--gold)'; return }
   status.textContent = '⏳ Connexion…'; status.style.color = 'var(--txt2)'
   try {
-    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000), headers: { 'ngrok-skip-browser-warning': '1' } })
+    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     const last = (d.NQ || d).last
@@ -1092,7 +1094,7 @@ function setStatus(state, errMsg) {
 async function poll() {
   setStatus('wait')
   try {
-    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000), headers: { 'ngrok-skip-browser-warning': '1' } })
+    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d   = await r.json()
     const raw = d.NQ || d
