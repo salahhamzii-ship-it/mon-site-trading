@@ -413,6 +413,7 @@ body {
     <div id="bst">
       <span class="dot d-warn" id="bdot"></span>
       <span id="blbl">connexion…</span>
+      <span id="blbl-price" class="mono" style="margin-left:7px;font-weight:700;font-size:0.85em;color:var(--green);letter-spacing:0.03em"></span>
     </div>
   </div>
 </header>
@@ -717,10 +718,10 @@ function effectiveData(bridge) {
         if (!isValidVal(merged[k]) && isValidVal(refCache[k])) merged[k] = refCache[k]
       })
     }
-    // Priorité 2 : manualLevels (saisie manuelle) — s'applique même quand bridge connecté
+    // Priorité 2 : manualLevels (saisie manuelle) — prioritaire sur bridge pour REF_FIELDS
     if (manualLevels) {
       REF_FIELDS.forEach(k => {
-        if (!isValidVal(merged[k]) && isValidVal(manualLevels[k])) merged[k] = manualLevels[k]
+        if (isValidVal(manualLevels[k])) merged[k] = manualLevels[k]
       })
     }
     return merged
@@ -1062,18 +1063,21 @@ function setStatus(state) {
   const dot = document.getElementById('bdot')
   const lbl = document.getElementById('blbl')
   const tag = document.getElementById('demo-tag')
+  const prc = document.getElementById('blbl-price')
   if (state === 'ok') {
     dot.className = 'dot d-ok'; lbl.textContent = 'BRIDGE OK'
     lbl.style.color = ''; tag.classList.remove('on')
     miss = 0; demo = false
   } else if (state === 'wait') {
     dot.className = 'dot d-warn'; lbl.textContent = '…'
+    if (prc) prc.textContent = ''
   } else if (state === 'freeze') {
     dot.className = 'dot d-warn'; lbl.textContent = 'GEL ✦'
     lbl.style.color = 'var(--gold)'
   } else {
     dot.className = 'dot d-err'; lbl.textContent = 'OFFLINE'
     lbl.style.color = 'var(--red)'
+    if (prc) prc.textContent = ''
     miss++
     if (miss >= 2 && !demo && !_lastGood) {
       demo = true; tag.classList.add('on')
@@ -1130,6 +1134,8 @@ function render(nq) {
 
   // Prix principal
   document.getElementById('p-last').textContent = fmt(last)
+  const hdrPrc = document.getElementById('blbl-price')
+  if (hdrPrc && !demo && isValidVal(last)) hdrPrc.textContent = 'NQ ' + last.toFixed(2)
   const chgEl = document.getElementById('p-chg')
   if (prevLast !== null) {
     const d = last - prevLast
