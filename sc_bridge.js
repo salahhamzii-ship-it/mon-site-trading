@@ -1106,6 +1106,10 @@ const INSTRUMENTS = new Set(['NQ', 'ES', 'GC', 'CL'])
 
 const httpServer = createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'ngrok-skip-browser-warning, Content-Type')
+
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
 
   // ── Sert le tracker HTML directement — accessible sur tout écran du réseau
   if (req.method === 'GET' && (req.url === '/' || req.url === '/tracker')) {

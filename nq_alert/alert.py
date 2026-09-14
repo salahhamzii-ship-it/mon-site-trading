@@ -14,7 +14,7 @@ from datetime import datetime, date
 import pandas as pd
 import pytz
 
-# ── Config ───────────────────────────────────────────────────────────────────
+# ── Config ────────────────────────────────────────────────────────────────────────────
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
@@ -22,7 +22,7 @@ def load_config():
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
-# ── Logging ──────────────────────────────────────────────────────────────────
+# ── Logging ──────────────────────────────────────────────────────────────────────────
 
 LOG_FILE = os.path.join(os.path.dirname(__file__), "alerts_log.txt")
 
@@ -37,7 +37,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("nq_alert")
 
-# ── Fenêtre OVN ──────────────────────────────────────────────────────────────
+# ── Fenêtre OVN ────────────────────────────────────────────────────────────────────────
 
 NY_TZ = pytz.timezone("America/New_York")
 
@@ -61,7 +61,7 @@ def get_window_label(h: int) -> tuple[str, str]:
         return "20H-02H", "MOYENNE (SHORT 59.1% / LONG 52.2%)"
     return "02H-06H", "BASSE  ⚠️"
 
-# ── Lecture CSV Sierra Chart ──────────────────────────────────────────────────
+# ── Lecture CSV Sierra Chart ──────────────────────────────────────────────────────────────────
 
 def read_last_complete_candle(csv_path: str, cfg: dict) -> pd.Series | None:
     """
@@ -126,7 +126,7 @@ def parse_row(row: pd.Series, cfg: dict) -> dict | None:
         log.warning(f"Erreur parsing ligne : {e}")
         return None
 
-# ── Alertes ──────────────────────────────────────────────────────────────────
+# ── Alertes ──────────────────────────────────────────────────────────────────────────
 
 def send_sound():
     """Sirène infinie — s'arrête UNIQUEMENT quand l'utilisateur appuie sur une touche."""
@@ -220,7 +220,7 @@ def dispatch_alert(title: str, body: str, cfg: dict):
     if "email" in methods and cfg.get("smtp_host"):
         send_email(cfg, title, body)
 
-# ── Détection signal ─────────────────────────────────────────────────────────
+# ── Détection signal ───────────────────────────────────────────────────────────────────────────
 
 def check_signal(data: dict) -> str | None:
     """Retourne 'SHORT', 'LONG' ou None."""
@@ -261,7 +261,7 @@ def format_alert(signal: str, data: dict) -> tuple[str, str]:
         )
     return title, body
 
-# ── Boucle principale ─────────────────────────────────────────────────────────
+# ── Boucle principale ───────────────────────────────────────────────────────────────────────────
 
 def main():
     cfg = load_config()
