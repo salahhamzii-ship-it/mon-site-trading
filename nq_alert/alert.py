@@ -129,16 +129,26 @@ def parse_row(row: pd.Series, cfg: dict) -> dict | None:
 # ── Alertes ──────────────────────────────────────────────────────────────────
 
 def send_sound():
+    """Sirène 3 minutes — assez longue pour réveiller."""
     try:
         if platform.system() == "Windows":
             import winsound
-            for _ in range(3):
-                winsound.Beep(880, 400)
-                time.sleep(0.15)
-                winsound.Beep(660, 300)
-                time.sleep(0.1)
+
+            # Si un fichier siren.wav existe dans le même dossier, l'utiliser
+            wav = os.path.join(os.path.dirname(__file__), "siren.wav")
+            if os.path.isfile(wav):
+                for _ in range(12):          # ~3 min si le wav dure ~15s
+                    winsound.PlaySound(wav, winsound.SND_FILENAME)
+                return
+
+            # Sinon : sirène alternée haute/basse pendant 3 minutes
+            for _ in range(90):              # 90 × 2s ≈ 3 min
+                winsound.Beep(1200, 600)     # aigu
+                winsound.Beep(800,  400)     # grave
         else:
-            print("\a\a\a", end="", flush=True)
+            for _ in range(30):
+                print("\a", end="", flush=True)
+                time.sleep(2)
     except Exception as e:
         log.warning(f"Son : {e}")
 
