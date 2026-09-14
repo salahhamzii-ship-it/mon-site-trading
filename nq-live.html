@@ -712,16 +712,16 @@ const DEMO = {
 function effectiveData(bridge) {
   if (bridge && !bridge._demo) {
     const merged = Object.assign({}, bridge)
-    // Priorité 1 : refCache (valeurs bridge déjà vues)
-    if (refCache) {
-      REF_FIELDS.forEach(k => {
-        if (!isValidVal(merged[k]) && isValidVal(refCache[k])) merged[k] = refCache[k]
-      })
-    }
-    // Priorité 2 : manualLevels (saisie manuelle) — prioritaire sur bridge pour REF_FIELDS
+    // Priorité 1 : manualLevels — saisie explicite prime sur tout le reste
     if (manualLevels) {
       REF_FIELDS.forEach(k => {
         if (isValidVal(manualLevels[k])) merged[k] = manualLevels[k]
+      })
+    }
+    // Priorité 2 : refCache — uniquement pour champs pas encore remplis
+    if (refCache) {
+      REF_FIELDS.forEach(k => {
+        if (!isValidVal(merged[k]) && isValidVal(refCache[k])) merged[k] = refCache[k]
       })
     }
     return merged
@@ -1278,6 +1278,9 @@ function applyEditor() {
     _demo: true
   }
   saveLevels(manualLevels)
+  // Purge le cache stale pour que les niveaux manuels priment
+  refCache = {}
+  try { localStorage.removeItem(LS_REF) } catch(e) {}
 
   const bSel = document.getElementById('ei-alarm-band')
   if (bSel) { selectedAlarmBand = bSel.value; saveAlarmBand(selectedAlarmBand) }
