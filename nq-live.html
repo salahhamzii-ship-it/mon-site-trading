@@ -413,6 +413,7 @@ body {
     <div id="bst">
       <span class="dot d-warn" id="bdot"></span>
       <span id="blbl">connexion…</span>
+      <span id="blbl-price" class="mono" style="margin-left:7px;font-weight:700;font-size:0.85em;color:var(--green);letter-spacing:0.03em"></span>
     </div>
   </div>
 </header>
@@ -487,7 +488,7 @@ body {
     <div class="edit-grid" style="grid-template-columns:1fr auto;gap:8px">
       <div class="edit-field">
         <label class="edit-lbl">URL BRIDGE (http://IP:8766/data)</label>
-        <input class="edit-inp" id="ei-bridge" type="text" placeholder="http://192.168.x.x:8766/data">
+        <input class="edit-inp" id="ei-bridge" type="text" placeholder="https://hatbox-placidly-crabmeat.ngrok-free.dev/api/bridge-data">
       </div>
       <div style="display:flex;align-items:flex-end">
         <button class="btn-apply" style="white-space:nowrap" onclick="testBridge()">TESTER</button>
@@ -717,10 +718,10 @@ function effectiveData(bridge) {
         if (!isValidVal(merged[k]) && isValidVal(refCache[k])) merged[k] = refCache[k]
       })
     }
-    // Priorité 2 : manualLevels (saisie manuelle) — s'applique même quand bridge connecté
+    // Priorité 2 : manualLevels (saisie manuelle) — prioritaire sur bridge pour REF_FIELDS
     if (manualLevels) {
       REF_FIELDS.forEach(k => {
-        if (!isValidVal(merged[k]) && isValidVal(manualLevels[k])) merged[k] = manualLevels[k]
+        if (isValidVal(manualLevels[k])) merged[k] = manualLevels[k]
       })
     }
     return merged
@@ -1018,16 +1019,15 @@ function defaultBridge() {
   const h = window.location.hostname
   if (!h || h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8766/data'
   if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return window.location.origin + '/data'
-  if (h.includes('vercel.app')) return window.location.origin + '/api/bridge-data'
-  // GitHub Pages → proxy Vercel (évite CORS + interstitielle ngrok)
-  return 'https://salah-tataouine-terminal.vercel.app/api/bridge-data'
+  return 'https://hatbox-placidly-crabmeat.ngrok-free.dev/data'
 }
 function getBridgeUrl() {
+  const h = window.location.hostname
+  const isGhPages = h && h !== 'localhost' && h !== '127.0.0.1' && !/^\d+\.\d+\.\d+\.\d+$/.test(h)
+  if (isGhPages) return defaultBridge()
   try {
     const s = localStorage.getItem(LS_BRIDGE)
-    // Rejeter toute URL pointant vers github.io (jamais un bridge valide)
-    if (s && s.startsWith('http') && !s.includes('github.io')) return s
-    if (s && s.includes('github.io')) localStorage.removeItem(LS_BRIDGE)
+    if (s && s.startsWith('http')) return s
   } catch(e) {}
   return defaultBridge()
 }
@@ -1045,7 +1045,7 @@ async function testBridge() {
   if (!url) { status.textContent = '⚠ Entrer une URL'; status.style.color = 'var(--gold)'; return }
   status.textContent = '⏳ Connexion…'; status.style.color = 'var(--txt2)'
   try {
-    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000), headers: {'ngrok-skip-browser-warning': '1'} })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     const last = (d.NQ || d).last
@@ -1059,30 +1059,25 @@ async function testBridge() {
   }
 }
 
-function setStatus(state, errMsg) {
+function setStatus(state) {
   const dot = document.getElementById('bdot')
   const lbl = document.getElementById('blbl')
   const tag = document.getElementById('demo-tag')
+  const prc = document.getElementById('blbl-price')
   if (state === 'ok') {
     dot.className = 'dot d-ok'; lbl.textContent = 'BRIDGE OK'
     lbl.style.color = ''; tag.classList.remove('on')
     miss = 0; demo = false
   } else if (state === 'wait') {
     dot.className = 'dot d-warn'; lbl.textContent = '…'
+    if (prc) prc.textContent = ''
   } else if (state === 'freeze') {
     dot.className = 'dot d-warn'; lbl.textContent = 'GEL ✦'
     lbl.style.color = 'var(--gold)'
   } else {
-    dot.className = 'dot d-err'
-    try {
-      const u = new URL(BRIDGE)
-      const short = u.hostname.length > 28 ? u.hostname.slice(0,28)+'…' : u.hostname
-      lbl.textContent = 'OFFLINE — ' + short
-      lbl.title = 'URL: ' + BRIDGE + (errMsg ? ' | ' + errMsg : '')
-    } catch(_) {
-      lbl.textContent = 'OFFLINE'
-    }
+    dot.className = 'dot d-err'; lbl.textContent = 'OFFLINE'
     lbl.style.color = 'var(--red)'
+    if (prc) prc.textContent = ''
     miss++
     if (miss >= 2 && !demo && !_lastGood) {
       demo = true; tag.classList.add('on')
@@ -1094,7 +1089,7 @@ function setStatus(state, errMsg) {
 async function poll() {
   setStatus('wait')
   try {
-    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000), headers: {'ngrok-skip-browser-warning': '1'} })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d   = await r.json()
     const raw = d.NQ || d
@@ -1112,8 +1107,8 @@ async function poll() {
       setStatus('freeze')
       if (_lastGood) render(_lastGood)
     }
-  } catch(e) {
-    setStatus('err', e && e.message)
+  } catch {
+    setStatus('err')
   }
 }
 
@@ -1139,6 +1134,8 @@ function render(nq) {
 
   // Prix principal
   document.getElementById('p-last').textContent = fmt(last)
+  const hdrPrc = document.getElementById('blbl-price')
+  if (hdrPrc && !demo && isValidVal(last)) hdrPrc.textContent = 'NQ ' + last.toFixed(2)
   const chgEl = document.getElementById('p-chg')
   if (prevLast !== null) {
     const d = last - prevLast
