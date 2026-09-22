@@ -8,12 +8,16 @@ Lancement : python nq_bridge.py
 """
 
 import json
+import os
 import time
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = "localhost"
 PORT = 8766
+
+# Dossier du script — pour localiser nq-live.html
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SOURCE DE DONNÉES
@@ -97,16 +101,44 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Cache-Control", "no-store")
 
     def do_OPTIONS(self):
         self.send_response(204)
         self._cors_headers()
         self.end_headers()
 
+    def _serve_html(self):
+        # Cherche nq-live.html dans le même dossier que le script, puis dans ./public/
+        candidates = [
+            os.path.join(SCRIPT_DIR, "nq-live.html"),
+            os.path.join(SCRIPT_DIR, "public", "nq-live.html"),
+        ]
+        html_path = next((p for p in candidates if os.path.isfile(p)), None)
+        if html_path is None:
+            msg = "404 - nq-live.html introuvable. Placez-le dans le meme dossier que nq_bridge.py".encode("utf-8")
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self._cors_headers()
+            self.end_headers()
+            self.wfile.write(msg)
+            return
+        with open(html_path, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self._cors_headers()
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/")
 
-        if path == "/health":
+        if path in ("", "/nq-live.html", "/index.html"):
+            self._serve_html()
+
+        elif path == "/health":
             body = json.dumps({"status": "ok", "ts": time.time()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -150,8 +182,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 def main():
     server = ThreadingHTTPServer((HOST, PORT), BridgeHandler)
-    print(f"NQ Bridge démarré  →  http://{HOST}:{PORT}/data")
-    print(f"Health check       →  http://{HOST}:{PORT}/health")
+    print(f"NQ Bridge démarré")
+    print(f"  → HTML    : http://{HOST}:{PORT}/")
+    print(f"  → Data    : http://{HOST}:{PORT}/data")
+    print(f"  → Health  : http://{HOST}:{PORT}/health")
     print("Ctrl+C pour arrêter\n")
     try:
         server.serve_forever()
