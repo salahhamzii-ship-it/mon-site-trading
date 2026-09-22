@@ -1,0 +1,28 @@
+{
+  "bridge": {
+    "host": "localhost",
+    "port": 8766,
+    "poll_interval_ms": 3000
+  },
+  "source": {
+    "type": "test",
+    "csv_path": "",
+    "api_url": ""
+  },
+  "tunnels": {
+    "ngrok_url": "",
+    "cloudflared_url": "",
+    "vercel_proxy_url": ""
+  },
+  "ui": {
+    "default_page": "/cockpit",
+    "theme": "dark",
+    "locale": "fr"
+  },
+  "logging": {
+    "level": "info",
+    "file": "nq_bridge.log",
+    "max_size_mb": 10,
+    "rotate": 3
+  }
+}

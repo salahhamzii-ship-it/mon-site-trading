@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-nq_bridge.py v2.0.0 — Bridge HTTP local NQ Futures
+nq_bridge.py v2.1.0 — Bridge HTTP local NQ Futures
 Seul bridge actif sur port 8766 (remplace sc_bridge.py et sc_bridge.js).
 
 Routes :
@@ -18,25 +18,86 @@ Routes :
   GET /<file.ext>     → fallback statique générique
 
 Lancement : python nq_bridge.py
+Config     : config.json (racine du projet)
 """
 
 import json
+import logging
+import logging.handlers
 import os
 import time
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONFIG
+# CONFIG — chargée depuis config.json
 # ─────────────────────────────────────────────────────────────────────────────
 
-HOST    = "localhost"
-PORT    = 8766
-
-# Dossier du script — base pour la résolution des fichiers
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
 
-_VERSION      = "2.0.0"
+def _load_config() -> dict:
+    """Charge config.json ; retourne les valeurs par défaut si absent."""
+    defaults = {
+        "bridge":  {"host": "localhost", "port": 8766, "poll_interval_ms": 3000},
+        "source":  {"type": "test", "csv_path": "", "api_url": ""},
+        "tunnels": {"ngrok_url": "", "cloudflared_url": "", "vercel_proxy_url": ""},
+        "ui":      {"default_page": "/cockpit", "theme": "dark", "locale": "fr"},
+        "logging": {"level": "info", "file": "nq_bridge.log",
+                    "max_size_mb": 10, "rotate": 3},
+    }
+    if not os.path.isfile(CONFIG_PATH):
+        return defaults
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        # Merge — les clés manquantes héritent des défauts
+        for section, vals in defaults.items():
+            if section not in cfg:
+                cfg[section] = vals
+            elif isinstance(vals, dict):
+                for k, v in vals.items():
+                    cfg[section].setdefault(k, v)
+        return cfg
+    except Exception as e:
+        print(f"[WARN] config.json illisible ({e}) — valeurs par défaut utilisées")
+        return defaults
+
+_CFG = _load_config()
+
+HOST = _CFG["bridge"]["host"]
+PORT = _CFG["bridge"]["port"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LOGGING — fichier rotatif + console
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _setup_logging():
+    lcfg     = _CFG["logging"]
+    log_file = os.path.join(SCRIPT_DIR, lcfg["file"])
+    level    = getattr(logging, lcfg["level"].upper(), logging.INFO)
+    max_b    = lcfg["max_size_mb"] * 1024 * 1024
+    backup   = lcfg["rotate"]
+
+    root = logging.getLogger()
+    root.setLevel(level)
+    fmt  = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s",
+                              datefmt="%Y-%m-%d %H:%M:%S")
+
+    fh = logging.handlers.RotatingFileHandler(
+        log_file, maxBytes=max_b, backupCount=backup, encoding="utf-8")
+    fh.setFormatter(fmt)
+
+    ch = logging.StreamHandler()
+    ch.setFormatter(fmt)
+
+    root.addHandler(fh)
+    root.addHandler(ch)
+
+_setup_logging()
+log = logging.getLogger("nq_bridge")
+
+_VERSION      = "2.1.0"
 _SERVER_START = time.time()
 
 # État partagé (thread-safe via GIL sur lectures/écritures simples)
@@ -206,21 +267,27 @@ class BridgeHandler(BaseHTTPRequestHandler):
         h, rem  = divmod(uptime, 3600)
         m, s    = divmod(rem, 60)
         age     = int(now - _last_data_ts) if _last_data_ts else None
+        tunnels = _CFG.get("tunnels", {})
         payload = {
             "version":        _VERSION,
             "uptime":         f"{h}h {m:02d}m {s:02d}s",
             "uptime_seconds": uptime,
             "port":           PORT,
             "host":           HOST,
-            "source":         "test",
+            "source":         _CFG["source"]["type"],
             "last_data_ts":   _last_data_ts,
             "last_data_age_s": age,
             "last_error":     _last_error,
+            "tunnels": {
+                "ngrok":       tunnels.get("ngrok_url", ""),
+                "cloudflared": tunnels.get("cloudflared_url", ""),
+                "vercel":      tunnels.get("vercel_proxy_url", ""),
+            },
             "pages": {
-                "cockpit":   f"http://{HOST}:{PORT}/cockpit",
+                "cockpit":    f"http://{HOST}:{PORT}/cockpit",
                 "cockpit_v3": f"http://{HOST}:{PORT}/cockpit-v3",
-                "nq_live":   f"http://{HOST}:{PORT}/nq-live",
-                "tracker":   f"http://{HOST}:{PORT}/tracker",
+                "nq_live":    f"http://{HOST}:{PORT}/nq-live",
+                "tracker":    f"http://{HOST}:{PORT}/tracker",
             },
         }
         body = json.dumps(payload, indent=2).encode()
@@ -298,10 +365,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self._send_404(path)
 
     def log_message(self, fmt, *args):
-        # Silencer les polls /data (toutes les 3s) pour ne pas spammer le terminal
         if args and "/data" in str(args[0]):
             return
-        print(f"[{self.log_date_time_string()}] {fmt % args}")
+        log.info(fmt % args)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -310,20 +376,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 def main():
     server = ThreadingHTTPServer((HOST, PORT), BridgeHandler)
-    print(f"NQ Bridge v{_VERSION} — port {PORT}")
-    print(f"  → Cockpit      : http://{HOST}:{PORT}/cockpit")
-    print(f"  → Cockpit v3   : http://{HOST}:{PORT}/cockpit-v3")
-    print(f"  → NQ Live      : http://{HOST}:{PORT}/nq-live")
-    print(f"  → Tracker      : http://{HOST}:{PORT}/tracker")
-    print(f"  → Data JSON    : http://{HOST}:{PORT}/data")
-    print(f"  → API Bridge   : http://{HOST}:{PORT}/api/bridge-data")
-    print(f"  → Health       : http://{HOST}:{PORT}/health")
-    print(f"  → Status       : http://{HOST}:{PORT}/status")
-    print("Ctrl+C pour arrêter\n")
+    log.info(f"NQ Bridge v{_VERSION} démarré — port {PORT} — source={_CFG['source']['type']}")
+    log.info(f"  → Cockpit      : http://{HOST}:{PORT}/cockpit")
+    log.info(f"  → Cockpit v3   : http://{HOST}:{PORT}/cockpit-v3")
+    log.info(f"  → NQ Live      : http://{HOST}:{PORT}/nq-live")
+    log.info(f"  → Tracker      : http://{HOST}:{PORT}/tracker")
+    log.info(f"  → Data JSON    : http://{HOST}:{PORT}/data")
+    log.info(f"  → API Bridge   : http://{HOST}:{PORT}/api/bridge-data")
+    log.info(f"  → Health       : http://{HOST}:{PORT}/health")
+    log.info(f"  → Status       : http://{HOST}:{PORT}/status")
+    log.info("Ctrl+C pour arrêter")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nArrêt du bridge.")
+        log.info("Arrêt du bridge.")
         server.shutdown()
 
 
