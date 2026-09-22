@@ -1,0 +1,51 @@
+POUR LANCER LE COCKPIT :
+========================
+
+1. Double-clique sur UPDATE-ET-LANCE.bat
+2. Attends (30 secondes a 2 minutes selon la connexion)
+3. Chrome s'ouvre tout seul sur http://localhost:8766/#/cockpit
+4. C'est pret.
+
+Tu peux relancer UPDATE-ET-LANCE.bat autant de fois que tu veux.
+Il fait tout automatiquement : mise a jour, build, lancement.
+
+
+SI CA NE MARCHE PAS :
+======================
+
+- Ouvre le fichier update.log (dans le meme dossier)
+  Cherche la ligne [ERREUR] pour voir ce qui a plante.
+
+- Verifie que Node.js est installe :
+    Ouvre une invite de commande et tape : node --version
+    Si erreur → telecharger sur https://nodejs.org
+
+- Verifie que Git est installe :
+    Dans l'invite de commande : git --version
+    Si erreur → telecharger sur https://git-scm.com
+
+- Verifie que Python est installe :
+    Dans l'invite de commande : python --version
+    Si erreur → telecharger sur https://python.org
+    (cocher "Add Python to PATH" pendant l'installation)
+
+- Si le badge BRIDGE OFF s'affiche dans le cockpit :
+    Le bridge Python n'est pas lance.
+    Ferme tout et relance UPDATE-ET-LANCE.bat.
+
+
+POUR ARRETER LE COCKPIT :
+==========================
+
+Double-clique sur STOP-COCKPIT.bat
+(ou ferme simplement la fenetre noire "NQ Bridge" dans la barre des taches)
+
+
+STRUCTURE DES FICHIERS IMPORTANTS :
+=====================================
+
+UPDATE-ET-LANCE.bat   → Lance tout (a double-cliquer chaque matin)
+STOP-COCKPIT.bat      → Arrete le bridge
+update.log            → Journal de la derniere execution (debug)
+nq_bridge.py          → Le serveur local (ne pas modifier)
+config.json           → Configuration bridge + tunnels
