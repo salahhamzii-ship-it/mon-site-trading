@@ -68,16 +68,19 @@ export default function CockpitApp() {
     INSTRUMENTS.map(i => ({ price: i.base, delta: 0 }))
   )
   const [bridgeData, setBridgeData] = useState<BridgeData | null>(null)
+  const [bridgeAge,  setBridgeAge]  = useState<number>(Infinity)
+  const bridgeTs     = useRef<number>(0)
   const prevAvwapSide = useRef<string>('')
 
-  // Bridge data — fetch every 30s
+  // Bridge data — fetch every 10s from local bridge
   useEffect(() => {
     const fetchBridge = async () => {
       try {
-        const r = await fetch('/api/bridge-data', { cache: 'no-store' })
+        const r = await fetch('/data', { cache: 'no-store' })
         if (!r.ok) return
         const d: BridgeData = await r.json()
         setBridgeData(d)
+        bridgeTs.current = Date.now()
         // Seed ticker prices from real bridge data
         setPrices(prev => {
           const keys = ['NQ', 'ES', 'GC', 'CL'] as const
@@ -98,7 +101,18 @@ export default function CockpitApp() {
       } catch { /* bridge offline */ }
     }
     fetchBridge()
-    const id = setInterval(fetchBridge, 30_000)
+    const id = setInterval(fetchBridge, 10_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Bridge age — updated every second for badge colour
+  useEffect(() => {
+    const id = setInterval(() => {
+      const age = bridgeTs.current === 0
+        ? Infinity
+        : (Date.now() - bridgeTs.current) / 1000
+      setBridgeAge(age)
+    }, 1000)
     return () => clearInterval(id)
   }, [])
 
@@ -113,16 +127,6 @@ export default function CockpitApp() {
     tick(); const id = setInterval(tick, 1000); return () => clearInterval(id)
   }, [])
 
-  // Ticker
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPrices(prev => prev.map((p, i) => {
-        const d = (Math.random() - 0.49) * INSTRUMENTS[i].mult
-        return { price: +(p.price + d).toFixed(2), delta: d }
-      }))
-    }, 680)
-    return () => clearInterval(id)
-  }, [])
 
 
   const NAV: { id: View; icon: string; label: string }[] = [
@@ -206,14 +210,20 @@ export default function CockpitApp() {
           })}>{clock}</span>
           <span style={jb(8.5, 400, { color: T.muted })}>{date}</span>
         </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px',
-          background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)',
-          borderRadius: 3,
-        }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.up, animation: 'pulseDot 1.8s infinite' }} />
-          <span style={orb(8, 700, { color: T.up, letterSpacing: '0.18em' })}>RTH LIVE</span>
-        </div>
+        {(() => {
+          const online  = bridgeAge < 5
+          const stale   = bridgeAge >= 5 && bridgeAge < 30
+          const color   = online ? T.up : stale ? '#d4a017' : '#ff4444'
+          const label   = online ? 'BRIDGE LIVE' : stale ? 'BRIDGE STALE' : 'BRIDGE OFF'
+          const bg      = online ? 'rgba(0,255,136,0.06)' : stale ? 'rgba(212,160,23,0.06)' : 'rgba(255,68,68,0.06)'
+          const bdr     = online ? 'rgba(0,255,136,0.2)' : stale ? 'rgba(212,160,23,0.2)' : 'rgba(255,68,68,0.2)'
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px', background: bg, border: `1px solid ${bdr}`, borderRadius: 3 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, animation: online ? 'pulseDot 1.8s infinite' : 'none' }} />
+              <span style={orb(8, 700, { color, letterSpacing: '0.18em' })}>{label}</span>
+            </div>
+          )
+        })()}
       </header>
 
       {/* ── Ticker Bar ── */}

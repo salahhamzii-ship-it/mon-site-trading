@@ -4,8 +4,9 @@ nq_bridge.py v2.1.0 — Bridge HTTP local NQ Futures
 Seul bridge actif sur port 8766 (remplace sc_bridge.py et sc_bridge.js).
 
 Routes :
-  GET /               → 302 vers /cockpit
-  GET /cockpit        → cockpit-camel.html   (étude Salah, page principale)
+  GET /               → dist/index.html  (React SPA)
+  GET /cockpit        → 302 vers /#/cockpit (React route)
+  GET /#/cockpit      → iframe cockpit-v3.html via React
   GET /cockpit-v3     → cockpit-v3.html      (cockpit complet SD/AVWAP)
   GET /nq-live        → nq-live.html         (dashboard NQ live)
   GET /tracker        → tracker.html         (tracker sessions)
@@ -34,6 +35,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 # ─────────────────────────────────────────────────────────────────────────────
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DIST_DIR   = os.path.join(SCRIPT_DIR, "dist")
 CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
 
 def _load_config() -> dict:
@@ -153,6 +155,12 @@ def _find_asset(name: str) -> str | None:
     return None
 
 
+def _find_dist(rel_path: str) -> str | None:
+    """Cherche un fichier dans dist/ (React build)."""
+    p = os.path.join(DIST_DIR, rel_path.lstrip("/"))
+    return p if os.path.isfile(p) else None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SOURCE DE DONNÉES
 # Remplacer get_nq_data() par la vraie lecture (Sierra Chart, API, fichier CSV…)
@@ -246,6 +254,32 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(msg)
 
+    def _serve_dist_file(self, rel_path: str):
+        """Sert un fichier depuis dist/ (React build)."""
+        file_path = _find_dist(rel_path)
+        if file_path is None:
+            self._send_404(rel_path)
+            return
+        ext = os.path.splitext(rel_path)[1].lower()
+        ctype = {
+            ".html": "text/html; charset=utf-8",
+            ".js":   "application/javascript; charset=utf-8",
+            ".css":  "text/css; charset=utf-8",
+            ".json": "application/json; charset=utf-8",
+            ".svg":  "image/svg+xml",
+            ".ico":  "image/x-icon",
+            ".png":  "image/png",
+            ".woff2":"font/woff2",
+        }.get(ext, "application/octet-stream")
+        with open(file_path, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self._cors_headers()
+        self.end_headers()
+        self.wfile.write(body)
+
     def _serve_file(self, filename: str):
         """Cherche <filename> via _find_asset et l'envoie."""
         file_path = _find_asset(filename)
@@ -286,6 +320,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
             _last_data_ts   = time.time()
             _last_error     = None
 
+            data["ts"] = _last_data_ts
             body = json.dumps({"NQ": data}, separators=(",", ":")).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -346,7 +381,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 "vercel":      tunnels.get("vercel_proxy_url", ""),
             },
             "pages": {
-                "cockpit":    f"http://{HOST}:{PORT}/cockpit",
+                "app":        f"http://{HOST}:{PORT}/",
+                "cockpit":    f"http://{HOST}:{PORT}/#/cockpit",
                 "cockpit_v3": f"http://{HOST}:{PORT}/cockpit-v3",
                 "nq_live":    f"http://{HOST}:{PORT}/nq-live",
                 "tracker":    f"http://{HOST}:{PORT}/tracker",
@@ -364,16 +400,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/")
 
-        # ── Redirections ──────────────────────────────────────────────
+        # ── React SPA — racine sert dist/index.html ───────────────────
         if path in ("", "/index.html"):
-            self._redirect("/cockpit")
+            self._serve_dist_file("index.html")
 
         elif path == "/suivi-sd":
             self._redirect("/tracker")
 
-        # ── URLs propres (sans extension) ─────────────────────────────
+        # ── React SPA — /cockpit redirige vers l'app hashée ───────────
         elif path == "/cockpit":
-            self._serve_file("cockpit-camel.html")
+            self._redirect("/#/cockpit")
+
+        # ── Assets React (dist/assets/*) ──────────────────────────────
+        elif path.startswith("/assets/"):
+            self._serve_dist_file(path)
 
         elif path == "/cockpit-v3":
             self._serve_file("cockpit-v3.html")
@@ -422,12 +462,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
             else:
                 self._send_404(path)
 
-        # ── Fallback générique pour tout fichier avec une extension ────
+        # ── Fichiers statiques avec extension (public/, racine) ───────
         elif "." in os.path.basename(path):
             self._serve_file(os.path.basename(path))
 
+        # ── SPA fallback — toute route inconnue → dist/index.html ─────
         else:
-            self._send_404(path)
+            self._serve_dist_file("index.html")
 
     def log_message(self, fmt, *args):
         if args and "/data" in str(args[0]):
@@ -441,7 +482,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 def _print_banner():
     log.info(f"NQ Bridge v{_VERSION} — port {PORT} — source={_CFG['source']['type']}")
-    log.info(f"  Cockpit    : http://{HOST}:{PORT}/cockpit")
+    log.info(f"  App React  : http://{HOST}:{PORT}/")
+    log.info(f"  Cockpit    : http://{HOST}:{PORT}/#/cockpit")
     log.info(f"  Cockpit v3 : http://{HOST}:{PORT}/cockpit-v3")
     log.info(f"  NQ Live    : http://{HOST}:{PORT}/nq-live")
     log.info(f"  Tracker    : http://{HOST}:{PORT}/tracker")

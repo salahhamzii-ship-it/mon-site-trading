@@ -12,7 +12,8 @@
 Le bridge démarre, ouvre le cockpit dans votre navigateur et affiche :
 ```
 NQ Bridge v2.2.0 démarré — port 8766 — source=test
-  Cockpit    : http://localhost:8766/cockpit
+  App React  : http://localhost:8766/
+  Cockpit    : http://localhost:8766/#/cockpit
   Cockpit v3 : http://localhost:8766/cockpit-v3
   NQ Live    : http://localhost:8766/nq-live
   Tracker    : http://localhost:8766/tracker
@@ -27,11 +28,15 @@ Laisser la fenêtre ouverte pendant toute la session.
 
 | URL | Page | Rôle |
 |-----|------|------|
-| `/cockpit` | cockpit-camel.html | **PAGE PRINCIPALE** — Étude Salah, bornes SD, AVWAP |
+| `/` ou `/#/cockpit` | React App | **PAGE PRINCIPALE** — Cockpit NQ (servi depuis dist/) |
+| `/cockpit` | → redirige vers `/#/cockpit` | Alias pratique |
 | `/cockpit-v3` | cockpit-v3.html | Cockpit complet SD/AVWAP multi-source |
 | `/nq-live` | nq-live.html | Dashboard NQ live temps réel |
 | `/tracker` | tracker.html | Tracker sessions ALN/IB/SD |
 | `/status-page` | status.html | **Diagnostic** — santé du bridge, tunnels, uptime |
+
+> **Note** : l'app React est servie en local depuis `dist/` par `nq_bridge.py`.
+> Vercel n'est plus utilisé pour l'usage quotidien.
 
 ---
 
