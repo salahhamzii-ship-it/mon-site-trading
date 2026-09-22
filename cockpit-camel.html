@@ -170,6 +170,30 @@ td.pos{color:var(--green);font-weight:700}td.neg{color:var(--red);font-weight:70
 .bts-val.pct-ok{color:var(--green)}.bts-val.pct-warn{color:var(--gold)}.bts-val.pct-bad{color:var(--red)}
 .bts-val.tp-pos{color:var(--green)}.bts-val.tp-neg{color:var(--red)}
 
+/* backtest agrandissement */
+#sec-backtest{flex:1;min-height:0}
+#sec-backtest>.sh{flex-shrink:0;order:1}
+#sec-backtest>.r2{flex-shrink:0;order:3}
+#sec-backtest>.card{order:2;flex:1;min-height:0;display:flex;flex-direction:column}
+#sec-backtest>.card>.ct{flex-shrink:0}
+#sec-backtest>.card>div:last-child{flex:1;min-height:0;overflow-y:auto;overflow-x:auto;max-height:none!important}
+#sec-backtest .sh h2{font-size:16px}
+#sec-backtest .ct{font-size:12px}
+#sec-backtest .btt{font-size:15px}
+#sec-backtest .btt th{font-size:12px;padding:9px 16px}
+#sec-backtest .btt td{font-size:15px;padding:9px 16px;height:38px}
+#sec-backtest .btt col.c-date{width:120px}#sec-backtest .btt col.c-inst{width:70px}
+#sec-backtest .btt col.c-setup{width:150px}#sec-backtest .btt col.c-dir{width:95px}
+#sec-backtest .btt col.c-ent{width:105px}#sec-backtest .btt col.c-stp{width:105px}
+#sec-backtest .btt col.c-ext{width:105px}#sec-backtest .btt col.c-pnl{width:95px}
+#sec-backtest .btt col.c-rr{width:70px}#sec-backtest .btt col.c-del{width:44px}
+#sec-backtest .bt-badge{font-size:13px;padding:4px 10px}
+#sec-backtest .bt-bdg-setup{font-size:13px;padding:4px 10px;max-width:150px}
+#sec-backtest .bt-del{font-size:12px;padding:3px 9px}
+#sec-backtest .bts-lbl{font-size:11px}
+#sec-backtest .f input,#sec-backtest .f select{font-size:14px;height:40px;padding:6px 10px}
+@media(min-width:2560px){#sec-backtest .btt td,#sec-backtest .btt{font-size:17px}#sec-backtest .btt th{font-size:13px}}
+
 /* position */
 #pdis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .pm{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:10px}
