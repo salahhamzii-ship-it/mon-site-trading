@@ -108,36 +108,71 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self._cors_headers()
         self.end_headers()
 
-    def _serve_html(self):
-        # Cherche nq-live.html dans le même dossier que le script, puis dans ./public/
+    def _serve_file(self, filename):
+        """Cherche filename dans SCRIPT_DIR puis SCRIPT_DIR/public/ et l'envoie."""
         candidates = [
-            os.path.join(SCRIPT_DIR, "nq-live.html"),
-            os.path.join(SCRIPT_DIR, "public", "nq-live.html"),
+            os.path.join(SCRIPT_DIR, filename),
+            os.path.join(SCRIPT_DIR, "public", filename),
         ]
-        html_path = next((p for p in candidates if os.path.isfile(p)), None)
-        if html_path is None:
-            msg = "404 - nq-live.html introuvable. Placez-le dans le meme dossier que nq_bridge.py".encode("utf-8")
+        file_path = next((p for p in candidates if os.path.isfile(p)), None)
+        if file_path is None:
+            msg = ("404 - " + filename + " introuvable").encode("utf-8")
             self.send_response(404)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self._cors_headers()
             self.end_headers()
             self.wfile.write(msg)
             return
-        with open(html_path, "rb") as f:
+        ext = os.path.splitext(filename)[1].lower()
+        ctype = {
+            ".html": "text/html; charset=utf-8",
+            ".js":   "application/javascript; charset=utf-8",
+            ".css":  "text/css; charset=utf-8",
+            ".json": "application/json; charset=utf-8",
+            ".ico":  "image/x-icon",
+            ".png":  "image/png",
+            ".svg":  "image/svg+xml",
+        }.get(ext, "application/octet-stream")
+        with open(file_path, "rb") as f:
             body = f.read()
         self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self._cors_headers()
         self.end_headers()
         self.wfile.write(body)
 
+    def _serve_data(self):
+        """Endpoint JSON — alias pour /data et /api/bridge-data."""
+        try:
+            data = get_nq_data()
+            body = json.dumps({"NQ": data}, separators=(",", ":")).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self._cors_headers()
+            self.end_headers()
+            self.wfile.write(body)
+        except Exception as e:
+            err = json.dumps({"error": str(e)}).encode()
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self._cors_headers()
+            self.end_headers()
+            self.wfile.write(err)
+
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/")
 
-        if path in ("", "/nq-live.html", "/index.html"):
-            self._serve_html()
+        # ── Page d'accueil ──────────────────────────────────────────
+        if path in ("", "/index.html"):
+            self._serve_file("nq-live.html")
 
+        # ── HTML nommés ─────────────────────────────────────────────
+        elif path in ("/nq-live.html", "/cockpit-v3.html", "/cockpit-camel.html",
+                      "/tracker.html", "/suivi_sd_nq.html"):
+            self._serve_file(path.lstrip("/"))
+
+        # ── Health check ────────────────────────────────────────────
         elif path == "/health":
             body = json.dumps({"status": "ok", "ts": time.time()}).encode()
             self.send_response(200)
@@ -146,23 +181,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
 
-        elif path == "/data":
-            try:
-                data = get_nq_data()
-                # Format encapsulé compatible nq-live.html (accepte aussi la racine plate)
-                body = json.dumps({"NQ": data}, separators=(",", ":")).encode()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self._cors_headers()
-                self.end_headers()
-                self.wfile.write(body)
-            except Exception as e:
-                err = json.dumps({"error": str(e)}).encode()
-                self.send_response(500)
-                self.send_header("Content-Type", "application/json")
-                self._cors_headers()
-                self.end_headers()
-                self.wfile.write(err)
+        # ── Données JSON — /data ET /api/bridge-data (alias) ────────
+        elif path in ("/data", "/api/bridge-data"):
+            self._serve_data()
+
+        # ── Fichiers statiques génériques (public/) ─────────────────
+        elif "." in os.path.basename(path):
+            self._serve_file(os.path.basename(path))
 
         else:
             self.send_response(404)
@@ -182,10 +207,13 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 def main():
     server = ThreadingHTTPServer((HOST, PORT), BridgeHandler)
-    print(f"NQ Bridge démarré")
-    print(f"  → HTML    : http://{HOST}:{PORT}/")
-    print(f"  → Data    : http://{HOST}:{PORT}/data")
-    print(f"  → Health  : http://{HOST}:{PORT}/health")
+    print(f"NQ Bridge démarré — port {PORT}")
+    print(f"  → Cockpit     : http://{HOST}:{PORT}/cockpit-v3.html")
+    print(f"  → Étude Salah : http://{HOST}:{PORT}/cockpit-camel.html")
+    print(f"  → NQ Live     : http://{HOST}:{PORT}/nq-live.html")
+    print(f"  → Data JSON   : http://{HOST}:{PORT}/data")
+    print(f"  → API Bridge  : http://{HOST}:{PORT}/api/bridge-data")
+    print(f"  → Health      : http://{HOST}:{PORT}/health")
     print("Ctrl+C pour arrêter\n")
     try:
         server.serve_forever()
