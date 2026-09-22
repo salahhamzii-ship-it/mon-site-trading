@@ -818,12 +818,25 @@ let _offlineSince   = null   // timestamp du 1er miss consécutif
 function lsGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null } catch(e) { return null } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch(e) {} }
 
+// ── COMPAT AbortSignal ────────────────────────────────────────────
+function timeoutSignal(ms) {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function')
+    return AbortSignal.timeout(ms)
+  const ctrl = new AbortController()
+  setTimeout(() => ctrl.abort(), ms)
+  return ctrl.signal
+}
+
 // ── VALIDATION — Verrou 1 ─────────────────────────────────────────
 function vld(v) { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null }
 function vldR(v) { const n = vld(v); return n !== null && n >= NQ_MIN && n <= NQ_MAX ? n : null }
 function validPayload(nq) {
   if (!nq || typeof nq !== 'object') return false
-  return ['last','vwap','sd1h','sd1l','sd2h','sd2l'].every(k => vldR(nq[k]) !== null)
+  const required = ['last','sd1h','sd1l','sd2h','sd2l']
+  if (!required.every(k => vldR(nq[k]) !== null)) return false
+  const vwapManual = _manual && vldR(_manual.vwap) !== null
+  if (!vwapManual && vldR(nq.vwap) === null) return false
+  return true
 }
 
 // ── TIMEZONE — Verrou 3 ───────────────────────────────────────────
@@ -1101,8 +1114,10 @@ function render(d) {
   // Right pane values
   const sr = (id, v, c) => {
     const el = document.getElementById(id)
-    el.textContent = fmt2(v)
-    if (c) el.className = 'val ' + c
+    const n = vldR(v)
+    if (n === null) { el.textContent = '——'; el.className = 'val na'; return }
+    el.textContent = fmt2(n)
+    el.className = c ? 'val ' + c : 'val'
   }
   sr('val-j1h',      vldR(d.j1_high),  'up')
   sr('val-j1s',      vldR(d.j1_settle),'gold')
@@ -1136,11 +1151,12 @@ function setStatus(s) {
 async function poll() {
   setStatus('wait')
   try {
-    const r = await fetch(_bridgeUrl, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    const r = await fetch(_bridgeUrl, { cache: 'no-store', signal: timeoutSignal(4000) })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const data  = await r.json()
     const raw   = (data && data.NQ) ? data.NQ : data
-    const merged = Object.assign({}, _manual || {}, raw)
+    // Verrou 2 : _manual ÉCRASE raw — ordre impératif
+    const merged = Object.assign({}, raw, _manual || {})
     if (validPayload(merged)) {
       _lastGood  = merged
       lsSet(LS_CACHE, _lastGood)
@@ -1292,7 +1308,7 @@ document.getElementById('btn-bridge-test').addEventListener('click', async () =>
   if (!url) { res.textContent = 'URL vide'; return }
   res.textContent = 'Test…'; res.style.color = 'var(--txt2)'
   try {
-    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    const r = await fetch(url, { cache: 'no-store', signal: timeoutSignal(4000) })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     const nq = d && d.NQ ? d.NQ : d
