@@ -200,6 +200,66 @@ def run_tests():
     assert_header("X-Bridge-Version présent sur /health", "/health", "X-Bridge-Version")
     assert_header("CORS header sur /data",                "/data",   "Access-Control-Allow-Origin")
 
+    # ── /data — IB fields ────────────────────────────────────────────────────
+    print("\n[/data — IB fields]")
+    def check_ib_fields(d):
+        nq = d.get("NQ", {})
+        for k in ("sigma", "ib_high", "ib_low", "avwap_ib", "close_ib2", "sequence"):
+            if k not in nq:
+                return f"champ '{k}' absent dans NQ"
+        return None
+    assert_json("/data expose 6 champs IB", "/data", check_ib_fields)
+
+    def check_ib_sanity(d):
+        nq = d.get("NQ", {})
+        h, l = nq.get("ib_high"), nq.get("ib_low")
+        if not isinstance(h, (int, float)) or not isinstance(l, (int, float)):
+            return "ib_high/ib_low non numériques"
+        if h <= l:
+            return f"ib_high ({h}) <= ib_low ({l})"
+        return None
+    assert_json("/data ib_high > ib_low", "/data", check_ib_sanity)
+
+    def check_sigma(d):
+        s = d.get("NQ", {}).get("sigma")
+        if not isinstance(s, (int, float)):
+            return "sigma non numérique"
+        if s <= 0:
+            return f"sigma <= 0: {s}"
+        return None
+    assert_json("/data sigma > 0", "/data", check_sigma)
+
+    def check_avwap_ib(d):
+        nq = d.get("NQ", {})
+        a, h, l = nq.get("avwap_ib"), nq.get("ib_high"), nq.get("ib_low")
+        if not all(isinstance(x, (int, float)) for x in (a, h, l)):
+            return "champs numériques manquants"
+        if not (l <= a <= h):
+            return f"avwap_ib ({a}) hors [ib_low {l}, ib_high {h}]"
+        return None
+    assert_json("/data avwap_ib dans [ib_low, ib_high]", "/data", check_avwap_ib)
+
+    def check_sequence(d):
+        seq = d.get("NQ", {}).get("sequence")
+        if seq not in ("low_first", "high_first"):
+            return f"sequence invalide: {seq!r}"
+        return None
+    assert_json("/data sequence valide", "/data", check_sequence)
+
+    # ── /cockpit — auto-fill IDs présents ─────────────────────────────────────
+    print("\n[/cockpit — auto-fill]")
+    try:
+        code, body, _ = get("/cockpit")
+        body_str = body.decode("utf-8", errors="replace")
+        for marker in ("auto-btn", "sd-avwap", "sd-sigma", "ib-high", "ib-low",
+                       "ib-avwap", "sc-close", "sc-avwap", "auto-ts"):
+            if marker not in body_str:
+                fail(f"/cockpit contient '{marker}'", "absent du HTML")
+            else:
+                ok(f"/cockpit contient '{marker}'")
+    except Exception as e:
+        fail("/cockpit auto-fill IDs", str(e))
+
     # ── CORS OPTIONS ──────────────────────────────────────────────────────────
     print("\n[CORS OPTIONS]")
     try:

@@ -186,6 +186,15 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
   #td2{grid-template-columns:repeat(4,1fr)}
   #pdis{grid-template-columns:1fr 1fr}
 }
+/* ── AUTO-FILL ──────────────────────────── */
+.btn-auto{font-family:var(--mono);font-size:11px;font-weight:600;padding:3px 10px;border-radius:3px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .15s}
+.btn-auto.on{border-color:var(--green);color:var(--green);background:rgba(76,175,130,.08)}
+#auto-ts{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.af-fresh{border-color:var(--green)!important}
+.af-stale{border-color:var(--amber)!important}
+.af-absent{border-color:var(--red)!important}
+@keyframes af-flash{0%{background:#1C3358}100%{background:transparent}}
+.af-flash{animation:af-flash .2s ease-out}
 </style>
 
 <div id="app">
@@ -448,7 +457,11 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
 
 <!-- ── RÉGLAGES ── -->
 <div class="sec" id="sec-reglages">
-  <div class="sh"><h2>⚙ RÉGLAGES IB/OR</h2></div>
+  <div class="sh" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <h2>⚙ RÉGLAGES IB/OR</h2>
+    <button class="btn-auto" id="auto-btn" onclick="toggleAuto()">AUTO OFF ○</button>
+    <span id="auto-ts"></span>
+  </div>
   <div class="cg">
 
     <!-- SD Bands -->
@@ -957,6 +970,101 @@ function loadPos(){
 // ── TOAST ─────────────────────────────────────────────
 let TT;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(TT);TT=setTimeout(()=>el.classList.remove('show'),2400);}
+
+// ── AUTO-FILL RÉGLAGES ────────────────────────────────
+const _AF_IDS=['sd-avwap','sd-sigma','rr-entry','rr-stop','rr-target','ib-high','ib-low','ib-avwap','sc-close','sc-avwap','sc-ibh','sc-ibl'];
+let _autoOn=false,_lastBridgeTs=null,_autoIvl=null;
+
+function toggleAuto(){
+  _autoOn=!_autoOn;
+  const b=document.getElementById('auto-btn');
+  if(_autoOn){b.textContent='AUTO ON ●';b.classList.add('on');_afPoll();_autoIvl=setInterval(_afPoll,3000);}
+  else{b.textContent='AUTO OFF ○';b.classList.remove('on');clearInterval(_autoIvl);_autoIvl=null;_afClear();}
+}
+
+async function _afPoll(){
+  try{
+    const sig=typeof AbortSignal.timeout==='function'?AbortSignal.timeout(4000):undefined;
+    const r=await fetch('/data',sig?{signal:sig}:{});
+    if(!r.ok)return;
+    const j=await r.json();
+    const nq=j&&j.NQ;if(!nq)return;
+    _lastBridgeTs=Date.now();
+    _afFill(nq);_afTs();
+  }catch(e){}
+}
+
+function _afV(nq,k){const x=nq[k];return(x!==undefined&&x!==null&&!isNaN(+x))?+x:null;}
+
+function _afField(id,val){
+  const el=document.getElementById(id);
+  if(!el||!_autoOn)return;
+  if(val===null){el.classList.remove('af-fresh','af-stale');el.classList.add('af-absent');return;}
+  const prev=el.value;
+  el.value=val;el.readOnly=true;
+  el.classList.remove('af-stale','af-absent');el.classList.add('af-fresh');
+  if(String(prev)!==String(val)){el.classList.add('af-flash');setTimeout(()=>el.classList.remove('af-flash'),200);}
+}
+
+function _afSelect(id,raw){
+  const el=document.getElementById(id);
+  if(!el||!_autoOn||!raw)return;
+  const map={low_first:'lowfirst',high_first:'highfirst'};
+  el.value=map[raw]||raw;el.disabled=true;
+}
+
+function _afFill(nq){
+  const v=k=>_afV(nq,k);
+  // Panel 1 — SD BANDS
+  _afField('sd-avwap',v('vwap'));
+  _afField('sd-sigma',v('sigma'));
+  // Panel 2 — RISK/RR
+  const e=v('last'),s=v('sigma');
+  _afField('rr-entry',e);
+  if(e!==null&&s!==null){
+    _afField('rr-stop',  Math.round((e-s*1.5)*4)/4);
+    _afField('rr-target',Math.round((e+s*2  )*4)/4);
+  }
+  // Panel 3 — IB SETUP
+  _afField('ib-high', v('ib_high'));
+  _afField('ib-low',  v('ib_low'));
+  _afField('ib-avwap',v('avwap_ib'));
+  // Panel 4 — AVWAP IB SCALPEL
+  _afField('sc-close',v('close_ib2'));
+  _afField('sc-avwap',v('avwap_ib'));
+  _afField('sc-ibh',  v('ib_high'));
+  _afField('sc-ibl',  v('ib_low'));
+  _afSelect('sc-seq', nq.sequence);
+}
+
+function _afClear(){
+  _AF_IDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.readOnly=false;
+    el.classList.remove('af-fresh','af-stale','af-absent','af-flash');
+  });
+  const sc=document.getElementById('sc-seq');if(sc)sc.disabled=false;
+  const ts=document.getElementById('auto-ts');if(ts)ts.textContent='';
+  _lastBridgeTs=null;
+}
+
+function _afTs(){
+  const ny=new Date().toLocaleString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const el=document.getElementById('auto-ts');if(el)el.textContent='Mise à jour : '+ny+' NY';
+}
+
+setInterval(()=>{
+  if(!_autoOn||_lastBridgeTs===null)return;
+  const age=(Date.now()-_lastBridgeTs)/1000;
+  const state=age<5?'fresh':age<30?'stale':'absent';
+  _AF_IDS.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el||!el.readOnly)return;
+    el.classList.remove('af-fresh','af-stale','af-absent');
+    el.classList.add('af-'+state);
+  });
+},1000);
 
 // ── INIT ──────────────────────────────────────────────
 (function(){

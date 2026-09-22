@@ -199,6 +199,13 @@ def get_nq_data() -> dict:
         "avwap_side": "above",
         "laf_sd2":    False,
         "lbf_sd2":    False,
+        # IB / Scalpel (TODO: lire depuis Sierra Chart CSV — source.type=csv)
+        "sigma":      96.00,
+        "ib_high":    round(vwap + 67.00, 2),
+        "ib_low":     round(vwap - 29.00, 2),
+        "avwap_ib":   round(vwap + 14.00, 2),
+        "close_ib2":  round(last + 28.00, 2),
+        "sequence":   "low_first" if int(t / 60) % 2 == 0 else "high_first",
     }
     # ── FIN VALEURS DE TEST ───────────────────────────────────────────────────
 
