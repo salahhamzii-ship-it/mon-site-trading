@@ -634,8 +634,9 @@ function isValidVal(v) {
 
 function isValidPayload(nq) {
   if (!nq || typeof nq !== 'object') return false
-  // Seules last + vwap + sd2h + sd2l sont obligatoires — les autres sont best-effort
-  return isValidVal(nq.last) && isValidVal(nq.vwap) &&
+  // last + sd2h + sd2l obligatoires. vwap peut venir de manualLevels (Verrou 2).
+  const vwapOk = isValidVal(nq.vwap) || (manualLevels && isValidVal(manualLevels.vwap))
+  return isValidVal(nq.last) && vwapOk &&
          isValidVal(nq.sd2h) && isValidVal(nq.sd2l)
 }
 
@@ -1038,6 +1039,15 @@ let prevLast  = null
 let miss      = 0
 let demo      = false
 
+// Safari < 16.4 ne supporte pas AbortSignal.timeout() — polyfill sûr
+function timeoutSignal(ms) {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function')
+    return AbortSignal.timeout(ms)
+  const c = new AbortController()
+  setTimeout(() => c.abort(), ms)
+  return c.signal
+}
+
 async function testBridge() {
   const inp    = document.getElementById('ei-bridge')
   const status = document.getElementById('bridge-status')
@@ -1045,7 +1055,7 @@ async function testBridge() {
   if (!url) { status.textContent = '⚠ Entrer une URL'; status.style.color = 'var(--gold)'; return }
   status.textContent = '⏳ Connexion…'; status.style.color = 'var(--txt2)'
   try {
-    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000), headers: {'ngrok-skip-browser-warning': '1'} })
+    const r = await fetch(url, { cache: 'no-store', signal: timeoutSignal(5000), headers: {'ngrok-skip-browser-warning': '1'} })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     const last = (d.NQ || d).last
@@ -1089,7 +1099,7 @@ function setStatus(state) {
 async function poll() {
   setStatus('wait')
   try {
-    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000), headers: {'ngrok-skip-browser-warning': '1'} })
+    const r   = await fetch(BRIDGE, { cache: 'no-store', signal: timeoutSignal(4000), headers: {'ngrok-skip-browser-warning': '1'} })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d   = await r.json()
     const raw = d.NQ || d
