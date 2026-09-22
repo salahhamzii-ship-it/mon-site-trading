@@ -16,8 +16,18 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HOST = "localhost"
 PORT = 8766
 
-# Dossier du script — pour localiser nq-live.html
+# Dossier du script — base pour la résolution des fichiers
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def _find_asset(name):
+    """Cherche name dans : racine → public/ → static/ (premier trouvé)."""
+    for base in (SCRIPT_DIR,
+                 os.path.join(SCRIPT_DIR, "public"),
+                 os.path.join(SCRIPT_DIR, "static")):
+        p = os.path.join(base, name)
+        if os.path.isfile(p):
+            return p
+    return None
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SOURCE DE DONNÉES
@@ -109,12 +119,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _serve_file(self, filename):
-        """Cherche filename dans SCRIPT_DIR puis SCRIPT_DIR/public/ et l'envoie."""
-        candidates = [
-            os.path.join(SCRIPT_DIR, filename),
-            os.path.join(SCRIPT_DIR, "public", filename),
-        ]
-        file_path = next((p for p in candidates if os.path.isfile(p)), None)
+        """Cherche filename dans SCRIPT_DIR, public/ puis static/ et l'envoie."""
+        file_path = _find_asset(filename)
         if file_path is None:
             msg = ("404 - " + filename + " introuvable").encode("utf-8")
             self.send_response(404)
@@ -165,7 +171,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
         # ── Page d'accueil ──────────────────────────────────────────
         if path in ("", "/index.html"):
-            self._serve_file("nq-live.html")
+            self._serve_file("cockpit-camel.html")
 
         # ── HTML nommés ─────────────────────────────────────────────
         elif path in ("/nq-live.html", "/cockpit-v3.html", "/cockpit-camel.html",
@@ -208,9 +214,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
 def main():
     server = ThreadingHTTPServer((HOST, PORT), BridgeHandler)
     print(f"NQ Bridge démarré — port {PORT}")
-    print(f"  → Cockpit     : http://{HOST}:{PORT}/cockpit-v3.html")
-    print(f"  → Étude Salah : http://{HOST}:{PORT}/cockpit-camel.html")
+    print(f"  → Cockpit     : http://{HOST}:{PORT}/")
+    print(f"  → Cockpit v3  : http://{HOST}:{PORT}/cockpit-v3.html")
     print(f"  → NQ Live     : http://{HOST}:{PORT}/nq-live.html")
+    print(f"  → Tracker     : http://{HOST}:{PORT}/tracker.html")
+    print(f"  → Suivi SD    : http://{HOST}:{PORT}/suivi_sd_nq.html")
     print(f"  → Data JSON   : http://{HOST}:{PORT}/data")
     print(f"  → API Bridge  : http://{HOST}:{PORT}/api/bridge-data")
     print(f"  → Health      : http://{HOST}:{PORT}/health")
