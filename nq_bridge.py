@@ -97,12 +97,49 @@ def _setup_logging():
 _setup_logging()
 log = logging.getLogger("nq_bridge")
 
-_VERSION      = "2.1.0"
+_VERSION      = "2.2.0"
 _SERVER_START = time.time()
 
 # État partagé (thread-safe via GIL sur lectures/écritures simples)
-_last_data_ts : float | None = None
-_last_error   : str | None   = None
+_last_data_ts   : float | None = None
+_last_error     : str | None   = None
+_last_good_data : dict | None  = None   # cache dernier payload valide (stale fallback)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PORT CONFLICT DETECTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _check_port(host: str, port: int) -> bool:
+    """Retourne True si le port est libre, False s'il est déjà occupé."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind((host, port))
+            return True
+        except OSError:
+            return False
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAYLOAD VALIDATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+_REQUIRED_NUMERIC = ("last", "vwap", "sd1h", "sd1l", "sd2h", "sd2l")
+_PRICE_MIN = 5_000.0
+_PRICE_MAX = 100_000.0
+
+def _validate_payload(data: dict) -> list[str]:
+    """Retourne la liste des erreurs de validation (vide = OK)."""
+    errors = []
+    for key in _REQUIRED_NUMERIC:
+        val = data.get(key)
+        if val is None:
+            errors.append(f"champ manquant: {key}")
+        elif not isinstance(val, (int, float)):
+            errors.append(f"type invalide: {key}={val!r}")
+        elif not (_PRICE_MIN <= val <= _PRICE_MAX):
+            errors.append(f"hors plage [{_PRICE_MIN}–{_PRICE_MAX}]: {key}={val}")
+    return errors
 
 
 def _find_asset(name: str) -> str | None:
@@ -231,25 +268,43 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
     def _serve_data(self):
         """GET /data et /api/bridge-data — snapshot NQ au format {NQ:{...}}."""
-        global _last_data_ts, _last_error
+        global _last_data_ts, _last_error, _last_good_data
         try:
-            data = get_nq_data()
+            data   = get_nq_data()
+            errors = _validate_payload(data)
+            if errors:
+                raise ValueError(f"payload invalide: {'; '.join(errors)}")
+
+            _last_good_data = data
+            _last_data_ts   = time.time()
+            _last_error     = None
+
             body = json.dumps({"NQ": data}, separators=(",", ":")).encode()
-            _last_data_ts = time.time()
-            _last_error   = None
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self._cors_headers()
             self.end_headers()
             self.wfile.write(body)
+
         except Exception as exc:
             _last_error = str(exc)
-            err = json.dumps({"error": str(exc)}).encode()
-            self.send_response(500)
+            log.warning(f"/data erreur: {exc}")
+
+            if _last_good_data is not None:
+                # Retourne le dernier payload valide avec flag stale
+                stale = dict(_last_good_data)
+                stale["stale"] = True
+                stale["stale_reason"] = str(exc)
+                body = json.dumps({"NQ": stale}, separators=(",", ":")).encode()
+                self.send_response(200)
+            else:
+                body = json.dumps({"error": str(exc), "stale": False}).encode()
+                self.send_response(503)
+
             self.send_header("Content-Type", "application/json")
             self._cors_headers()
             self.end_headers()
-            self.wfile.write(err)
+            self.wfile.write(body)
 
     def _serve_health(self):
         """GET /health — ping simple."""
@@ -374,23 +429,41 @@ class BridgeHandler(BaseHTTPRequestHandler):
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _print_banner():
+    log.info(f"NQ Bridge v{_VERSION} — port {PORT} — source={_CFG['source']['type']}")
+    log.info(f"  Cockpit    : http://{HOST}:{PORT}/cockpit")
+    log.info(f"  Cockpit v3 : http://{HOST}:{PORT}/cockpit-v3")
+    log.info(f"  NQ Live    : http://{HOST}:{PORT}/nq-live")
+    log.info(f"  Tracker    : http://{HOST}:{PORT}/tracker")
+    log.info(f"  Data JSON  : http://{HOST}:{PORT}/data")
+    log.info(f"  Health     : http://{HOST}:{PORT}/health")
+    log.info(f"  Status     : http://{HOST}:{PORT}/status")
+
+
 def main():
-    server = ThreadingHTTPServer((HOST, PORT), BridgeHandler)
-    log.info(f"NQ Bridge v{_VERSION} démarré — port {PORT} — source={_CFG['source']['type']}")
-    log.info(f"  → Cockpit      : http://{HOST}:{PORT}/cockpit")
-    log.info(f"  → Cockpit v3   : http://{HOST}:{PORT}/cockpit-v3")
-    log.info(f"  → NQ Live      : http://{HOST}:{PORT}/nq-live")
-    log.info(f"  → Tracker      : http://{HOST}:{PORT}/tracker")
-    log.info(f"  → Data JSON    : http://{HOST}:{PORT}/data")
-    log.info(f"  → API Bridge   : http://{HOST}:{PORT}/api/bridge-data")
-    log.info(f"  → Health       : http://{HOST}:{PORT}/health")
-    log.info(f"  → Status       : http://{HOST}:{PORT}/status")
-    log.info("Ctrl+C pour arrêter")
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        log.info("Arrêt du bridge.")
-        server.shutdown()
+    if not _check_port(HOST, PORT):
+        log.error(f"Port {PORT} déjà utilisé — un autre processus tourne peut-être.")
+        log.error("Arrêtez l'autre processus (stop_bridge.bat ou kill -9 <pid>) puis relancez.")
+        raise SystemExit(1)
+
+    _print_banner()
+
+    while True:
+        try:
+            server = ThreadingHTTPServer((HOST, PORT), BridgeHandler)
+            log.info("Serveur démarré. Ctrl+C pour arrêter.")
+            server.serve_forever()
+        except KeyboardInterrupt:
+            log.info("Arrêt du bridge (KeyboardInterrupt).")
+            server.shutdown()
+            break
+        except Exception as exc:
+            log.error(f"Crash inattendu: {exc} — redémarrage dans 5s…")
+            try:
+                server.server_close()
+            except Exception:
+                pass
+            time.sleep(5)
 
 
 if __name__ == "__main__":
