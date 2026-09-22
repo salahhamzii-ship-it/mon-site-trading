@@ -173,5 +173,67 @@ Ou sous Windows : double-clic `tests/start_tests.bat`
 
 ---
 
+## 12. ALARME NOCTURNE FIABLE (indépendante du navigateur)
+
+Fichier : `alarm_service.py`  
+Surveille `/data` du bridge toutes les 3s.  
+Entre **18h–06h NY** : popup Windows modale + son en boucle si NQ touche un band SD (±15 pts).
+
+### Installation (une seule fois)
+
+```
+Double-clic : install_alarm.bat
+```
+
+Essaie 3 méthodes dans l'ordre :
+1. Task Scheduler `onlogon` avec droits admin
+2. Task Scheduler `onlogon` droits standard
+3. Dossier Startup Windows (VBS silencieux, fallback garanti)
+
+L'alarme se lance automatiquement à chaque connexion Windows.
+
+### Tests
+
+```
+python alarm_service.py --test-sound    → son strident 5 secondes
+python alarm_service.py --test-popup    → popup modale au premier plan
+python alarm_service.py --test-trigger  → son + popup simultanés (cliquer OK pour arrêter)
+```
+
+Faire les 3 tests après installation pour valider audio + affichage.
+
+### Comportement nocturne (18h–06h NY)
+
+| Condition | Action |
+|---|---|
+| NQ dans ±15 pts d'un band SD | Son en boucle + popup modale (reste au premier plan jusqu'au clic OK) |
+| Bridge muet > 2 min | Popup "BRIDGE MORT" + son |
+| PC en veille | Empêché par `SetThreadExecutionState` (Windows ne dort pas la nuit) |
+| Même band retouché | Ré-armement après 60s post-ACK |
+
+### Fichier son
+
+`alarm.wav` — généré automatiquement au premier lancement (bip 1200 Hz, pur Python).
+
+### Logs
+
+`alarm.log` (racine du projet) — rotation 10 MB, 2 archives.
+
+### Désinstallation
+
+```
+schtasks /delete /tn "NQAlarm" /f
+```
+(ou supprimer `NQAlarm.vbs` dans `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`)
+
+### Si Windows refuse la tâche planifiée
+
+Méthode manuelle : ajouter `pythonw alarm_service.py` dans le dossier Startup :
+```
+%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\
+```
+
+---
+
 *Ligiste du désert. Héritier de Dalton, Dorian, Josh et du Texan.*  
 *"Vivons cachés, vivons heureux." 🐪*
