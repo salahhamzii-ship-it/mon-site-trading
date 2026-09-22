@@ -404,6 +404,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
         elif path == "/status":
             self._serve_status()
 
+        elif path == "/status-page":
+            self._serve_file("status.html")
+
         # ── Fichiers statiques : /static/<fichier> ─────────────────────
         elif path.startswith("/static/"):
             fname = os.path.basename(path)
@@ -437,7 +440,8 @@ def _print_banner():
     log.info(f"  Tracker    : http://{HOST}:{PORT}/tracker")
     log.info(f"  Data JSON  : http://{HOST}:{PORT}/data")
     log.info(f"  Health     : http://{HOST}:{PORT}/health")
-    log.info(f"  Status     : http://{HOST}:{PORT}/status")
+    log.info(f"  Status JSON: http://{HOST}:{PORT}/status")
+    log.info(f"  Status Page: http://{HOST}:{PORT}/status-page")
 
 
 def main():
