@@ -465,6 +465,18 @@ button {
   from { background: rgba(60, 0, 0, 0.92); }
   to   { background: rgba(120, 10, 10, 0.97); }
 }
+/* variante OFFLINE — bleu */
+#alarm-overlay[data-alarm-type="offline"] { animation: pulse-bg-off 1.2s ease-in-out infinite alternate; }
+@keyframes pulse-bg-off {
+  from { background: rgba(0, 20, 70, 0.93); }
+  to   { background: rgba(0, 50, 140, 0.97); }
+}
+#alarm-overlay[data-alarm-type="offline"] #btn-ack {
+  background: #003880; border-color: #2060cc;
+  box-shadow: 0 0 40px rgba(0,100,220,0.6);
+}
+#alarm-overlay[data-alarm-type="offline"] #alarm-timer { color: #66aaff; }
+#alarm-overlay[data-alarm-type="offline"] #ack-hint { color: #88bbff; }
 #alarm-icon {
   font-size: 64px;
   animation: alarm-shake 0.4s linear infinite;
@@ -750,10 +762,11 @@ button {
 'use strict'
 
 // ── CONSTANTS ─────────────────────────────────────────────────────
-const POLL_MS   = 3000
-const NQ_MIN    = 8000
-const NQ_MAX    = 60000
-const ACK_DELAY = 30000  // ms neutral required before ACK
+const POLL_MS            = 3000
+const NQ_MIN             = 8000
+const NQ_MAX             = 60000
+const ACK_DELAY          = 30000   // ms neutral required before ACK
+const OFFLINE_ALARM_DELAY = 90000  // 90s (30 polls) offline during night → alarm
 
 const LS_CACHE   = 'nq_live_cache_v3'
 const LS_MANUAL  = 'nq_manual_16h_v3'   // Verrou 2 — never touched by bridge
@@ -792,12 +805,14 @@ let _alarmBands   = new Set()
 let _drawerOpen   = false
 
 // Verrou 4 — memory-forced siren state
-let _sirenTriggered = false  // never clears without physical ACK
+let _sirenTriggered = false  // price alarm — never clears without physical ACK
+let _offlineAlarm   = false  // offline alarm — bridge mort pendant nuit
 let _sirenActive    = false
 let _neutralSince   = null
 let _ackTimerID     = null
 let _audioCtx       = null
 let _sirenNodes     = null
+let _offlineSince   = null   // timestamp du 1er miss consécutif
 
 // ── LOCALSTORAGE ──────────────────────────────────────────────────
 function lsGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null } catch(e) { return null } }
@@ -871,11 +886,21 @@ function stopSiren() {
 }
 
 // ── ALARM OVERLAY ─────────────────────────────────────────────────
-function showOverlay(bandName, price, bandPrice) {
-  document.getElementById('alarm-msg').textContent = '⚠ NQ TOUCHE ' + bandName + ' ⚠'
-  document.getElementById('alarm-price-info').textContent =
-    'LAST: ' + fmt2(price) + '  |  ' + bandName + ': ' + fmt2(bandPrice)
-  document.getElementById('alarm-overlay').classList.add('visible')
+function showOverlay(type, bandName, price, bandPrice) {
+  const overlay = document.getElementById('alarm-overlay')
+  overlay.dataset.alarmType = type
+  if (type === 'offline') {
+    document.getElementById('alarm-icon').textContent = '📡'
+    document.getElementById('alarm-msg').textContent = '📡 BRIDGE OFFLINE — CONNEXION PERDUE 📡'
+    document.getElementById('alarm-price-info').textContent =
+      'Sierra Chart non joignable depuis ' + Math.round(OFFLINE_ALARM_DELAY/1000) + 's+'
+  } else {
+    document.getElementById('alarm-icon').textContent = '⚠️'
+    document.getElementById('alarm-msg').textContent = '⚠ NQ TOUCHE ' + bandName + ' ⚠'
+    document.getElementById('alarm-price-info').textContent =
+      'LAST: ' + fmt2(price) + '  |  ' + bandName + ': ' + fmt2(bandPrice)
+  }
+  overlay.classList.add('visible')
   document.getElementById('btn-ack').disabled = true
 }
 
@@ -892,7 +917,9 @@ function startCountdown() {
     const ackBtn  = document.getElementById('btn-ack')
     if (!_neutralSince) {
       ackBtn.disabled = true
-      timerEl.textContent = 'En zone dangereuse — sirène active'
+      timerEl.textContent = _offlineAlarm && _missCount > 0
+        ? 'Bridge toujours offline — en attente...'
+        : 'En zone dangereuse — sirène active'
       return
     }
     const elapsed = Date.now() - _neutralSince
@@ -904,25 +931,55 @@ function startCountdown() {
       _ackTimerID = null
     } else {
       ackBtn.disabled = true
-      timerEl.textContent = 'Zone neutre ' + Math.floor(elapsed/1000) + 's — bouton actif dans ' + rem + 's'
+      const ctx = _offlineAlarm ? 'Reconnecté ' : 'Zone neutre '
+      timerEl.textContent = ctx + Math.floor(elapsed/1000) + 's — bouton actif dans ' + rem + 's'
     }
   }, 500)
 }
 
-// Physical ACK — Verrou 4
+// Physical ACK — Verrou 4 (price) + offline alarm
 document.getElementById('btn-ack').addEventListener('click', () => {
-  if (!_sirenTriggered) return
+  if (!_sirenTriggered && !_offlineAlarm) return
   if (!_neutralSince || (Date.now() - _neutralSince) < ACK_DELAY) return
   stopSiren()
   _sirenTriggered = false
+  _offlineAlarm   = false
+  _offlineSince   = null
   _neutralSince   = null
   hideOverlay()
 })
 
+// ── OFFLINE ALARM CHECK ───────────────────────────────────────────
+function checkOfflineAlarm() {
+  if (!isNight()) {
+    if (_offlineAlarm && !_sirenTriggered) { stopSiren(); hideOverlay() }
+    _offlineAlarm = false
+    _offlineSince = null
+    return
+  }
+  if (_missCount === 0) {
+    // Bridge vient de répondre — si alarme offline active, démarrer horloge neutre
+    if (_offlineAlarm && !_sirenTriggered) {
+      if (!_neutralSince) { _neutralSince = Date.now(); startCountdown() }
+    }
+    _offlineSince = null
+    return
+  }
+  // Bridge toujours offline
+  if (!_offlineSince) _offlineSince = Date.now()
+  const offMs = Date.now() - _offlineSince
+  if (offMs >= OFFLINE_ALARM_DELAY && !_offlineAlarm && !_sirenTriggered) {
+    _offlineAlarm = true
+    startSiren()
+    showOverlay('offline', '', 0, 0)
+    startCountdown()
+  }
+}
+
 // ── ALARM CHECK — Verrou 3+4 ──────────────────────────────────────
 function checkAlarm(last, bands) {
   if (!isNight()) {
-    if (_sirenActive) { stopSiren(); hideOverlay() }
+    if (_sirenActive && !_offlineAlarm) { stopSiren(); hideOverlay() }
     _sirenTriggered = false
     _neutralSince   = null
     return
@@ -938,8 +995,9 @@ function checkAlarm(last, bands) {
     _neutralSince = null  // reset neutral clock while in danger
     if (!_sirenTriggered) {
       _sirenTriggered = true
+      if (_offlineAlarm) { _offlineAlarm = false; _offlineSince = null }  // price prime sur offline
       startSiren()
-      showOverlay(dBand, last, dPrice)
+      showOverlay('price', dBand, last, dPrice)
       startCountdown()
     }
     document.getElementById('btn-ack').disabled = true
@@ -1086,10 +1144,11 @@ async function poll() {
     if (validPayload(merged)) {
       _lastGood  = merged
       lsSet(LS_CACHE, _lastGood)
-      _missCount = 0
+      _missCount = 0      // bridge répond → reset offline clock
       setStatus('ok')
       document.getElementById('pill-demo').style.display = 'none'
       document.getElementById('miss-count').textContent = ''
+      checkOfflineAlarm() // gère reconnexion offline alarm
       render(_lastGood)
     } else {
       setStatus('freeze')
@@ -1100,6 +1159,7 @@ async function poll() {
     _missCount++
     document.getElementById('miss-count').textContent = 'miss:' + _missCount
     setStatus(_missCount === 1 ? 'err' : 'freeze')
+    checkOfflineAlarm()   // vérifie si alarme offline doit sonner
     const fallback = _lastGood || (_manual && validPayload(_manual) ? _manual : null)
     if (fallback) {
       render(fallback)
