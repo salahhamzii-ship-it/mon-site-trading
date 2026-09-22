@@ -792,7 +792,7 @@ function updateTracker(){
 function updTrLevels(){
   const a=parseFloat(SD.avwap)||0,s=parseFloat(SD.sigma)||0;
   const vah=gv('s-vah'),val=gv('s-val'),poc=gv('s-poc'),mpoc=gv('s-mpoc');
-  if(!a)return;
+  if(!a){document.getElementById('tlevels').innerHTML='<span style="color:var(--muted)">Saisissez AVWAP + Sigma dans la session pour activer.</span>';return;}
   let h='';
   if(mpoc)h+=`<span style="color:var(--amber)">Monthly POC ${mpoc.toFixed(2)} ★★★</span><br>`;
   if(vah)h+=`<span style="color:var(--gold)">VAH J-1 ${vah.toFixed(2)}</span><br>`;
