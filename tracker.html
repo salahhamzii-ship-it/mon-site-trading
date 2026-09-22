@@ -730,6 +730,12 @@ body {
 </div>
 
 <script>
+// ── POLYFILL AbortSignal.timeout (Safari < 16.4) ────
+function _abortTimeout(ms) {
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(ms)
+  const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal
+}
+
 // ── CONFIG ──────────────────────────────────────────
 const LS_KEY        = 'nq_levels_v2'
 const LS_ALN        = 'nq_aln_v1'
@@ -1021,7 +1027,7 @@ async function testBridge() {
   if (!url) { status.textContent = '⚠ Entrer une URL'; status.style.color = 'var(--gold)'; return }
   status.textContent = '⏳ Connexion...'; status.style.color = 'var(--txt2)'
   try {
-    const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    const r = await fetch(url, { cache: 'no-store', signal: _abortTimeout(5000) })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     const last = (d.NQ || d).last
@@ -1061,7 +1067,7 @@ function setStatus(state) {
 async function poll() {
   setStatus('wait')
   try {
-    const r = await fetch(BRIDGE, { cache: 'no-store', signal: AbortSignal.timeout(4000) })
+    const r = await fetch(BRIDGE, { cache: 'no-store', signal: _abortTimeout(4000) })
     if (!r.ok) throw new Error('HTTP ' + r.status)
     const d = await r.json()
     setStatus('ok')
