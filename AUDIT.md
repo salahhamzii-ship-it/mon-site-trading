@@ -298,3 +298,43 @@ Trois comportements différents selon l'environnement de déploiement.
 ---
 
 *Aucun fichier modifié lors de cet audit.*
+
+
+---
+
+## 7. DÉCISIONS PRISES (2026-09-22)
+
+### Q1 — suivi_sd_nq.html
+**Décision : DÉPLACER vers `legacy/suivi_sd_nq.html` (ne pas supprimer).**
+- Raison : zéro risque de perte accidentelle. La route `/suivi-sd` redirigera vers `/tracker`.
+- `legacy/README.md` expliquera que c'est un doublon exact de `tracker.html`.
+
+### Q2 — sc_bridge.py vs sc_bridge.js
+**Décision : ARCHIVER LES DEUX dans `legacy/`.**
+- `sc_bridge.js` = ancien bridge Node.js utilisé avec tunnel ngrok (Windows).
+- `sc_bridge.py` = ancien bridge Python WebSocket (probablement VPS).
+- `nq_bridge.py` devient **LE SEUL bridge actif** sur port 8766.
+- Les .bat qui lancent les anciens bridges ne sont pas modifiés à cette étape (tâche 8).
+
+### Q3 — URLs ngrok figées
+**Décision : EXTERNALISER toutes les URLs dans `config.json`.**
+- `config.tunnels.ngrok_url`, `cloudflared_url`, `vercel_proxy_url`.
+- Valeurs actuelles (`hatbox-placidly-crabmeat`, `cfargotunnel`) comme défauts documentés.
+- `/status` teste chaque tunnel en live et retourne `up`/`down`.
+- Le frontend lit `/status` pour choisir automatiquement le tunnel qui répond.
+- Aucune URL de tunnel codée en dur dans `nq_bridge.py`.
+
+### Q4 — React app / Vercel
+**Décision : HORS SCOPE.**
+- Les 36 fichiers `src/` et `api/bridge-data.ts` ne sont pas touchés.
+- La stabilisation cible : `nq_bridge.py` + les 5 HTML servis localement + `config.json` + docs + tests.
+- LIRE-MOI.md documentera l'existence de la stack React/Vercel (séparée).
+
+### Ajustements aux tâches suivantes
+| Tâche | Ajustement |
+|---|---|
+| 2 (consolidation) | Intègre Q1+Q2 : legacy/ pour sc_bridge.py, sc_bridge.js, suivi_sd_nq.html |
+| 3 (config) | Intègre Q3 : URLs tunnels dans config.json |
+| 4 (robustesse) | Ajouter détection "port 8766 déjà occupé" au démarrage (audit #2) |
+| 6 (mixed content) | Le frontend lit `/status` pour choisir tunnel HTTPS, pas en dur |
+| 8 (launcher) | `stop_bridge.bat` tuera UNIQUEMENT le PID de `nq_bridge.py`, pas tous les Python |
