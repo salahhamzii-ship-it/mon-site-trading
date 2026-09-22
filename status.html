@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NQ Bridge — Statut</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --border: #30363d;
+    --txt: #e6edf3; --txt2: #8b949e;
+    --green: #22c55e; --red: #ef4444; --gold: #f59e0b; --blue: #3b82f6;
+    --radius: 8px; --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--txt); font-family: var(--mono); font-size: 13px; }
+  header { background: var(--bg2); border-bottom: 1px solid var(--border);
+           padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 16px; font-weight: 600; }
+  header .ver { color: var(--txt2); font-size: 11px; margin-left: auto; }
+  .refresh-btn { background: var(--blue); color: #fff; border: none; border-radius: var(--radius);
+                 padding: 6px 14px; cursor: pointer; font-family: var(--mono); font-size: 12px; }
+  .refresh-btn:hover { opacity: .85; }
+  main { max-width: 860px; margin: 24px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .card h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+             color: var(--txt2); margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; padding: 5px 0;
+         border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: none; }
+  .key { color: var(--txt2); }
+  .val { color: var(--txt); }
+  .ok  { color: var(--green); }
+  .err { color: var(--red); }
+  .warn { color: var(--gold); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+         margin-right: 6px; background: var(--txt2); }
+  .dot-ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-err  { background: var(--red); }
+  .dot-warn { background: var(--gold); }
+  .tunnel-row { display: flex; align-items: center; gap: 8px; padding: 6px 0;
+                border-bottom: 1px solid var(--border); }
+  .tunnel-row:last-child { border-bottom: none; }
+  .tunnel-url { color: var(--txt2); font-size: 11px; overflow: hidden;
+                text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .test-btn { background: transparent; border: 1px solid var(--border);
+              border-radius: 4px; color: var(--txt2); padding: 2px 8px;
+              cursor: pointer; font-family: var(--mono); font-size: 11px; }
+  .test-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .page-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .page-link { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+               color: var(--blue); padding: 6px 12px; text-decoration: none; font-size: 12px; }
+  .page-link:hover { border-color: var(--blue); }
+  #last-update { color: var(--txt2); font-size: 11px; text-align: right; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--txt2);
+             border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+</style>
+</head>
+<body>
+<header>
+  <span id="main-dot" class="dot"></span>
+  <h1>NQ Bridge — Statut</h1>
+  <span class="ver" id="ver-lbl">v—</span>
+  <button class="refresh-btn" onclick="load()">⟳ Rafraîchir</button>
+</header>
+
+<main>
+  <!-- Résumé -->
+  <div class="card" id="card-summary">
+    <h2>Résumé</h2>
+    <div class="row"><span class="key">Version</span>      <span class="val" id="s-version">—</span></div>
+    <div class="row"><span class="key">Uptime</span>       <span class="val" id="s-uptime">—</span></div>
+    <div class="row"><span class="key">Port</span>         <span class="val" id="s-port">—</span></div>
+    <div class="row"><span class="key">Source</span>       <span class="val" id="s-source">—</span></div>
+    <div class="row"><span class="key">Dernier tick</span> <span class="val" id="s-age">—</span></div>
+    <div class="row"><span class="key">Dernière erreur</span> <span class="val" id="s-error">—</span></div>
+  </div>
+
+  <!-- Tunnels -->
+  <div class="card" id="card-tunnels">
+    <h2>Tunnels HTTPS</h2>
+    <div id="tunnels-list">—</div>
+  </div>
+
+  <!-- Pages -->
+  <div class="card">
+    <h2>Pages</h2>
+    <div class="page-links" id="page-links">—</div>
+  </div>
+
+  <div id="last-update">Jamais chargé</div>
+</main>
+
+<script>
+const STATUS_URL = '/status';
+
+async function testTunnel(url, btn, lbl) {
+  btn.disabled = true;
+  lbl.className = 'tunnel-url';
+  lbl.textContent = url + '  ';
+  const spinner = document.createElement('span');
+  spinner.className = 'spinner';
+  btn.replaceWith(spinner);
+  try {
+    const r = await fetch(url + '/health', { signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : (() => { const c = new AbortController(); setTimeout(() => c.abort(), 3000); return c.signal; })() });
+    spinner.replaceWith(Object.assign(document.createElement('span'), { className: 'ok', textContent: '✓ OK' }));
+  } catch (e) {
+    spinner.replaceWith(Object.assign(document.createElement('span'), { className: 'err', textContent: '✗ ' + (e.name === 'AbortError' ? 'timeout' : 'erreur') }));
+  }
+}
+
+function renderTunnels(tunnels) {
+  const container = document.getElementById('tunnels-list');
+  const entries = [
+    ['ngrok',       tunnels.ngrok       || ''],
+    ['cloudflared', tunnels.cloudflared || ''],
+    ['vercel',      tunnels.vercel      || ''],
+  ];
+  const hasAny = entries.some(([, u]) => u);
+  if (!hasAny) { container.innerHTML = '<span class="warn">Aucun tunnel configuré — config.json à remplir</span>'; return; }
+
+  container.innerHTML = '';
+  for (const [name, url] of entries) {
+    const row = document.createElement('div');
+    row.className = 'tunnel-row';
+
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.title = name;
+
+    const lbl = document.createElement('span');
+    lbl.className = 'tunnel-url';
+    lbl.textContent = url || '(non configuré)';
+
+    row.appendChild(dot);
+    row.appendChild(Object.assign(document.createElement('span'), { textContent: name, style: 'min-width:90px;color:var(--txt2)' }));
+    row.appendChild(lbl);
+
+    if (url) {
+      const btn = document.createElement('button');
+      btn.className = 'test-btn';
+      btn.textContent = 'Tester';
+      btn.onclick = () => testTunnel(url, btn, lbl);
+      row.appendChild(btn);
+    } else {
+      row.appendChild(Object.assign(document.createElement('span'), { className: 'warn', textContent: '—' }));
+    }
+    container.appendChild(row);
+  }
+}
+
+function renderPages(pages) {
+  const container = document.getElementById('page-links');
+  container.innerHTML = '';
+  for (const [name, url] of Object.entries(pages || {})) {
+    const a = document.createElement('a');
+    a.className = 'page-link';
+    a.href = url; a.target = '_blank'; a.textContent = name;
+    container.appendChild(a);
+  }
+}
+
+async function load() {
+  const mainDot = document.getElementById('main-dot');
+  mainDot.className = 'dot dot-warn';
+  try {
+    const r = await fetch(STATUS_URL, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    document.getElementById('ver-lbl').textContent   = 'v' + (d.version || '?');
+    document.getElementById('s-version').textContent = d.version || '?';
+    document.getElementById('s-uptime').textContent  = d.uptime   || '?';
+    document.getElementById('s-port').textContent    = d.port     || '?';
+    document.getElementById('s-source').textContent  = d.source   || '?';
+
+    const age = d.last_data_age_s;
+    const ageEl = document.getElementById('s-age');
+    if (age == null) { ageEl.textContent = 'Jamais'; ageEl.className = 'val warn'; }
+    else if (age > 15) { ageEl.textContent = age + 's (stale)'; ageEl.className = 'val warn'; }
+    else { ageEl.textContent = age + 's'; ageEl.className = 'val ok'; }
+
+    const errEl = document.getElementById('s-error');
+    if (d.last_error) { errEl.textContent = d.last_error; errEl.className = 'val err'; }
+    else { errEl.textContent = 'Aucune'; errEl.className = 'val ok'; }
+
+    renderTunnels(d.tunnels || {});
+    renderPages(d.pages || {});
+
+    mainDot.className = 'dot dot-ok';
+    document.getElementById('last-update').textContent = 'Mis à jour : ' + new Date().toLocaleTimeString('fr-FR');
+  } catch (e) {
+    mainDot.className = 'dot dot-err';
+    document.getElementById('s-error').textContent = e.message;
+    document.getElementById('s-error').className = 'val err';
+    document.getElementById('last-update').textContent = '✗ Erreur : ' + e.message;
+  }
+}
+
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>
