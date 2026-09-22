@@ -1332,48 +1332,64 @@ function _setBadge(ok,price){
   b.style.color=ok?'var(--green)':'var(--red)';
   b.style.borderColor=ok?'var(--green)':'var(--red)';
 }
+// Applique les données bridge reçues (appelé depuis bridgeFetch ou fallback local)
+function _applyBridgeData(d){
+  if(!d||d.error)return false;
+  var nq=d.NQ||{},es=d.ES||{};
+  // Live price — always update
+  if(nq.last){var tp=document.getElementById('tp');if(tp)tp.value=parseFloat(nq.last).toFixed(2);}
+  // Compute sigma = SD1H - AVWAP
+  var avwap=parseFloat(nq.ovn_vwap)||0,sd1h=parseFloat(nq.ovn_sd1h)||0;
+  var sigma=sd1h&&avwap?Math.abs(sd1h-avwap):0;
+  // Fill session fields only if empty
+  _fill('s-avwap',avwap||nq.ovn_vwap);
+  if(sigma){var se=document.getElementById('s-sigma');if(se&&!se.value)se.value=sigma.toFixed(2);}
+  _fill('s-vah',nq.vah);_fill('s-val',nq.val);_fill('s-poc',nq.poc);
+  _fill('s-j1h',nq.j1_high);_fill('s-j1l',nq.j1_low);_fill('s-settle',nq.j1_settle);
+  _fill('s-ovnh',nq.ovn_high);_fill('s-ovnl',nq.ovn_low);
+  // ALN Pattern auto-detect
+  var ah=parseFloat(nq.asia_high||0),al=parseFloat(nq.asia_low||0);
+  var lh=parseFloat(nq.lon_high||0),ll=parseFloat(nq.lon_low||0);
+  if(ah&&al&&lh&&ll){
+    var aln_el=document.getElementById('s-aln');
+    if(aln_el&&!aln_el.value){
+      var pat='';
+      if(lh>ah&&ll<al)pat='P1 (Outside)';
+      else if(lh<ah&&ll>al)pat='P2 (Inside)';
+      else if(lh>ah&&ll>al)pat='P3 (Partial Up)';
+      else if(lh<ah&&ll<al)pat='P4 (Partial Down)';
+      if(pat)aln_el.value=pat;
+    }
+  }
+  // ES fields
+  var eavwap=parseFloat(es.ovn_vwap)||0,esd1h=parseFloat(es.ovn_sd1h)||0;
+  var esig=esd1h&&eavwap?Math.abs(esd1h-eavwap):0;
+  _fill('s-es-avwap',eavwap||es.ovn_vwap);
+  if(esig){var ese=document.getElementById('s-es-sigma');if(ese&&!ese.value)ese.value=esig.toFixed(2);}
+  _fill('s-es-vah',es.vah);_fill('s-es-val',es.val);_fill('s-es-poc',es.poc);
+  _fill('s-es-j1h',es.j1_high);_fill('s-es-j1l',es.j1_low);_fill('s-es-settle',es.j1_settle);
+  // Trigger SD sync + tracker refresh
+  oSI();updateTracker();updTrLevels();
+  _setBadge(true,nq.last?parseFloat(nq.last).toFixed(2):'');
+  return true;
+}
+// Normalise la réponse du bridge Python local (format plat {NQ:{...}}) vers format cockpit
+function _normLocal(raw){
+  if(!raw)return null;
+  if(raw.NQ)return raw; // déjà au bon format
+  return {NQ:raw};      // bridge Python renvoie {last,vwap,...} → envelopper dans NQ
+}
 function bridgeFetch(){
   fetch('/api/bridge-data',{cache:'no-store'})
-    .then(function(r){return r.ok?r.json():null;})
-    .then(function(d){
-      if(!d||d.error){_setBadge(false);return;}
-      var nq=d.NQ||{},es=d.ES||{};
-      // Live price — always update
-      if(nq.last){var tp=document.getElementById('tp');if(tp)tp.value=parseFloat(nq.last).toFixed(2);}
-      // Compute sigma = SD1H - AVWAP
-      var avwap=parseFloat(nq.ovn_vwap)||0,sd1h=parseFloat(nq.ovn_sd1h)||0;
-      var sigma=sd1h&&avwap?Math.abs(sd1h-avwap):0;
-      // Fill session fields only if empty
-      _fill('s-avwap',avwap||nq.ovn_vwap);
-      if(sigma){var se=document.getElementById('s-sigma');if(se&&!se.value)se.value=sigma.toFixed(2);}
-      _fill('s-vah',nq.vah);_fill('s-val',nq.val);_fill('s-poc',nq.poc);
-      _fill('s-j1h',nq.j1_high);_fill('s-j1l',nq.j1_low);_fill('s-settle',nq.j1_settle);
-      _fill('s-ovnh',nq.ovn_high);_fill('s-ovnl',nq.ovn_low);
-      // ALN Pattern auto-detect
-      var ah=parseFloat(nq.asia_high||0),al=parseFloat(nq.asia_low||0);
-      var lh=parseFloat(nq.lon_high||0),ll=parseFloat(nq.lon_low||0);
-      if(ah&&al&&lh&&ll){
-        var aln_el=document.getElementById('s-aln');
-        if(aln_el&&!aln_el.value){
-          var pat='';
-          if(lh>ah&&ll<al)pat='P1 (Outside)';
-          else if(lh<ah&&ll>al)pat='P2 (Inside)';
-          else if(lh>ah&&ll>al)pat='P3 (Partial Up)';
-          else if(lh<ah&&ll<al)pat='P4 (Partial Down)';
-          if(pat)aln_el.value=pat;
-        }
-      }
-      // ES fields
-      var eavwap=parseFloat(es.ovn_vwap)||0,esd1h=parseFloat(es.ovn_sd1h)||0;
-      var esig=esd1h&&eavwap?Math.abs(esd1h-eavwap):0;
-      _fill('s-es-avwap',eavwap||es.ovn_vwap);
-      if(esig){var ese=document.getElementById('s-es-sigma');if(ese&&!ese.value)ese.value=esig.toFixed(2);}
-      _fill('s-es-vah',es.vah);_fill('s-es-val',es.val);_fill('s-es-poc',es.poc);
-      _fill('s-es-j1h',es.j1_high);_fill('s-es-j1l',es.j1_low);_fill('s-es-settle',es.j1_settle);
-      // Trigger SD sync + tracker refresh
-      oSI();updateTracker();updTrLevels();
-      _setBadge(true,parseFloat(nq.last).toFixed(2));
-    }).catch(function(){_setBadge(false);});
+    .then(function(r){return r.ok?r.json():Promise.reject('api-'+r.status);})
+    .then(function(d){if(!_applyBridgeData(d))_setBadge(false);})
+    .catch(function(){
+      // Fallback : bridge Python local sur localhost:8766
+      fetch('http://localhost:8766/data',{cache:'no-store'})
+        .then(function(r){return r.ok?r.json():Promise.reject('local-'+r.status);})
+        .then(function(d){if(!_applyBridgeData(_normLocal(d)))_setBadge(false);})
+        .catch(function(){_setBadge(false);});
+    });
 }
 bridgeFetch();
 _bridgeTimer=setInterval(bridgeFetch,30000);
@@ -1436,18 +1452,29 @@ function showAvwapFlash(msg, color){
 }
 
 async function fetchAvwap(){
+  let d=null;
   try{
     const r=await fetch('/api/bridge-data',{cache:'no-store'});
     if(!r.ok)throw new Error('HTTP '+r.status);
-    const d=await r.json();
-    document.getElementById('avwap-err').textContent='';
-    renderAvwapPanel(d);
-    const ts=d._fetchedAt?new Date(d._fetchedAt).toLocaleTimeString('fr-FR'):new Date().toLocaleTimeString('fr-FR');
-    document.getElementById('avwap-ts').textContent='Sync '+ts;
-  }catch(e){
-    document.getElementById('avwap-err').textContent=e.message;
-    document.getElementById('avwap-ts').textContent='⚠ erreur';
+    d=await r.json();
+  }catch(_){
+    // Fallback : bridge Python local
+    try{
+      const r2=await fetch('http://localhost:8766/data',{cache:'no-store'});
+      if(!r2.ok)throw new Error('local '+r2.status);
+      const raw=await r2.json();
+      d=_normLocal(raw);
+    }catch(e2){
+      document.getElementById('avwap-err').textContent='bridge hors-ligne';
+      document.getElementById('avwap-ts').textContent='⚠ erreur';
+      return;
+    }
   }
+  if(!d){document.getElementById('avwap-ts').textContent='⚠ erreur';return;}
+  document.getElementById('avwap-err').textContent='';
+  renderAvwapPanel(d);
+  const ts=d._fetchedAt?new Date(d._fetchedAt).toLocaleTimeString('fr-FR'):new Date().toLocaleTimeString('fr-FR');
+  document.getElementById('avwap-ts').textContent='Sync '+ts;
 }
 function renderAvwapPanel(d){
   const nq=d.NQ||d.nq, es=d.ES||d.es;
