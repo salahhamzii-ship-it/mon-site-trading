@@ -145,16 +145,30 @@ label{color:var(--muted);font-size:11px;display:block;margin-bottom:2px;text-tra
 #tsig.sn{background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
 
 /* backtest */
-.btt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
-.btt th{text-align:left;padding:5px 7px;color:var(--muted);font-size:10px;border-bottom:1px solid var(--border);font-weight:500;letter-spacing:.04em}
-.btt td{padding:5px 7px;border-bottom:1px solid var(--border);color:var(--text)}
+.btt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;table-layout:fixed}
+.btt thead{position:sticky;top:0;z-index:2;background:var(--surface)}
+.btt th{text-align:left;padding:8px 9px;color:var(--muted);font-size:10px;border-bottom:2px solid var(--border);font-weight:600;letter-spacing:.05em;white-space:nowrap}
+.btt td{padding:7px 9px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:32px;vertical-align:middle}
+.btt tr:nth-child(even) td{background:rgba(255,255,255,.025)}
 .btt tr:last-child td{border-bottom:none}
-.btt tr:hover td{background:var(--surface2)}
-td.pos{color:var(--green)}td.neg{color:var(--red)}
-.bts{display:flex;gap:12px;flex-wrap:wrap}
-.bts-box{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:7px 12px}
-.bts-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.bts-val{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--gold);margin-top:2px}
+.btt tr:hover td{background:rgba(91,143,212,.08)!important}
+.btt col.c-date{width:100px}.btt col.c-inst{width:58px}.btt col.c-setup{width:120px}
+.btt col.c-dir{width:82px}.btt col.c-ent{width:88px}.btt col.c-stp{width:88px}
+.btt col.c-ext{width:88px}.btt col.c-pnl{width:78px}.btt col.c-rr{width:58px}
+.btt col.c-note{width:auto}.btt col.c-del{width:36px}
+td.pos{color:var(--green);font-weight:700}td.neg{color:var(--red);font-weight:700}
+.bt-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.06em}
+.bt-bdg-l{background:rgba(76,175,130,.2);color:#6BDFAA;border:1px solid rgba(76,175,130,.4)}
+.bt-bdg-s{background:rgba(224,92,92,.2);color:#F08080;border:1px solid rgba(224,92,92,.4)}
+.bt-bdg-setup{background:rgba(200,168,75,.15);color:#D4AD60;border:1px solid rgba(200,168,75,.35);font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;max-width:116px}
+.bt-del{opacity:0;background:rgba(224,92,92,.15);border:1px solid rgba(224,92,92,.4);color:#E05C5C;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;cursor:pointer;transition:opacity .15s}
+.btt tr:hover .bt-del{opacity:1}
+.bts{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.bts-box{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px 14px}
+.bts-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.bts-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--gold);line-height:1}
+.bts-val.pct-ok{color:var(--green)}.bts-val.pct-warn{color:var(--gold)}.bts-val.pct-bad{color:var(--red)}
+.bts-val.tp-pos{color:var(--green)}.bts-val.tp-neg{color:var(--red)}
 
 /* position */
 #pdis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
@@ -548,7 +562,7 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
       <div class="f"><label>Direction</label><select id="bt-dir"><option>LONG</option><option>SHORT</option></select></div></div>
       <div class="r3" style="margin-top:8px"><div class="f"><label>Entrée</label><input id="bt-ent" type="number" step=".25"></div><div class="f"><label>Stop</label><input id="bt-stp" type="number" step=".25"></div><div class="f"><label>Sortie</label><input id="bt-ext" type="number" step=".25"></div></div>
       <div class="f" style="margin-top:8px"><label>Note</label><input id="bt-note" placeholder="Confluences…" style="width:100%"></div>
-      <button class="btn bg" style="width:100%;margin-top:9px" onclick="addBT()">+ AJOUTER</button></div>
+      <button onclick="addBT()" style="width:100%;margin-top:12px;height:44px;background:#2A1F00;border:2px solid #C8A030;color:#F0C040;font-family:var(--mono);font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:.08em;transition:all .15s" onmouseover="this.style.background='#3A2A00'" onmouseout="this.style.background='#2A1F00'">+ AJOUTER</button></div>
     <div class="card"><div class="ct">STATISTIQUES</div>
       <div class="bts">
         <div class="bts-box"><div class="bts-lbl">Trades</div><div class="bts-val" id="bts-t">0</div></div>
@@ -558,9 +572,12 @@ td.pos{color:var(--green)}td.neg{color:var(--red)}
         <div class="bts-box"><div class="bts-lbl">Moy/trade</div><div class="bts-val" id="bts-a">—</div></div>
       </div></div>
   </div>
-  <div class="card"><div class="ct" style="display:flex;justify-content:space-between"><span>HISTORIQUE</span><button class="btn bd" style="padding:1px 8px;font-size:10px" onclick="clearBT()">✕ TOUT EFFACER</button></div>
-    <div style="overflow-x:auto">
-    <table class="btt" id="bt-table"><thead><tr><th>Date</th><th>Instr</th><th>Setup</th><th>Dir</th><th>Entrée</th><th>Stop</th><th>Sortie</th><th>PnL (pts)</th><th>R:R</th><th>Note</th><th></th></tr></thead><tbody id="bt-body"></tbody></table>
+  <div class="card"><div class="ct" style="display:flex;justify-content:space-between"><span>HISTORIQUE</span><button class="btn bd" style="padding:2px 10px;font-size:10px" onclick="clearBT()">✕ TOUT EFFACER</button></div>
+    <div style="overflow-x:auto;max-height:480px">
+    <table class="btt" id="bt-table">
+      <colgroup><col class="c-date"><col class="c-inst"><col class="c-setup"><col class="c-dir"><col class="c-ent"><col class="c-stp"><col class="c-ext"><col class="c-pnl"><col class="c-rr"><col class="c-note"><col class="c-del"></colgroup>
+      <thead><tr><th>Date</th><th>Instr</th><th>Setup</th><th>Dir</th><th>Entrée</th><th>Stop</th><th>Sortie</th><th>PnL (pts)</th><th>R:R</th><th>Note</th><th></th></tr></thead>
+      <tbody id="bt-body"></tbody></table>
     </div></div>
 </div>
 
@@ -915,17 +932,25 @@ function addBT(){
 function rBT(){
   const d=loadBT();
   document.getElementById('bt-body').innerHTML=d.map(t=>`<tr>
-    <td>${t.date}</td><td>${t.inst}</td><td>${t.setup}</td>
-    <td style="color:${t.dir==='LONG'?'var(--green)':'var(--red)'}">${t.dir}</td>
+    <td>${t.date}</td>
+    <td>${t.inst}</td>
+    <td><span class="bt-bdg-setup">${t.setup}</span></td>
+    <td><span class="bt-badge ${t.dir==='LONG'?'bt-bdg-l':'bt-bdg-s'}">${t.dir}</span></td>
     <td>${t.entry}</td><td>${t.stop}</td><td>${t.exit}</td>
     <td class="${t.win?'pos':'neg'}">${t.pnl>0?'+':''}${t.pnl}</td>
-    <td>${t.rr}</td><td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.note||''}</td>
-    <td><button class="btn bd" style="padding:1px 5px;font-size:10px" onclick="delBT(${t.id})">✕</button></td></tr>`).join('');
+    <td>${t.rr}</td>
+    <td title="${(t.note||'').replace(/"/g,'&quot;')}">${t.note||''}</td>
+    <td><button class="bt-del" onclick="delBT(${t.id})">✕</button></td></tr>`).join('');
   const wins=d.filter(t=>t.win).length,pts=d.reduce((s,t)=>s+t.pnl,0);
+  const pct=d.length?Math.round(wins/d.length*100):null;
   document.getElementById('bts-t').textContent=d.length;
   document.getElementById('bts-w').textContent=wins;
-  document.getElementById('bts-p').textContent=d.length?Math.round(wins/d.length*100)+'%':'—';
-  document.getElementById('bts-tp').textContent=(pts>0?'+':'')+pts.toFixed(0)+' pts';
+  const pe=document.getElementById('bts-p');
+  pe.textContent=pct!==null?pct+'%':'—';
+  pe.className='bts-val'+(pct===null?'':pct>=60?' pct-ok':pct>=40?' pct-warn':' pct-bad');
+  const te=document.getElementById('bts-tp');
+  te.textContent=(pts>0?'+':'')+pts.toFixed(0)+' pts';
+  te.className='bts-val'+(pts>0?' tp-pos':pts<0?' tp-neg':'');
   document.getElementById('bts-a').textContent=d.length?(pts/d.length).toFixed(1)+' pts':'—';
 }
 function delBT(id){savBT(loadBT().filter(t=>t.id!==id));rBT();}
