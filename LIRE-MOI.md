@@ -3,6 +3,8 @@
 > Version 2.2 — Septembre 2026  
 > Méthode Salah | NQ Futures | Python stdlib uniquement
 
+> **Pour l'état du projet et la procédure de reprise → voir [ETAT-DU-PROJET.md](ETAT-DU-PROJET.md)**
+
 ---
 
 ## 1. DÉMARRAGE RAPIDE
