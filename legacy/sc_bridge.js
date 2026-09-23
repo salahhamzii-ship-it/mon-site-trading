@@ -89,14 +89,13 @@ const STEMS = {
   ES:    ['ES_auto', 'ES'],
   ES30m: ['ES_auto', 'ES_30min', 'ES_TPO'],
   ES10m: ['ES_10min', 'ES_TPO_10min'],
-  GC:    ['GC_auto', 'GC'],
   CL:    ['CL_auto', 'CL'],
   CL30m: ['CL_30min', 'CL_auto', 'CL'],
 }
 
 // NQ_PATHS et FILES sont peuplés par discoverAllFiles() au démarrage et à chaque scan
 const NQ_PATHS = { main: '', auto: '', m30: '', m10: '', rth: '', ovn: '', tpo: '' }
-let FILES = { NQ: '', NQ10m: '', ES: '', ES30m: '', ES10m: '', GC: '', CL: '', CL30m: '' }
+let FILES = { NQ: '', NQ10m: '', ES: '', ES30m: '', ES10m: '', CL: '', CL30m: '' }
 
 function discoverAllFiles() {
   logBridge('[DISCOVER] Recherche des fichiers Sierra Chart...')
@@ -107,7 +106,6 @@ function discoverAllFiles() {
     { key: 'ES',    label: 'ES principal' },
     { key: 'ES30m', label: 'ES 30min' },
     { key: 'ES10m', label: 'ES 10min' },
-    { key: 'GC',    label: 'GC principal' },
     { key: 'CL',    label: 'CL principal' },
     { key: 'CL30m', label: 'CL 30min' },
   ]
@@ -231,8 +229,8 @@ function sendScOrder({ action, symbol, quantity = 1, orderType = 'MARKET', price
 // autoDiscoverFiles : alias pour compatibilité avec les appels existants dans buildMessage()
 function autoDiscoverFiles() { discoverAllFiles() }
 
-const RTH_START = { NQ: '09:30', ES: '09:30', GC: '08:20', CL: '09:00' }
-const RTH_END   = { NQ: '16:00', ES: '16:00', GC: '13:30', CL: '14:30' }
+const RTH_START = { NQ: '09:30', ES: '09:30', CL: '09:00' }
+const RTH_END   = { NQ: '16:00', ES: '16:00', CL: '14:30' }
 
 const WS_PORT   = 8765
 const HTTP_PORT = 8766
@@ -576,9 +574,9 @@ function barDict(r) {
 
 const NO_FILE = { status: 'no_file', message: 'Configurer l\'export dans Sierra Chart' }
 
-function buildSimplePayload(rows, tf) {
+function buildSimplePayload(rows, tf, overrideLast = null) {
   if (!rows || !rows.length) return null
-  const last        = rows[rows.length - 1]
+  const last        = overrideLast || rows[rows.length - 1]
   const lastPrice   = parseFloat(last.close)
   const lastVwap    = parseFloat(last.vwap)
   const avwap_side  = (!isNaN(lastPrice) && !isNaN(lastVwap) && lastVwap > 0)
@@ -1077,7 +1075,21 @@ function buildMessage() {
       logBridge(`  [DATA] NQ 30min → ${f || 'AUCUN'} (${rows.length} lignes)`)
       DIAG_DONE.add('NQ30m')
     }
-    data.NQ = rows.length ? buildSimplePayload(rows, '30min') : { ...NO_FILE }
+    // Préférer la dernière barre RTH (09:30-16:00) si disponible
+    // → NQ_TPO.csv peut n'avoir que des barres OVN ; on ne veut pas leur close comme prix NQ
+    if (rows.length) {
+      const today = todayStr()
+      const rthLast = [...rows].reverse().find(r =>
+        r.date === today &&
+        t2m(r.time) >= t2m(RTH_START.NQ) &&
+        t2m(r.time) <= t2m(RTH_END.NQ)
+      ) || null
+      if (rthLast) logBridge(`  [DATA] NQ last RTH bar → ${rthLast.date} ${rthLast.time} close=${rthLast.close}`)
+      else         logBridge(`  [DATA] NQ aucune barre RTH aujourd'hui → fallback dernière barre OVN`)
+      data.NQ = buildSimplePayload(rows, '30min', rthLast)
+    } else {
+      data.NQ = { ...NO_FILE }
+    }
   }
 
   // ── ES 30min (ES_auto.csv ou équivalent) ──────────────────────────────────
@@ -1125,7 +1137,7 @@ function buildMessage() {
 
 // ─── SERVEUR HTTP ─────────────────────────────────────────────────────────────
 
-const INSTRUMENTS = new Set(['NQ', 'ES', 'GC', 'CL'])
+const INSTRUMENTS = new Set(['NQ', 'ES', 'CL'])
 
 const httpServer = createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
