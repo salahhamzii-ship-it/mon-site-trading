@@ -45,7 +45,7 @@ const NQ_PATHS = {
 }
 
 let FILES = {
-  NQ: NQ_PATHS.auto,
+  NQ: NQ_PATHS.tpo,
   ES: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`),
   GC: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv` : `${UPLOAD_DIR}/GC.csv`),
   CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
@@ -170,12 +170,15 @@ function autoDiscoverFiles() {
     }
   }
 
-  // Sélectionne le meilleur fichier par instrument : préfère _auto, sinon premier
+  // Sélectionne le meilleur fichier par instrument
+  // NQ : préfère _tpo (NQ_TPO.csv = export Sierra Chart actif)
+  // ES/CL/GC : préfère _auto
   for (const sym of ['NQ', 'ES', 'GC', 'CL']) {
     const list = found[sym]
     if (!list.length) continue
+    const tpo  = sym === 'NQ' ? list.find(f => f.toLowerCase().includes('_tpo')) : null
     const auto = list.find(f => f.toLowerCase().includes('_auto'))
-    const chosen = auto || list[0]
+    const chosen = tpo || auto || list[0]
     FILES[sym] = chosen
     console.log(`  [AUTO] ${sym} → ${chosen}`)
   }
