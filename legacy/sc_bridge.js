@@ -39,16 +39,21 @@ const NQ_PATHS = {
   main: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ.csv`        : `${UPLOAD_DIR}/NQ.csv`),
   auto: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_auto.csv`   : `${UPLOAD_DIR}/NQ_auto.csv`),
   m30:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_30min.csv`  : `${UPLOAD_DIR}/NQ_30min.csv`),
+  m10:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_10min.csv`  : `${UPLOAD_DIR}/NQ_10min.csv`),
   rth:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_RTH.csv`    : `${UPLOAD_DIR}/NQ_RTH.csv`),
   ovn:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_OVN.csv`    : `${UPLOAD_DIR}/NQ_OVN.csv`),
   tpo:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_TPO.csv`    : `${UPLOAD_DIR}/NQ_TPO.csv`),
 }
 
 let FILES = {
-  NQ: NQ_PATHS.auto,
-  ES: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv` : `${UPLOAD_DIR}/ES.csv`),
-  GC: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv` : `${UPLOAD_DIR}/GC.csv`),
-  CL: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv` : `${UPLOAD_DIR}/CL.csv`),
+  NQ:    NQ_PATHS.auto,
+  NQ10m: NQ_PATHS.m10,
+  ES:    resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv`   : `${UPLOAD_DIR}/ES.csv`),
+  ES30m: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_30min.csv`  : `${UPLOAD_DIR}/ES_30min.csv`),
+  ES10m: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_10min.csv`  : `${UPLOAD_DIR}/ES_10min.csv`),
+  GC:    resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv`        : `${UPLOAD_DIR}/GC.csv`),
+  CL:    resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv`        : `${UPLOAD_DIR}/CL.csv`),
+  CL30m: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL_30min.csv`  : `${UPLOAD_DIR}/CL_30min.csv`),
 }
 
 // ─── SIERRA CHART ORDER BRIDGE — DTC Protocol (port 11099) ──────────────────
@@ -184,10 +189,21 @@ function autoDiscoverFiles() {
   const allNqFiles = found.NQ
   const pick = (keyword) => allNqFiles.find(f => f.toLowerCase().includes(keyword)) || ''
   if (pick('_30min') || pick('_30m')) NQ_PATHS.m30 = pick('_30min') || pick('_30m')
+  if (pick('_10min') || pick('_10m')) NQ_PATHS.m10 = pick('_10min') || pick('_10m')
   if (pick('_rth'))   NQ_PATHS.rth = pick('_rth')
   if (pick('_ovn'))   NQ_PATHS.ovn = pick('_ovn')
   if (pick('_tpo'))   NQ_PATHS.tpo = pick('_tpo')
   if (!NQ_PATHS.auto || !existsSync(NQ_PATHS.auto)) NQ_PATHS.auto = FILES.NQ
+
+  // Variantes multi-timeframes ES et CL
+  const allEsFiles = found.ES
+  const pickEs = (kw) => allEsFiles.find(f => f.toLowerCase().includes(kw)) || ''
+  if (pickEs('_30min') || pickEs('_30m')) FILES.ES30m = pickEs('_30min') || pickEs('_30m')
+  if (pickEs('_10min') || pickEs('_10m')) FILES.ES10m = pickEs('_10min') || pickEs('_10m')
+
+  const allClFiles = found.CL
+  const pickCl = (kw) => allClFiles.find(f => f.toLowerCase().includes(kw)) || ''
+  if (pickCl('_30min') || pickCl('_30m')) FILES.CL30m = pickCl('_30min') || pickCl('_30m')
 
   console.log()
 }

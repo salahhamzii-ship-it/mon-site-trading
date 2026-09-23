@@ -240,5 +240,102 @@ Méthode manuelle : ajouter `pythonw alarm_service.py` dans le dossier Startup :
 
 ---
 
+## 13. CONFIGURATION SIERRA CHART — EXPORT CSV AUTOMATIQUE
+
+Pour brancher Sierra Chart au cockpit, chaque chart doit exporter ses données en CSV automatiquement.
+
+### Tableau des 5 charts à configurer
+
+| Chart SC | Instrument | Timeframe | Nom fichier | Chemin complet |
+|----------|-----------|-----------|-------------|----------------|
+| #28 | NQ | 30 min | `NQ_30min.csv` | `C:\SierraChart_CME\Data\NQ_30min.csv` |
+| #11 | NQ | 10 min | `NQ_10min.csv` | `C:\SierraChart_CME\Data\NQ_10min.csv` |
+| #3  | ES | 30 min | `ES_30min.csv` | `C:\SierraChart_CME\Data\ES_30min.csv` |
+| #15 | ES | 10 min | `ES_10min.csv` | `C:\SierraChart_CME\Data\ES_10min.csv` |
+| #5  | CL | 30 min | `CL_30min.csv` | `C:\SierraChart_CME\Data\CL_30min.csv` |
+
+Répéter la procédure ci-dessous pour chacun des 5 charts.
+
+---
+
+### Procédure (une fois par chart)
+
+**Étape 1 — Ouvrir le chart**
+
+Dans Sierra Chart, ouvrir le chart concerné (ex : chart #28, NQ 30min).
+
+**Étape 2 — Ouvrir le menu Auto Export**
+
+Chemin à confirmer selon version SC :
+
+- **Version courante** : `Analysis` → `Auto Export Chart Data` *(le plus fréquent)*
+- **Alternative** : `Chart` → `Export Chart Data to File`
+- **Alternative ancienne** : `File` → `Export` → `Chart Data`
+
+Si le menu est introuvable : `Ctrl+F`, rechercher "export".
+
+**Étape 3 — Activer l'export**
+
+Cocher **Enable Auto Export** (ou **Export Data to CSV**).
+
+**Étape 4 — Chemin de sortie (Output File)**
+
+Saisir le chemin exact du tableau ci-dessus, par exemple :
+
+```
+C:\SierraChart_CME\Data\NQ_30min.csv
+```
+
+Si le dossier `C:\SierraChart_CME\Data\` n'existe pas, le créer manuellement (clic droit → Nouveau dossier).
+
+**Étape 5 — Format**
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Séparateur | **Tabulation (TSV)** — ou virgule si l'option tabulation est absente |
+| Encodage | **UTF-8** |
+| En-têtes | **Oui** (inclure la ligne d'en-tête) |
+
+**Étape 6 — Intervalle d'export**
+
+- **Export Interval** → `1 Minute` (ou `On Bar Close` pour minimiser les écritures)
+- Si `1 Minute` absent : choisir l'intervalle le plus court disponible
+
+**Étape 7 — Valider**
+
+Cliquer **OK**. Sierra Chart crée et met à jour le fichier automatiquement.
+
+**Étape 8 — Vérifier**
+
+Dans l'explorateur Windows, ouvrir `C:\SierraChart_CME\Data\` et vérifier que le fichier apparaît et que sa date de modification avance en temps réel.
+
+---
+
+### Vérification depuis le cockpit
+
+Une fois les 5 fichiers configurés et le bridge lancé (`LANCER-COCKPIT.bat`) :
+
+```
+http://localhost:8766/scan
+```
+
+Affiche la liste des CSV détectés. Chaque fichier configuré doit apparaître avec son chemin.
+
+```
+http://localhost:8766/data
+```
+
+Retourne le JSON avec les données de chaque instrument.
+
+---
+
+## 14. ARRÊT
+
+**Double-clic sur `stop_bridge.bat`**
+
+Arrête uniquement `nq_bridge.py` — ne tue pas les autres processus Python.
+
+---
+
 *Ligiste du désert. Héritier de Dalton, Dorian, Josh et du Texan.*  
 *"Vivons cachés, vivons heureux." 🐪*
