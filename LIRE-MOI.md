@@ -325,6 +325,11 @@ Le bridge cherche automatiquement plusieurs noms par instrument. Si votre sheet 
 
 Extensions testées pour chaque nom : `.csv`, `.csv.txt`, `.txt`
 
+**Fichiers avec noms bizarres (NQ_TPO.csv33, NQ_TPO.csv 111, NQ_TPO.csv.13…) :**
+Le bridge les ignore automatiquement — il ne cherche que les noms exacts listés ci-dessus.
+Ces fichiers sont des artefacts Sierra Chart (exports successifs ou bugs de nommage).
+Vous pouvez les supprimer manuellement depuis l'Explorateur Windows sans impact sur le bridge.
+
 **Pourquoi Sierra Chart ajoute `.txt` automatiquement :**
 Le Spreadsheet Study de Sierra Chart écrit le fichier avec l'extension `.txt` par défaut, même si le nom contient `.csv`. Le pont accepte `NQ_TPO.csv.txt` exactement comme `NQ_TPO.csv`.
 

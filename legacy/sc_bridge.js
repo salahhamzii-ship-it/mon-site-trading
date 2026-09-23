@@ -78,16 +78,16 @@ function findFile(stems) {
   return pool[0]
 }
 
-// Stems à tester par slot instrument/timeframe
+// Stems à tester par slot instrument/timeframe (ordre = priorité)
 const STEMS = {
   NQ:    ['NQ_auto', 'NQ'],
-  NQ30m: ['NQ_30min', 'NQ_TPO', 'NQ_auto', 'NQ_TPO_CSV'],
+  NQ30m: ['NQ_TPO', 'NQ_30min', 'NQ_auto'],
   NQ10m: ['NQ_10min', 'NQ_TPO_10min'],
   NQrth: ['NQ_RTH'],
   NQovn: ['NQ_OVN'],
   NQtpo: ['NQ_TPO'],
   ES:    ['ES_auto', 'ES'],
-  ES30m: ['ES_30min', 'ES_auto', 'ES_TPO'],
+  ES30m: ['ES_auto', 'ES_30min', 'ES_TPO'],
   ES10m: ['ES_10min', 'ES_TPO_10min'],
   GC:    ['GC_auto', 'GC'],
   CL:    ['CL_auto', 'CL'],
@@ -572,6 +572,31 @@ function barDict(r) {
   }
 }
 
+// ─── STRUCTURE SIMPLIFIÉE (NQ_TPO / ES_auto — VWAP+SD uniquement) ─────────────
+
+const NO_FILE = { status: 'no_file', message: 'Configurer l\'export dans Sierra Chart' }
+
+function buildSimplePayload(rows, tf) {
+  if (!rows || !rows.length) return null
+  const last        = rows[rows.length - 1]
+  const lastPrice   = parseFloat(last.close)
+  const lastVwap    = parseFloat(last.vwap)
+  const avwap_side  = (!isNaN(lastPrice) && !isNaN(lastVwap) && lastVwap > 0)
+    ? (lastPrice >= lastVwap ? 'above' : 'below') : ''
+  return {
+    last:       last.close,
+    vwap:       last.vwap  || '',
+    sd1h:       last.sd1h  || '',
+    sd1l:       last.sd1l  || '',
+    sd2h:       last.sd2h  || '',
+    sd2l:       last.sd2l  || '',
+    avwap_side,
+    bars:       rows.map(barDict),
+    tf,
+    ts:         new Date().toISOString(),
+  }
+}
+
 function sessionSplit(rows, instr) {
   const rth = filterRth(rows, instr)
   const sessions = []
@@ -1041,131 +1066,59 @@ function applyJ1Cache(instr, j1Date, payload) {
 }
 
 function buildMessage() {
-  const today = todayStr()
-  const j1    = j1Str()
-  console.log(`\n  today=${today}  j1=${j1}`)
-
   const data = {}
 
-  // ── NQ : lecture multi-sources ────────────────────────────────────────────
+  // ── NQ 30min (NQ_TPO.csv ou équivalent) ──────────────────────────────────
   {
-    const instr = 'NQ'
-    const diagAuto = !DIAG_DONE.has(instr)
-    if (diagAuto) console.log(`\n  [DIAG] ── NQ main ─── ${FILES.NQ}`)
-    const rowsAuto = parseCsv(FILES.NQ, diagAuto)
-    if (diagAuto) DIAG_DONE.add(instr)
-
-    const extraSources = {}
-    for (const [key, path] of [['m30', NQ_PATHS.m30], ['rth', NQ_PATHS.rth], ['ovn', NQ_PATHS.ovn], ['tpo', NQ_PATHS.tpo]]) {
-      const diagKey = `NQ_${key}`
-      const doD = !DIAG_DONE.has(diagKey)
-      if (existsSync(path)) {
-        if (doD) console.log(`\n  [DIAG] ── NQ ${key} ─── ${path}`)
-        extraSources[key] = parseCsv(path, doD)
-        if (doD) DIAG_DONE.add(diagKey)
-        console.log(`  NQ_${key}: ${extraSources[key].length} lignes`)
-      } else {
-        extraSources[key] = []
-      }
+    const f   = NQ_PATHS.m30
+    const dg  = !DIAG_DONE.has('NQ30m')
+    const rows = f ? parseCsv(f, dg) : []
+    if (dg) {
+      logBridge(`  [DATA] NQ 30min → ${f || 'AUCUN'} (${rows.length} lignes)`)
+      DIAG_DONE.add('NQ30m')
     }
-
-    // Source principale : rowsAuto (fallback) enrichi par extraSources
-    const mainRows = rowsAuto.length ? rowsAuto
-      : (extraSources.m30?.length ? extraSources.m30
-        : (extraSources.rth?.length ? extraSources.rth : []))
-
-    if (mainRows.length) {
-      const dated = mainRows.filter(r => r.date).map(r => r.date).sort()
-      if (dated.length) {
-        const lastDate = dated[dated.length - 1]
-        console.log(`  NQ: dernière date CSV=${lastDate}  match=${lastDate === today}`)
-      } else {
-        console.log(`  NQ: aucune date parsée`)
-      }
-
-      data[instr] = buildPayload(instr, mainRows, extraSources)
-      applyJ1Cache(instr, j1, data[instr])
-      const bt = data[instr].bars_today
-      const bj = data[instr].bars_j1
-      console.log(`  NQ: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}  poc=${data[instr].poc}  vah=${data[instr].vah}  val=${data[instr].val}`)
-    }
+    data.NQ = rows.length ? buildSimplePayload(rows, '30min') : { ...NO_FILE }
   }
 
-  // ── ES / GC / CL ──────────────────────────────────────────────────────────
-  for (const [instr, filepath] of [['ES', FILES.ES], ['GC', FILES.GC], ['CL', FILES.CL]]) {
-    const diag = !DIAG_DONE.has(instr)
-    if (diag) console.log(`\n  [DIAG] ── ${instr} ─── ${filepath}`)
-    const rows = parseCsv(filepath, diag)
-    if (diag) DIAG_DONE.add(instr)
-    if (!rows.length) continue
-
-    const dated = rows.filter(r => r.date).map(r => r.date).sort()
-    if (dated.length) {
-      const lastDate = dated[dated.length - 1]
-      console.log(`  ${instr}: dernière date CSV=${lastDate}  match=${lastDate === today}`)
-    } else {
-      console.log(`  ${instr}: aucune date parsée`)
+  // ── ES 30min (ES_auto.csv ou équivalent) ──────────────────────────────────
+  {
+    const f   = FILES.ES30m || FILES.ES
+    const dg  = !DIAG_DONE.has('ES30m')
+    const rows = f ? parseCsv(f, dg) : []
+    if (dg) {
+      logBridge(`  [DATA] ES 30min → ${f || 'AUCUN'} (${rows.length} lignes)`)
+      DIAG_DONE.add('ES30m')
     }
-
-    data[instr] = buildPayload(instr, rows)
-    applyJ1Cache(instr, j1, data[instr])
-    const bt = data[instr].bars_today
-    const bj = data[instr].bars_j1
-    console.log(`  ${instr}: ${bt.length} barres today / ${bj.length} barres J-1  last=${data[instr].last}`)
+    data.ES = rows.length ? buildSimplePayload(rows, '30min') : { ...NO_FILE }
   }
 
-  // ── Re-scan si fichier manquant ─────────────────────────────────────────────
-  const missing = [['ES', FILES.ES], ['GC', FILES.GC], ['CL', FILES.CL]]
-    .filter(([instr]) => !data[instr])
-  if (missing.length) {
-    autoDiscoverFiles()
-    for (const [instr, oldPath] of missing) {
-      if (FILES[instr] === oldPath) continue // chemin inchangé, inutile de réessayer
-      const rows = parseCsv(FILES[instr])
-      if (!rows.length) continue
-      data[instr] = buildPayload(instr, rows)
-      console.log(`  ${instr}: re-scan → ${FILES[instr]}  last=${data[instr].last}`)
-    }
+  // ── NQ 10min ─────────────────────────────────────────────────────────────
+  {
+    const f    = FILES.NQ10m
+    const rows = f ? parseCsv(f) : []
+    data.NQ10m = rows.length ? buildSimplePayload(rows, '10min') : { ...NO_FILE }
   }
 
-  // ── §9 : NQ + ES alignés vs AVWAP ───────────────────────────────────────────
-  if (data.NQ && data.ES && data.NQ.avwap_side && data.ES.avwap_side) {
+  // ── ES 10min ─────────────────────────────────────────────────────────────
+  {
+    const f    = FILES.ES10m
+    const rows = f ? parseCsv(f) : []
+    data.ES10m = rows.length ? buildSimplePayload(rows, '10min') : { ...NO_FILE }
+  }
+
+  // ── CL 30min ─────────────────────────────────────────────────────────────
+  {
+    const f    = FILES.CL30m || FILES.CL
+    const rows = f ? parseCsv(f) : []
+    data.CL = rows.length ? buildSimplePayload(rows, '30min') : { ...NO_FILE }
+  }
+
+  // ── §9 : NQ + ES alignés vs AVWAP ────────────────────────────────────────
+  if (data.NQ?.avwap_side && data.ES?.avwap_side) {
     const par9 = data.NQ.avwap_side === data.ES.avwap_side ? data.NQ.avwap_side : 'divergent'
     data.NQ.par9 = par9
     data.ES.par9 = par9
-    console.log(`  §9: NQ=${data.NQ.avwap_side} ES=${data.ES.avwap_side} → ${par9}`)
   }
-
-  // ── Fallback snapshot pour instruments sans données CSV ─────────────────────
-  // Plages de prix valides par instrument (rejet des snapshots corrompus)
-  const PRICE_RANGES = { NQ: [8000, 50000], ES: [1500, 20000], GC: [500, 15000], CL: [10, 500] }
-  const snap = loadSnapshot()
-  for (const instr of ['NQ', 'ES', 'GC', 'CL']) {
-    if (!data[instr] && snap[instr]) {
-      const snapPrice = parseFloat(snap[instr].last)
-      const [lo, hi] = PRICE_RANGES[instr] || [0, Infinity]
-      if (!isNaN(snapPrice) && (snapPrice < lo || snapPrice > hi)) {
-        console.log(`  ${instr}: SNAPSHOT REJETÉ — prix ${snapPrice} hors plage [${lo}–${hi}]`)
-        continue
-      }
-      data[instr] = { ...snap[instr], _from_snapshot: true }
-      const age = snap[instr]._saved_at
-        ? Math.round((Date.now() - new Date(snap[instr]._saved_at).getTime()) / 3600000) + 'h'
-        : '?'
-      console.log(`  ${instr}: SNAPSHOT (sauvegardé il y a ${age})`)
-    }
-  }
-
-  // ── Sauvegarder uniquement les données avec prix valide ──────────────────
-  const validData = {}
-  for (const [instr, payload] of Object.entries(data)) {
-    if (!payload) continue
-    const p = parseFloat(payload.last)
-    const [lo, hi] = PRICE_RANGES[instr] || [0, Infinity]
-    if (!isNaN(p) && p >= lo && p <= hi) validData[instr] = payload
-    else console.log(`  ${instr}: prix ${p} invalide — non sauvegardé dans snapshot`)
-  }
-  saveSnapshot(validData)
 
   return JSON.stringify(data)
 }
