@@ -7,7 +7,7 @@
  */
 
 import { createServer } from 'http'
-import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, readdirSync, watch as fsWatch } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, renameSync, existsSync, readdirSync, statSync, appendFileSync, watch as fsWatch } from 'fs'
 import { join } from 'path'
 import { WebSocketServer, WebSocket } from 'ws'
 import { execFile } from 'child_process'
@@ -26,34 +26,125 @@ const J1_CACHE_FILE = IS_WIN
   ? String.raw`C:\SierraChart_CME\Data\j1_cache.json`
   : `${UPLOAD_DIR}/j1_cache.json`
 
-// Résout le chemin CSV : essaie .csv puis .csv.txt (Sierra Chart peut ajouter .txt)
-function resolveCsv(base) {
-  if (!IS_WIN) return base
-  if (existsSync(base)) return base
-  if (existsSync(base + '.txt')) return base + '.txt'
-  return base // retourne base même si absent (pour le diagnostic)
+// ─── LOG BRIDGE (console + fichier) ──────────────────────────────────────────
+const LOG_FILE = join(process.cwd(), 'sc_bridge.log')
+function logBridge(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}`
+  console.log(line)
+  try { appendFileSync(LOG_FILE, line + '\n') } catch {}
 }
 
-// NQ multi-sources — essaie les deux variantes de chemin Sierra Chart
-const NQ_PATHS = {
-  main: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ.csv`        : `${UPLOAD_DIR}/NQ.csv`),
-  auto: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_auto.csv`   : `${UPLOAD_DIR}/NQ_auto.csv`),
-  m30:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_30min.csv`  : `${UPLOAD_DIR}/NQ_30min.csv`),
-  m10:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_10min.csv`  : `${UPLOAD_DIR}/NQ_10min.csv`),
-  rth:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_RTH.csv`    : `${UPLOAD_DIR}/NQ_RTH.csv`),
-  ovn:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_OVN.csv`    : `${UPLOAD_DIR}/NQ_OVN.csv`),
-  tpo:  resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\NQ_TPO.csv`    : `${UPLOAD_DIR}/NQ_TPO.csv`),
+// ─── DOSSIERS DE RECHERCHE SIERRA CHART ──────────────────────────────────────
+const USERNAME = process.env.USERNAME || process.env.USER || 'USER'
+const SC_DATA_DIRS = IS_WIN ? [
+  String.raw`C:\SierraChart_CME\Data`,
+  String.raw`C:\SierraChart\Data`,
+  String.raw`C:\SierraChart\CME\Data`,
+  `C:\\Users\\${USERNAME}\\SierraChart\\Data`,
+  `C:\\Users\\${USERNAME}\\Documents\\SierraChart\\Data`,
+  String.raw`C:\Program Files\SierraChart\Data`,
+  String.raw`C:\Program Files (x86)\SierraChart\Data`,
+  String.raw`D:\SierraChart_CME\Data`,
+  String.raw`D:\SierraChart\Data`,
+] : [UPLOAD_DIR]
+
+// Extensions testées dans cet ordre (Sierra Chart ajoute parfois .txt)
+const CSV_EXTS = ['.csv', '.csv.txt', '.txt']
+
+// Fichier valide = existe + modifié il y a moins de 5 min (ou n'importe si aucun récent)
+const STALE_MS = 5 * 60 * 1000
+
+// findFile(stems) : retourne le chemin le plus récent parmi tous les stems×extensions×dirs
+// stems : tableau de noms sans extension, ex: ['NQ_30min', 'NQ_TPO', 'NQ_auto']
+function findFile(stems) {
+  const candidates = []
+  for (const dir of SC_DATA_DIRS) {
+    if (!existsSync(dir)) continue
+    for (const stem of stems) {
+      for (const ext of CSV_EXTS) {
+        const p = join(dir, stem + ext)
+        if (!existsSync(p)) continue
+        let mtime = 0
+        try { mtime = statSync(p).mtimeMs } catch {}
+        candidates.push({ path: p, mtime })
+      }
+    }
+  }
+  if (!candidates.length) return null
+  const now = Date.now()
+  const fresh = candidates.filter(c => now - c.mtime < STALE_MS)
+  const pool = (fresh.length ? fresh : candidates)
+  pool.sort((a, b) => b.mtime - a.mtime)
+  return pool[0]
 }
 
-let FILES = {
-  NQ:    NQ_PATHS.auto,
-  NQ10m: NQ_PATHS.m10,
-  ES:    resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_auto.csv`   : `${UPLOAD_DIR}/ES.csv`),
-  ES30m: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_30min.csv`  : `${UPLOAD_DIR}/ES_30min.csv`),
-  ES10m: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\ES_10min.csv`  : `${UPLOAD_DIR}/ES_10min.csv`),
-  GC:    resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\GC.csv`        : `${UPLOAD_DIR}/GC.csv`),
-  CL:    resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL.csv`        : `${UPLOAD_DIR}/CL.csv`),
-  CL30m: resolveCsv(IS_WIN ? String.raw`C:\SierraChart_CME\Data\CL_30min.csv`  : `${UPLOAD_DIR}/CL_30min.csv`),
+// Stems à tester par slot instrument/timeframe
+const STEMS = {
+  NQ:    ['NQ_auto', 'NQ'],
+  NQ30m: ['NQ_30min', 'NQ_TPO', 'NQ_auto', 'NQ_TPO_CSV'],
+  NQ10m: ['NQ_10min', 'NQ_TPO_10min'],
+  NQrth: ['NQ_RTH'],
+  NQovn: ['NQ_OVN'],
+  NQtpo: ['NQ_TPO'],
+  ES:    ['ES_auto', 'ES'],
+  ES30m: ['ES_30min', 'ES_auto', 'ES_TPO'],
+  ES10m: ['ES_10min', 'ES_TPO_10min'],
+  GC:    ['GC_auto', 'GC'],
+  CL:    ['CL_auto', 'CL'],
+  CL30m: ['CL_30min', 'CL_auto', 'CL'],
+}
+
+// NQ_PATHS et FILES sont peuplés par discoverAllFiles() au démarrage et à chaque scan
+const NQ_PATHS = { main: '', auto: '', m30: '', m10: '', rth: '', ovn: '', tpo: '' }
+let FILES = { NQ: '', NQ10m: '', ES: '', ES30m: '', ES10m: '', GC: '', CL: '', CL30m: '' }
+
+function discoverAllFiles() {
+  logBridge('[DISCOVER] Recherche des fichiers Sierra Chart...')
+
+  const slots = [
+    { key: 'NQ',    nqKey: 'auto', label: 'NQ principal' },
+    { key: 'NQ10m', nqKey: 'm10',  label: 'NQ 10min' },
+    { key: 'ES',    label: 'ES principal' },
+    { key: 'ES30m', label: 'ES 30min' },
+    { key: 'ES10m', label: 'ES 10min' },
+    { key: 'GC',    label: 'GC principal' },
+    { key: 'CL',    label: 'CL principal' },
+    { key: 'CL30m', label: 'CL 30min' },
+  ]
+
+  for (const s of slots) {
+    const found = findFile(STEMS[s.key] || [s.key])
+    if (found) {
+      FILES[s.key] = found.path
+      if (s.nqKey) NQ_PATHS[s.nqKey] = found.path
+      const age = Math.round((Date.now() - found.mtime) / 1000)
+      logBridge(`  [INSTR] ${s.label.padEnd(12)} → ${found.path} (mtime: ${age}s)`)
+    } else {
+      FILES[s.key] = ''
+      logBridge(`  [INSTR] ${s.label.padEnd(12)} → AUCUN fichier trouvé (à configurer dans SC)`)
+    }
+  }
+
+  // NQ 30min
+  const nq30 = findFile(STEMS.NQ30m)
+  if (nq30) {
+    NQ_PATHS.m30 = nq30.path
+    const age = Math.round((Date.now() - nq30.mtime) / 1000)
+    logBridge(`  [INSTR] NQ 30min      → ${nq30.path} (mtime: ${age}s)`)
+  } else {
+    logBridge(`  [INSTR] NQ 30min      → AUCUN fichier trouvé (à configurer dans SC)`)
+  }
+
+  // Variantes NQ spécialisées
+  for (const [key, stems] of [['rth', STEMS.NQrth], ['ovn', STEMS.NQovn], ['tpo', STEMS.NQtpo]]) {
+    const f = findFile(stems)
+    if (f) NQ_PATHS[key] = f.path
+  }
+
+  // NQ auto fallback
+  if (!NQ_PATHS.auto) NQ_PATHS.auto = FILES.NQ
+
+  logBridge('[DISCOVER] Terminé.\n')
 }
 
 // ─── SIERRA CHART ORDER BRIDGE — DTC Protocol (port 11099) ──────────────────
@@ -137,76 +228,8 @@ function sendScOrder({ action, symbol, quantity = 1, orderType = 'MARKET', price
   })
 }
 
-// ─── AUTO-DÉCOUVERTE des fichiers Sierra Chart ────────────────────────────────
-// Scanne tous les dossiers Sierra Chart connus et met à jour FILES automatiquement
-function autoDiscoverFiles() {
-  if (!IS_WIN) return
-  const USERNAME = process.env.USERNAME || process.env.USER || 'USER'
-  const searchDirs = [
-    String.raw`C:\SierraChart_CME\Data`,
-    String.raw`C:\SierraChart\Data`,
-    String.raw`C:\SierraChart\CME\Data`,
-    `C:\\Users\\${USERNAME}\\SierraChart\\Data`,
-    `C:\\Users\\${USERNAME}\\Documents\\SierraChart\\Data`,
-    String.raw`C:\Program Files\SierraChart\Data`,
-    String.raw`C:\Program Files (x86)\SierraChart\Data`,
-    String.raw`D:\SierraChart_CME\Data`,
-    String.raw`D:\SierraChart\Data`,
-  ]
-
-  const found = {}  // sym → [full_path, ...]
-  for (const sym of ['NQ', 'ES', 'GC', 'CL']) found[sym] = []
-
-  console.log('\n[AUTO-SCAN] Recherche des fichiers CSV Sierra Chart...')
-  for (const dir of searchDirs) {
-    if (!existsSync(dir)) continue
-    let files
-    try { files = readdirSync(dir) } catch { continue }
-    const csvs = files.filter(f => f.toLowerCase().includes('.csv'))
-    if (!csvs.length) continue
-    console.log(`  [SCAN] ${dir} → ${csvs.length} fichier(s) CSV trouvé(s): ${csvs.slice(0,8).join(', ')}`)
-    for (const f of csvs) {
-      const fl = f.toLowerCase()
-      for (const sym of ['NQ', 'ES', 'GC', 'CL']) {
-        if (fl.startsWith(sym.toLowerCase())) {
-          found[sym].push(join(dir, f))
-        }
-      }
-    }
-  }
-
-  // Sélectionne le meilleur fichier par instrument : préfère _auto, sinon premier
-  for (const sym of ['NQ', 'ES', 'GC', 'CL']) {
-    const list = found[sym]
-    if (!list.length) continue
-    const auto = list.find(f => f.toLowerCase().includes('_auto'))
-    const chosen = auto || list[0]
-    FILES[sym] = chosen
-    console.log(`  [AUTO] ${sym} → ${chosen}`)
-  }
-
-  // NQ_PATHS : cherche aussi les variantes spécialisées
-  const allNqFiles = found.NQ
-  const pick = (keyword) => allNqFiles.find(f => f.toLowerCase().includes(keyword)) || ''
-  if (pick('_30min') || pick('_30m')) NQ_PATHS.m30 = pick('_30min') || pick('_30m')
-  if (pick('_10min') || pick('_10m')) NQ_PATHS.m10 = pick('_10min') || pick('_10m')
-  if (pick('_rth'))   NQ_PATHS.rth = pick('_rth')
-  if (pick('_ovn'))   NQ_PATHS.ovn = pick('_ovn')
-  if (pick('_tpo'))   NQ_PATHS.tpo = pick('_tpo')
-  if (!NQ_PATHS.auto || !existsSync(NQ_PATHS.auto)) NQ_PATHS.auto = FILES.NQ
-
-  // Variantes multi-timeframes ES et CL
-  const allEsFiles = found.ES
-  const pickEs = (kw) => allEsFiles.find(f => f.toLowerCase().includes(kw)) || ''
-  if (pickEs('_30min') || pickEs('_30m')) FILES.ES30m = pickEs('_30min') || pickEs('_30m')
-  if (pickEs('_10min') || pickEs('_10m')) FILES.ES10m = pickEs('_10min') || pickEs('_10m')
-
-  const allClFiles = found.CL
-  const pickCl = (kw) => allClFiles.find(f => f.toLowerCase().includes(kw)) || ''
-  if (pickCl('_30min') || pickCl('_30m')) FILES.CL30m = pickCl('_30min') || pickCl('_30m')
-
-  console.log()
-}
+// autoDiscoverFiles : alias pour compatibilité avec les appels existants dans buildMessage()
+function autoDiscoverFiles() { discoverAllFiles() }
 
 const RTH_START = { NQ: '09:30', ES: '09:30', GC: '08:20', CL: '09:00' }
 const RTH_END   = { NQ: '16:00', ES: '16:00', GC: '13:30', CL: '14:30' }
@@ -329,15 +352,37 @@ function parseCsv(filepath, diag = false) {
 
   content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const lines = content.split('\n').filter(l => l.trim())
-  if (lines.length < 2) return []
+  if (lines.length < 1) return []
 
-  const hdr = lines[0]
-  const sep = hdr.split(';').length > hdr.split(',').length && hdr.split(';').length > hdr.split('\t').length
-    ? ';'
-    : hdr.split('\t').length > hdr.split(',').length ? '\t' : ','
+  // D\u00E9tection s\u00E9parateur sur les 2 premi\u00E8res lignes non vides
+  const sampleLines = lines.slice(0, Math.min(3, lines.length)).join('\n')
+  let sep = ','
+  const tabCount  = (sampleLines.match(/\t/g)   || []).length
+  const semicolonCount = (sampleLines.match(/;/g) || []).length
+  const commaCount = (sampleLines.match(/,/g)   || []).length
+  if (tabCount > commaCount && tabCount > semicolonCount) {
+    sep = '\t'
+  } else if (semicolonCount > commaCount) {
+    sep = ';'
+  }
+  // Espaces multiples (format fixe SC rare)
+  const splitLine = sep === '\t'
+    ? l => l.split('\t').map(c => c.trim().replace(/^"|"$/g, ''))
+    : l => l.split(sep).map(c => c.trim().replace(/^"|"$/g, ''))
 
-  const splitLine = l => l.split(sep).map(c => c.trim().replace(/^"|"$/g, ''))
-  const hdrs = splitLine(hdr).map(h => h.toLowerCase().trim())
+  if (diag) console.log(`  [DIAG] S\u00E9parateur: ${JSON.stringify(sep)}`)
+
+  // D\u00E9tection en-t\u00EAte : la ligne 0 est un en-t\u00EAte si elle ne commence pas par 4 chiffres (date)
+  const isDataLine = l => /^\d{4}[-/]/.test(l.trim()) || /^\d{2}\/\d{2}\/\d{4}/.test(l.trim())
+  const hasHeader = lines.length >= 1 && !isDataLine(lines[0])
+  const hdrLine   = hasHeader ? lines[0] : null
+  const dataLines = hasHeader ? lines.slice(1) : lines
+
+  if (lines.length < 1 || dataLines.length < 1) return []
+
+  const hdrs = hdrLine
+    ? splitLine(hdrLine).map(h => h.toLowerCase().trim())
+    : []  // pas d'en-t\u00EAte \u2014 on utilisera le fallback positionnel directement
 
   if (diag) {
     console.log(`  [DIAG] Séparateur: ${JSON.stringify(sep)}`)
@@ -380,31 +425,40 @@ function parseCsv(filepath, diag = false) {
   let idx_ask  = find('askvolume', 'ask volume', 'askvol', 'ask vol')
 
   // Fallback positionnel Sierra Chart standard : Date,Time,Open,High,Low,Last,...
-  const scStd = idx_date === 0 && idx_time === 1
-    && idx_open < 0 && idx_high < 0 && idx_low < 0 && idx_last < 0
-    && hdrs.length >= 6
-  if (scStd) {
+  // Activé si : (en-tête avec col 0=date et col 1=time mais OHLC non trouvés par nom)
+  //          ou (pas d'en-tête du tout)
+  const noHeader   = !hasHeader
+  const hdrScStd   = idx_date === 0 && idx_time === 1
+  const needsFallback = noHeader || (hdrScStd && idx_open < 0)
+
+  if (noHeader) {
+    // Sans en-tête : SC standard Date(0) Time(1) O(2) H(3) L(4) C(5) Vol(6) #T(7) Bid(8) Ask(9)
+    idx_date = 0; idx_time = 1
+    idx_open = 2; idx_high = 3; idx_low = 4; idx_last = 5
+    idx_vol  = 6; idx_bid  = 8; idx_ask  = 9
+    if (diag) console.log('  [DIAG] Pas d\'en-tête — fallback positionnel SC complet')
+  } else if (hdrScStd && idx_open < 0) {
     idx_open = 2; idx_high = 3; idx_low = 4; idx_last = 5
     if (diag) console.log('  [DIAG] OHLC fallback positionnel SC (col 2-5)')
   }
 
   // Volume fallback (col 6)
-  if (idx_vol < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 7) idx_vol = 6
+  if (idx_vol < 0 && needsFallback) idx_vol = 6
 
   // BidVol/AskVol fallback positionnel (SC standard : col 8=BidVol, col 9=AskVol)
-  if (idx_bid < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 9)  idx_bid = 8
-  if (idx_ask < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 10) idx_ask = 9
+  if (idx_bid < 0 && needsFallback) idx_bid = 8
+  if (idx_ask < 0 && needsFallback) idx_ask = 9
 
   // VWAP/SD positional fallback
-  if (idx_vwap < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 15) idx_vwap = 14
-  if (idx_sp1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 16) idx_sp1  = 15
-  if (idx_sm1  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 17) idx_sm1  = 16
-  if (idx_sp2  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 18) idx_sp2  = 17
-  if (idx_sm2  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 19) idx_sm2  = 18
+  if (idx_vwap < 0 && needsFallback) idx_vwap = 14
+  if (idx_sp1  < 0 && needsFallback) idx_sp1  = 15
+  if (idx_sm1  < 0 && needsFallback) idx_sm1  = 16
+  if (idx_sp2  < 0 && needsFallback) idx_sp2  = 17
+  if (idx_sm2  < 0 && needsFallback) idx_sm2  = 18
   // POC/VAH/VAL positional fallback — NQ_auto.csv : col 25=POC, 26=VAH, 27=VAL
-  if (idx_poc  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 26) idx_poc  = 25
-  if (idx_vah  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 27) idx_vah  = 26
-  if (idx_val  < 0 && idx_date === 0 && idx_time === 1 && hdrs.length >= 28) idx_val  = 27
+  if (idx_poc  < 0 && needsFallback) idx_poc  = 25
+  if (idx_vah  < 0 && needsFallback) idx_vah  = 26
+  if (idx_val  < 0 && needsFallback) idx_val  = 27
 
   if (diag) {
     console.log(`  [DIAG] date=${idx_date} time=${idx_time} O=${idx_open} H=${idx_high} L=${idx_low} C=${idx_last}`)
@@ -423,7 +477,7 @@ function parseCsv(filepath, diag = false) {
   const get = (cols, j) => (j >= 0 && j < cols.length ? cols[j].trim() : '')
 
   const rows = []
-  for (const line of lines.slice(1)) {
+  for (const line of dataLines) {
     const cols = splitLine(line)
     const raw  = get(cols, time_col)
     if (!raw) continue
@@ -1321,21 +1375,7 @@ wss.on('listening', () => {
 })
 
 // Auto-découverte : trouve les CSV Sierra Chart avant tout diagnostic
-autoDiscoverFiles()
-
-console.log('\nFichiers NQ configurés :')
-for (const [k, v] of Object.entries(NQ_PATHS)) {
-  if (!v) continue
-  const ok = existsSync(v)
-  console.log(`  NQ_${k}: ${v}  [${ok ? 'OK ✓' : 'absent (ignoré)'}]`)
-}
-console.log('\nFichiers ES/GC/CL :')
-for (const [k, v] of [['ES', FILES.ES], ['GC', FILES.GC], ['CL', FILES.CL]]) {
-  if (!v) continue
-  const ok = existsSync(v)
-  console.log(`  ${k}: ${v}  [${ok ? 'OK ✓' : 'absent (ignoré)'}]`)
-}
-console.log()
+discoverAllFiles()
 
 LAST_MSG = buildMessage()
 setInterval(refreshAndBroadcast, REFRESH_S * 1000)

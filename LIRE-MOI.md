@@ -311,6 +311,31 @@ Dans l'explorateur Windows, ouvrir `C:\SierraChart_CME\Data\` et vérifier que l
 
 ---
 
+### Noms de fichiers Sierra Chart — variantes acceptées
+
+Le bridge cherche automatiquement plusieurs noms par instrument. Si votre sheet s'appelle différemment, elle sera quand même trouvée.
+
+| Instrument | Noms testés dans l'ordre |
+|------------|--------------------------|
+| NQ 30min   | `NQ_30min`, `NQ_TPO`, `NQ_auto`, `NQ_TPO_CSV` |
+| NQ 10min   | `NQ_10min`, `NQ_TPO_10min` |
+| ES 30min   | `ES_30min`, `ES_auto`, `ES_TPO` |
+| ES 10min   | `ES_10min`, `ES_TPO_10min` |
+| CL 30min   | `CL_30min`, `CL_auto`, `CL` |
+
+Extensions testées pour chaque nom : `.csv`, `.csv.txt`, `.txt`
+
+**Pourquoi Sierra Chart ajoute `.txt` automatiquement :**
+Le Spreadsheet Study de Sierra Chart écrit le fichier avec l'extension `.txt` par défaut, même si le nom contient `.csv`. Le pont accepte `NQ_TPO.csv.txt` exactement comme `NQ_TPO.csv`.
+
+**Pour éviter le `.txt` (optionnel) :**
+Dans la configuration du Spreadsheet Study, renommer la sheet en `NQ_30min` (sans extension `.csv`) — Sierra Chart créera alors `NQ_30min.txt`. Le bridge le trouvera automatiquement. Pour forcer `.csv` pur, il faut utiliser le menu **Analysis → Auto Export Chart Data** (non le Spreadsheet Study).
+
+**Fichier trop vieux (> 5 min) :**
+Le bridge préfère les fichiers modifiés il y a moins de 5 minutes. Si aucun fichier récent n'est trouvé, il utilise le plus récent disponible.
+
+---
+
 ### Vérification depuis le cockpit
 
 Une fois les 5 fichiers configurés et le bridge lancé (`LANCER-COCKPIT.bat`) :
